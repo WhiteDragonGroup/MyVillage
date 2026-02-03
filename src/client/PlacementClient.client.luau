@@ -50,7 +50,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	end
 end)
 
--- BuildZone 찾기 (클릭한 파트 또는 조상에서)
+-- BuildZone 찾기 (직접 클릭한 파트만)
 local function findBuildZone(target)
 	if not target then return nil end
 
@@ -59,23 +59,21 @@ local function findBuildZone(target)
 		return target
 	end
 
-	-- 조상 중에서 BuildZone 찾기
-	local current = target
+	return nil
+end
+
+-- 플롯의 소유자 확인
+local function getPlotOwner(buildZone)
+	if not buildZone then return nil end
+
+	-- BuildZone의 부모들 중에서 Plot 찾기
+	local current = buildZone.Parent
 	while current and current ~= workspace do
-		-- 현재 또는 형제 중에 BuildZone 있는지
-		if current.Name == "BuildZone" then
-			return current
+		local owner = current:GetAttribute("Owner")
+		if owner ~= nil then
+			return owner
 		end
-
-		local parent = current.Parent
-		if parent then
-			local bz = parent:FindFirstChild("BuildZone", true)
-			if bz then
-				return bz
-			end
-		end
-
-		current = parent
+		current = current.Parent
 	end
 
 	return nil
@@ -92,6 +90,10 @@ mouse.Move:Connect(function()
 	local buildZone = findBuildZone(target)
 
 	if buildZone then
+		-- 내 땅인지 확인
+		local owner = getPlotOwner(buildZone)
+		local isMyPlot = (owner == player.Name)
+
 		-- BuildZone의 회전에 맞춰서 위치 계산
 		local hitPos = mouse.Hit.Position
 		local bzCFrame = buildZone.CFrame
@@ -108,13 +110,19 @@ mouse.Move:Connect(function()
 		local _, yRot, _ = bzCFrame:ToEulerAnglesYXZ()
 		currentPreviewCFrame = CFrame.new(bzCFrame:PointToWorldSpace(snappedLocal)) * CFrame.Angles(0, yRot, 0)
 		preview.CFrame = currentPreviewCFrame
-		preview.BrickColor = BrickColor.new("Lime green") -- 설치 가능
+
+		if isMyPlot then
+			preview.BrickColor = BrickColor.new("Lime green") -- 내 땅 = 설치 가능
+		else
+			preview.BrickColor = BrickColor.new("New Yeller") -- 남의 땅 = 노란색
+			currentPreviewCFrame = nil -- 설치 불가
+		end
 	else
 		currentPreviewCFrame = nil
 		if mouse.Hit then
 			preview.Position = mouse.Hit.Position + Vector3.new(0, 2, 0)
 		end
-		preview.BrickColor = BrickColor.new("Really red") -- 설치 불가
+		preview.BrickColor = BrickColor.new("Really red") -- BuildZone 아님
 	end
 end)
 
