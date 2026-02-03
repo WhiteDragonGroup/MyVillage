@@ -5,14 +5,22 @@ local Players = game:GetService("Players")
 
 local plotsFolder = workspace:WaitForChild("Plots")
 
--- 빈 플롯 찾기
+-- 빈 플롯 랜덤으로 찾기
 local function findEmptyPlot()
+	local emptyPlots = {}
+
 	for _, plot in plotsFolder:GetChildren() do
 		if plot:GetAttribute("Owner") == "" or plot:GetAttribute("Owner") == nil then
-			return plot
+			table.insert(emptyPlots, plot)
 		end
 	end
-	return nil -- 빈 플롯 없음
+
+	if #emptyPlots == 0 then
+		return nil -- 빈 플롯 없음
+	end
+
+	-- 랜덤 선택
+	return emptyPlots[math.random(1, #emptyPlots)]
 end
 
 -- 플레이어의 플롯 찾기

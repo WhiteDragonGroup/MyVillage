@@ -50,7 +50,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	end
 end)
 
--- BuildZone 찾기 (클릭한 파트 또는 부모에서)
+-- BuildZone 찾기 (클릭한 파트 또는 조상에서)
 local function findBuildZone(target)
 	if not target then return nil end
 
@@ -59,18 +59,23 @@ local function findBuildZone(target)
 		return target
 	end
 
-	-- 부모 중에 BuildZone이 있는지 확인
-	local current = target.Parent
+	-- 조상 중에서 BuildZone 찾기
+	local current = target
 	while current and current ~= workspace do
+		-- 현재 또는 형제 중에 BuildZone 있는지
 		if current.Name == "BuildZone" then
 			return current
 		end
-		-- 같은 레벨에 BuildZone이 있는지
-		local bz = current:FindFirstChild("BuildZone")
-		if bz then
-			return bz
+
+		local parent = current.Parent
+		if parent then
+			local bz = parent:FindFirstChild("BuildZone", true)
+			if bz then
+				return bz
+			end
 		end
-		current = current.Parent
+
+		current = parent
 	end
 
 	return nil
