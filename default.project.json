@@ -6,6 +6,67 @@
     "ReplicatedStorage": {
       "Shared": {
         "$path": "src/shared"
+      },
+      "PlotTemplate": {
+        "$className": "Model",
+        "$properties": {
+          "Name": "PlotTemplate"
+        },
+        "Ground": {
+          "$className": "Part",
+          "$properties": {
+            "Name": "Ground",
+            "Anchored": true,
+            "Color": [0.3, 0.6, 0.3],
+            "Position": [0, 0, 0],
+            "Size": [50, 1, 50],
+            "Material": "Grass"
+          }
+        },
+        "Fence1": {
+          "$className": "Part",
+          "$properties": {
+            "Name": "Fence1",
+            "Anchored": true,
+            "Color": [0.5, 0.3, 0.1],
+            "Position": [0, 2, 25],
+            "Size": [50, 4, 1],
+            "Material": "Wood"
+          }
+        },
+        "Fence2": {
+          "$className": "Part",
+          "$properties": {
+            "Name": "Fence2",
+            "Anchored": true,
+            "Color": [0.5, 0.3, 0.1],
+            "Position": [0, 2, -25],
+            "Size": [50, 4, 1],
+            "Material": "Wood"
+          }
+        },
+        "Fence3": {
+          "$className": "Part",
+          "$properties": {
+            "Name": "Fence3",
+            "Anchored": true,
+            "Color": [0.5, 0.3, 0.1],
+            "Position": [25, 2, 0],
+            "Size": [1, 4, 50],
+            "Material": "Wood"
+          }
+        },
+        "Fence4": {
+          "$className": "Part",
+          "$properties": {
+            "Name": "Fence4",
+            "Anchored": true,
+            "Color": [0.5, 0.3, 0.1],
+            "Position": [-25, 2, 0],
+            "Size": [1, 4, 50],
+            "Material": "Wood"
+          }
+        }
       }
     },
 
@@ -27,26 +88,18 @@
       "$properties": {
         "FilteringEnabled": true
       },
-      "Baseplate": {
+      "Plots": {
+        "$className": "Folder"
+      },
+      "Lobby": {
         "$className": "Part",
         "$properties": {
+          "Name": "Lobby",
           "Anchored": true,
-          "Color": [
-            0.38823,
-            0.37254,
-            0.38823
-          ],
-          "Locked": true,
-          "Position": [
-            0,
-            -10,
-            0
-          ],
-          "Size": [
-            512,
-            20,
-            512
-          ]
+          "Color": [0.5, 0.5, 0.5],
+          "Position": [0, 0, 0],
+          "Size": [40, 1, 40],
+          "Material": "SmoothPlastic"
         }
       }
     },
