@@ -76,6 +76,9 @@ local function findBuildZone(target)
 	return nil
 end
 
+-- 현재 미리보기 CFrame 저장
+local currentPreviewCFrame = nil
+
 -- 마우스 이동 시 미리보기 업데이트
 mouse.Move:Connect(function()
 	if not placementMode or not preview then return end
@@ -95,11 +98,14 @@ mouse.Move:Connect(function()
 			buildZone.Size.Y / 2 + 2,
 			math.floor(localPos.Z / 4 + 0.5) * 4
 		)
-		local worldPos = bzCFrame:PointToWorldSpace(snappedLocal)
 
-		preview.CFrame = CFrame.new(worldPos) * CFrame.Angles(0, bzCFrame:ToEulerAnglesYXZ())
+		-- BuildZone 회전만 가져와서 적용
+		local _, yRot, _ = bzCFrame:ToEulerAnglesYXZ()
+		currentPreviewCFrame = CFrame.new(bzCFrame:PointToWorldSpace(snappedLocal)) * CFrame.Angles(0, yRot, 0)
+		preview.CFrame = currentPreviewCFrame
 		preview.BrickColor = BrickColor.new("Lime green") -- 설치 가능
 	else
+		currentPreviewCFrame = nil
 		if mouse.Hit then
 			preview.Position = mouse.Hit.Position + Vector3.new(0, 2, 0)
 		end
@@ -111,12 +117,9 @@ end)
 mouse.Button1Down:Connect(function()
 	if not placementMode or not preview then return end
 
-	local target = mouse.Target
-	local buildZone = findBuildZone(target)
-
-	if buildZone then
-		-- 서버에 설치 요청
-		placeItemEvent:FireServer("DummyBlock", preview.Position)
+	if currentPreviewCFrame then
+		-- 서버에 설치 요청 (CFrame 전송)
+		placeItemEvent:FireServer("DummyBlock", currentPreviewCFrame)
 		print("설치 요청!")
 	else
 		print("BuildZone 위에만 설치 가능!")

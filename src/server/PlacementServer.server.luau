@@ -28,8 +28,8 @@ local function findPlotAtPosition(position)
 end
 
 -- 설치 요청 처리
-placeItemEvent.OnServerEvent:Connect(function(player, itemName, position)
-	print("설치 요청 받음:", player.Name, itemName, position)
+placeItemEvent.OnServerEvent:Connect(function(player, itemName, cframe)
+	print("설치 요청 받음:", player.Name, itemName)
 
 	-- 1. 아이템 템플릿 확인
 	local template = itemsFolder:FindFirstChild(itemName)
@@ -39,9 +39,10 @@ placeItemEvent.OnServerEvent:Connect(function(player, itemName, position)
 	end
 
 	-- 2. 해당 위치의 플롯 찾기
+	local position = cframe.Position
 	local plot = findPlotAtPosition(position)
 	if not plot then
-		warn(player.Name .. " - BuildZone 밖에 설치 시도 (위치: " .. tostring(position) .. ")")
+		warn(player.Name .. " - BuildZone 밖에 설치 시도")
 		return
 	end
 
@@ -56,9 +57,9 @@ placeItemEvent.OnServerEvent:Connect(function(player, itemName, position)
 		return
 	end
 
-	-- 4. 설치!
+	-- 4. 설치! (CFrame으로 위치+회전 적용)
 	local item = template:Clone()
-	item.Position = position
+	item.CFrame = cframe
 	item.Parent = plot -- 플롯 안에 저장
 
 	print(player.Name .. " → " .. plot.Name .. "에 " .. itemName .. " 설치 완료!")
