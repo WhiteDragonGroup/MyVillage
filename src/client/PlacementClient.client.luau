@@ -88,6 +88,7 @@ end
 
 -- 현재 미리보기 CFrame 저장
 local currentPreviewCFrame = nil
+local lastRotation = CFrame.Angles(0, 0, 0) -- 마지막 회전값 유지
 
 -- 마우스 이동 시 미리보기 업데이트
 mouse.Move:Connect(function()
@@ -115,7 +116,8 @@ mouse.Move:Connect(function()
 
 		-- BuildZone 회전만 가져와서 적용
 		local _, yRot, _ = bzCFrame:ToEulerAnglesYXZ()
-		currentPreviewCFrame = CFrame.new(bzCFrame:PointToWorldSpace(snappedLocal)) * CFrame.Angles(0, yRot, 0)
+		lastRotation = CFrame.Angles(0, yRot, 0) -- 회전값 저장
+		currentPreviewCFrame = CFrame.new(bzCFrame:PointToWorldSpace(snappedLocal)) * lastRotation
 		preview.CFrame = currentPreviewCFrame
 
 		if isMyPlot then
@@ -127,7 +129,8 @@ mouse.Move:Connect(function()
 	else
 		currentPreviewCFrame = nil
 		if mouse.Hit then
-			preview.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 2, 0))
+			-- 마지막 회전값 유지
+			preview.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 2, 0)) * lastRotation
 		end
 		preview.BrickColor = BrickColor.new("Really red") -- BuildZone 아님
 	end
