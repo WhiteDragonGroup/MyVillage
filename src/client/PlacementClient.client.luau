@@ -21,8 +21,12 @@ local function createPreview()
 	local items = ReplicatedStorage:WaitForChild("Items")
 	local dummy = items:WaitForChild("DummyBlock")
 	preview = dummy:Clone()
+	preview.Name = "PlacementPreview"
 	preview.Transparency = 0.5
 	preview.CanCollide = false
+	preview.Anchored = true
+	preview.CanQuery = false -- 레이캐스트에서 제외
+	preview.CanTouch = false -- 터치 이벤트 제외
 	preview.Parent = workspace
 end
 
@@ -53,6 +57,9 @@ end)
 -- BuildZone 찾기 (직접 클릭한 파트만)
 local function findBuildZone(target)
 	if not target then return nil end
+
+	-- 미리보기 블록 무시
+	if target.Name == "PlacementPreview" then return nil end
 
 	-- 직접 BuildZone인 경우
 	if target.Name == "BuildZone" then
@@ -120,7 +127,7 @@ mouse.Move:Connect(function()
 	else
 		currentPreviewCFrame = nil
 		if mouse.Hit then
-			preview.Position = mouse.Hit.Position + Vector3.new(0, 2, 0)
+			preview.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 2, 0))
 		end
 		preview.BrickColor = BrickColor.new("Really red") -- BuildZone 아님
 	end
