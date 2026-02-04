@@ -9,7 +9,19 @@
       },
       "Remotes": {
         "$className": "Folder",
-        "PlaceItem": {
+        "PlaceBuilding": {
+          "$className": "RemoteEvent"
+        },
+        "MoveBuilding": {
+          "$className": "RemoteEvent"
+        },
+        "StoreBuilding": {
+          "$className": "RemoteEvent"
+        },
+        "GetInventory": {
+          "$className": "RemoteFunction"
+        },
+        "InventoryUpdate": {
           "$className": "RemoteEvent"
         }
       },
@@ -22,6 +34,51 @@
             "Color": [1, 0.5, 0],
             "Size": [4, 4, 4],
             "Material": "SmoothPlastic"
+          }
+        },
+        "TownHall": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [0.6, 0.6, 0.8],
+            "Size": [8, 6, 8],
+            "Material": "SmoothPlastic"
+          }
+        },
+        "Garden": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [0.3, 0.8, 0.2],
+            "Size": [6, 2, 6],
+            "Material": "Grass"
+          }
+        },
+        "Mine": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [0.5, 0.4, 0.3],
+            "Size": [6, 4, 6],
+            "Material": "Slate"
+          }
+        },
+        "Lab": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [0.4, 0.6, 0.9],
+            "Size": [8, 8, 8],
+            "Material": "Glass"
+          }
+        },
+        "HotSpring": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [0.3, 0.7, 0.9],
+            "Size": [8, 2, 8],
+            "Material": "Foil"
           }
         }
       }
