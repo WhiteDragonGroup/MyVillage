@@ -5,7 +5,7 @@ local Constants = {}
 
 -- 그리드 설정
 Constants.GRID_SIZE = 2       -- 2 stud 단위 스냅
-Constants.ROTATION_STEP = 15  -- 15도 단위 회전
+Constants.ROTATION_STEP = 90  -- 90도 단위 회전
 
 -- 건물 유형
 Constants.BuildingType = {

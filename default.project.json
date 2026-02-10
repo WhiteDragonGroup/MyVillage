@@ -80,6 +80,15 @@
             "Size": [8, 2, 8],
             "Material": "Foil"
           }
+        },
+        "DummyBlock2": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [0.2, 0.6, 1],
+            "Size": [4, 8, 4],
+            "Material": "SmoothPlastic"
+          }
         }
       }
     },

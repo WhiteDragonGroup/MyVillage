@@ -247,9 +247,10 @@ local function toMoving(building: BasePart)
 	-- BuildZone 찾기
 	currentBuildZone = getMyBuildZone()
 
-	-- 현재 회전값 추출
+	-- 현재 회전값 추출 (BuildZone 기준 상대 회전)
+	local _, bzYRot, _ = currentBuildZone.CFrame:ToEulerAnglesYXZ()
 	local _, yRot, _ = building.CFrame:ToEulerAnglesYXZ()
-	currentRotationY = GridSnap.snapRotation(yRot)
+	currentRotationY = GridSnap.snapRotation(yRot - bzYRot)
 
 	-- UI
 	SelectionUI.hide()
@@ -382,34 +383,37 @@ SelectionUI.init({
 	end,
 })
 
+-- 배치 확정 (UI 버튼 + 마우스 클릭 공용)
+local function confirmPlace()
+	if hasCollision then return end
+
+	if currentState == BuildState.PlacingNew and previewPart then
+		local finalCFrame = previewPart.CFrame
+		DragHandler.stopDrag()
+		removePreview()
+		placeBuildingEvent:FireServer(previewItemName, finalCFrame)
+		toBuildMode()
+
+	elseif currentState == BuildState.Moving and selectedBuilding then
+		local finalCFrame = selectedBuilding.CFrame
+		local buildingId = selectedBuilding:GetAttribute("BuildingId")
+		DragHandler.stopDrag()
+
+		selectedBuilding.Transparency = 0
+		selectedBuilding.CanCollide = true
+		HighlightSystem.removeFrom(selectedBuilding)
+		previewPart = nil
+
+		if buildingId then
+			moveBuildingEvent:FireServer(buildingId, finalCFrame)
+		end
+		toBuildMode()
+	end
+end
+
 -- MoveHandleUI: Place/Rotate/Cancel
 MoveHandleUI.init({
-	onPlace = function()
-		if hasCollision then return end
-
-		if currentState == BuildState.PlacingNew and previewPart then
-			local finalCFrame = previewPart.CFrame
-			DragHandler.stopDrag()
-			removePreview()
-			placeBuildingEvent:FireServer(previewItemName, finalCFrame)
-			toBuildMode()
-
-		elseif currentState == BuildState.Moving and selectedBuilding then
-			local finalCFrame = selectedBuilding.CFrame
-			local buildingId = selectedBuilding:GetAttribute("BuildingId")
-			DragHandler.stopDrag()
-
-			selectedBuilding.Transparency = 0
-			selectedBuilding.CanCollide = true
-			HighlightSystem.removeFrom(selectedBuilding)
-			previewPart = nil
-
-			if buildingId then
-				moveBuildingEvent:FireServer(buildingId, finalCFrame)
-			end
-			toBuildMode()
-		end
-	end,
+	onPlace = confirmPlace,
 
 	onRotateLeft = function()
 		if currentState == BuildState.Moving or currentState == BuildState.PlacingNew then
@@ -444,18 +448,20 @@ MoveHandleUI.init({
 -- 입력 처리
 ----------------------------------------------------------------
 
--- 마우스 클릭: BuildMode에서 건물 선택
-mouse.Button1Down:Connect(function()
-	if currentState == BuildState.BuildMode then
-		local target = mouse.Target
-		if target and isBuildingPart(target) and isMyBuilding(target) then
-			toSelected(target)
+-- 마우스/키보드 입력 (gameProcessed로 UI 클릭과 구분)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	-- 마우스 클릭: 배치 확정 / BuildMode에서 건물 선택
+	if input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessed then
+		if currentState == BuildState.PlacingNew or currentState == BuildState.Moving then
+			confirmPlace()
+		elseif currentState == BuildState.BuildMode then
+			local target = mouse.Target
+			if target and isBuildingPart(target) and isMyBuilding(target) then
+				toSelected(target)
+			end
 		end
 	end
-end)
 
--- 키보드 입력
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
 
 	if input.KeyCode == Enum.KeyCode.Escape then
@@ -478,6 +484,25 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			toIdle()
 		end
 
+	elseif input.KeyCode == Enum.KeyCode.B then
+		if currentState == BuildState.Idle then
+			toBuildMode()
+		elseif currentState == BuildState.BuildMode then
+			toIdle()
+		elseif currentState == BuildState.Selected or currentState == BuildState.Moving or currentState == BuildState.PlacingNew then
+			if currentState == BuildState.Moving and selectedBuilding and originalCFrame then
+				selectedBuilding.CFrame = originalCFrame
+				selectedBuilding.Transparency = 0
+				selectedBuilding.CanCollide = true
+				DragHandler.stopDrag()
+				previewPart = nil
+			elseif currentState == BuildState.PlacingNew then
+				DragHandler.stopDrag()
+				removePreview()
+			end
+			toIdle()
+		end
+
 	elseif input.KeyCode == Enum.KeyCode.Q then
 		if currentState == BuildState.Moving or currentState == BuildState.PlacingNew then
 			DragHandler.rotate(-1)
@@ -486,9 +511,16 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		if currentState == BuildState.Moving or currentState == BuildState.PlacingNew then
 			DragHandler.rotate(1)
 		end
-	elseif input.KeyCode == Enum.KeyCode.R then
-		if currentState == BuildState.Moving or currentState == BuildState.PlacingNew then
-			DragHandler.rotate(1)
+	else
+		-- 숫자키 1~9: 인벤토리 단축키
+		local numberKeys = {
+			[Enum.KeyCode.One] = 1, [Enum.KeyCode.Two] = 2, [Enum.KeyCode.Three] = 3,
+			[Enum.KeyCode.Four] = 4, [Enum.KeyCode.Five] = 5, [Enum.KeyCode.Six] = 6,
+			[Enum.KeyCode.Seven] = 7, [Enum.KeyCode.Eight] = 8, [Enum.KeyCode.Nine] = 9,
+		}
+		local index = numberKeys[input.KeyCode]
+		if index and currentState == BuildState.BuildMode then
+			InventoryUI.selectByIndex(index)
 		end
 	end
 end)
