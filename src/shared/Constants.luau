@@ -36,6 +36,7 @@ Constants.RARITY_COLORS = {
 -- 건물 카탈로그
 Constants.BUILDINGS = {
 	DummyBlock = { name = "더미블록", types = {"장식"}, rarity = "일반" },
+	DummyBlock2 = { name = "더미블록2", types = {"장식"}, rarity = "일반" },
 	TownHall = { name = "마을회관", types = {"지원"}, rarity = "일반" },
 	Garden = { name = "텃밭", types = {"일터"}, rarity = "일반" },
 	Mine = { name = "광산", types = {"일터"}, rarity = "희귀" },
@@ -61,7 +62,8 @@ Constants.BuildState = {
 
 -- 시작 인벤토리 (플레이어에게 기본 지급)
 Constants.DEFAULT_INVENTORY = {
-	{ itemName = "DummyBlock", count = 5 },
+	{ itemName = "DummyBlock", count = 20 },
+	{ itemName = "DummyBlock2", count = 20 },
 }
 
 return Constants

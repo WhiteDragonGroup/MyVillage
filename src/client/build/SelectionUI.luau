@@ -73,8 +73,8 @@ function SelectionUI.init(callbacks: { onStore: () -> (), onCancel: () -> (), on
 		if _callbacks.onStore then _callbacks.onStore() end
 	end)
 
-	-- 취소 (ESC 힌트)
-	SelectionUI._createButton(panel, "Cancel", "취소 (Esc)", Color3.fromRGB(150, 50, 50), 3, function()
+	-- 취소
+	SelectionUI._createButton(panel, "Cancel", "취소", Color3.fromRGB(150, 50, 50), 3, function()
 		if _callbacks.onCancel then _callbacks.onCancel() end
 	end)
 end

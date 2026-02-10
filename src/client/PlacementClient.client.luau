@@ -299,7 +299,7 @@ local function toPlacingNew(itemName: string)
 		local hrp = character:FindFirstChild("HumanoidRootPart")
 		if hrp then
 			local frontPos = hrp.Position + hrp.CFrame.LookVector * 10
-			local snappedCFrame = GridSnap.snapToGrid(currentBuildZone, frontPos, previewPart.Size.Y)
+			local snappedCFrame = GridSnap.snapToGrid(currentBuildZone, frontPos, previewPart.Size)
 			previewPart.CFrame = snappedCFrame
 		end
 	end

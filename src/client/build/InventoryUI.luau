@@ -142,14 +142,14 @@ function InventoryUI._renderSlots()
 		countCorner.CornerRadius = UDim.new(0, 6)
 		countCorner.Parent = countLabel
 
-		-- 단축키 번호 표시
+		-- 단축키 번호 표시 (오른쪽 위)
 		if i <= 9 then
 			local keyLabel = Instance.new("TextLabel")
 			keyLabel.Size = UDim2.new(0, 18, 0, 16)
-			keyLabel.Position = UDim2.new(0, 2, 1, -18)
-			keyLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+			keyLabel.Position = UDim2.new(1, -20, 0, 2)
+			keyLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 			keyLabel.BackgroundTransparency = 0.3
-			keyLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
+			keyLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
 			keyLabel.TextSize = 11
 			keyLabel.Font = Enum.Font.GothamBold
 			keyLabel.Text = tostring(i)

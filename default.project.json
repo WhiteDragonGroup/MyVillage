@@ -86,7 +86,7 @@
           "$properties": {
             "Anchored": true,
             "Color": [0.2, 0.6, 1],
-            "Size": [4, 8, 4],
+            "Size": [2, 4, 6],
             "Material": "SmoothPlastic"
           }
         }

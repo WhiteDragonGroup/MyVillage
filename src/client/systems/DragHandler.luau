@@ -56,8 +56,7 @@ function DragHandler.startDrag(
 		local result = workspace:Raycast(unitRay.Origin, unitRay.Direction * 1000, rayParams)
 
 		if result then
-			local objectHeight = _targetPart.Size.Y
-			local snappedCFrame = _gridSnap.snapToGrid(_buildZone, result.Position, objectHeight)
+			local snappedCFrame = _gridSnap.snapToGrid(_buildZone, result.Position, _targetPart.Size)
 			local finalCFrame = _gridSnap.applyRotation(snappedCFrame, _currentRotationY)
 
 			if _onPositionUpdate then

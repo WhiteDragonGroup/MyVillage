@@ -16,7 +16,7 @@ local placeButton = nil
 local _callbacks = {}
 local _visible = false
 
-local BUTTON_SIZE = 48
+local BUTTON_SIZE = 56
 local PANEL_PADDING = 8
 
 function MoveHandleUI.init(callbacks: {
@@ -68,13 +68,13 @@ function MoveHandleUI.init(callbacks: {
 	padding.PaddingRight = UDim.new(0, PANEL_PADDING)
 	padding.Parent = panel
 
-	-- 왼쪽 회전 (반시계 화살표)
-	MoveHandleUI._createButton(panel, "RotateLeft", "↺", "Q", Color3.fromRGB(70, 90, 140), 1, function()
+	-- 반시계 회전
+	MoveHandleUI._createButton(panel, "RotateLeft", "반시계", "Q", Color3.fromRGB(70, 90, 140), 1, function()
 		if _callbacks.onRotateLeft then _callbacks.onRotateLeft() end
 	end)
 
-	-- 오른쪽 회전 (시계 화살표)
-	MoveHandleUI._createButton(panel, "RotateRight", "↻", "E", Color3.fromRGB(70, 90, 140), 2, function()
+	-- 시계 회전
+	MoveHandleUI._createButton(panel, "RotateRight", "시계", "E", Color3.fromRGB(70, 90, 140), 2, function()
 		if _callbacks.onRotateRight then _callbacks.onRotateRight() end
 	end)
 
@@ -83,20 +83,20 @@ function MoveHandleUI.init(callbacks: {
 		if _callbacks.onPlace then _callbacks.onPlace() end
 	end)
 
-	-- Cancel 버튼 (ESC 힌트)
-	MoveHandleUI._createButton(panel, "Cancel", "취소", "Esc", Color3.fromRGB(150, 50, 50), 4, function()
+	-- Cancel 버튼
+	MoveHandleUI._createButton(panel, "Cancel", "취소", nil, Color3.fromRGB(150, 50, 50), 4, function()
 		if _callbacks.onCancel then _callbacks.onCancel() end
 	end)
 end
 
-function MoveHandleUI._createButton(parent, name, text, shortcut, color, order, callback)
+function MoveHandleUI._createButton(parent, name, text, topLabel, color, order, callback)
 	local btn = Instance.new("TextButton")
 	btn.Name = name
 	btn.Size = UDim2.new(0, BUTTON_SIZE, 0, BUTTON_SIZE)
 	btn.BackgroundColor3 = color
 	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	btn.Text = text
-	btn.TextSize = 20
+	btn.TextSize = 14
 	btn.Font = Enum.Font.GothamBold
 	btn.LayoutOrder = order
 	btn.AutoButtonColor = true
@@ -106,17 +106,17 @@ function MoveHandleUI._createButton(parent, name, text, shortcut, color, order, 
 	btnCorner.CornerRadius = UDim.new(0, 10)
 	btnCorner.Parent = btn
 
-	-- 단축키 힌트 배지
-	if shortcut then
+	-- 단축키 배지 (오른쪽 위 상자)
+	if topLabel then
 		local badge = Instance.new("TextLabel")
-		badge.Size = UDim2.new(0, 24, 0, 14)
-		badge.Position = UDim2.new(0.5, -12, 1, -16)
+		badge.Size = UDim2.new(0, 20, 0, 14)
+		badge.Position = UDim2.new(1, -22, 0, 2)
 		badge.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-		badge.BackgroundTransparency = 0.4
+		badge.BackgroundTransparency = 0.3
 		badge.TextColor3 = Color3.fromRGB(200, 200, 220)
 		badge.TextSize = 10
 		badge.Font = Enum.Font.GothamBold
-		badge.Text = shortcut
+		badge.Text = topLabel
 		badge.Parent = btn
 
 		local badgeCorner = Instance.new("UICorner")
