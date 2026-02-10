@@ -114,7 +114,6 @@
       "Lobby": {
         "$className": "Part",
         "$properties": {
-          "Name": "Lobby",
           "Anchored": true,
           "Color": [0.5, 0.5, 0.5],
           "Position": [0, 0, 0],

@@ -117,10 +117,7 @@ local function updateCollisionState()
 		return
 	end
 
-	-- 충돌 체크를 위해 임시로 CanCollide 활성화
-	previewPart.CanCollide = true
 	local colliding = CollisionDetector.checkCollision(previewPart, { previewPart })
-	previewPart.CanCollide = false
 
 	hasCollision = colliding
 

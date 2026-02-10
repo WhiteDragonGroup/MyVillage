@@ -71,13 +71,10 @@ local function checkServerCollision(part: BasePart, ignoreParts: { Instance }?):
 
 	local touching = workspace:GetPartsInPart(part, params)
 
+	-- 배치된 건물(BuildingId 있는 것)만 충돌로 판정
 	for _, p in touching do
-		if p.Name ~= "BuildZone"
-			and p.Name ~= "Baseplate"
-			and p.Name ~= "Lobby"
-			and not p:IsA("Terrain")
-			and p.CanCollide then
-			return true -- 충돌 있음
+		if p:GetAttribute("BuildingId") ~= nil then
+			return true
 		end
 	end
 
