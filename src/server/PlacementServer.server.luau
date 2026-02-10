@@ -48,13 +48,26 @@ local function findBuildingById(plot, buildingId: string): BasePart?
 	return nil
 end
 
--- 서버 충돌 체크 (간단한 AABB)
-local function checkServerCollision(part: BasePart, ignoreParts: { BasePart }?): boolean
+-- 서버 충돌 체크 (플레이어 캐릭터 제외)
+local function checkServerCollision(part: BasePart, ignoreParts: { Instance }?): boolean
 	local params = OverlapParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 
-	local filterList = ignoreParts or {}
-	params.FilterDescendantsInstances = filterList
+	local combined = {}
+	if ignoreParts then
+		for _, p in ignoreParts do
+			table.insert(combined, p)
+		end
+	end
+
+	-- 모든 플레이어 캐릭터 무시
+	for _, plr in game:GetService("Players"):GetPlayers() do
+		if plr.Character then
+			table.insert(combined, plr.Character)
+		end
+	end
+
+	params.FilterDescendantsInstances = combined
 
 	local touching = workspace:GetPartsInPart(part, params)
 

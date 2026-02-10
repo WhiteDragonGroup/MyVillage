@@ -11,6 +11,7 @@ local BuildUI = {}
 
 local screenGui = nil
 local buildButton = nil
+local shortcutLabel = nil
 local _onToggle = nil  -- 콜백
 
 function BuildUI.init(onToggle: (boolean) -> ())
@@ -22,11 +23,11 @@ function BuildUI.init(onToggle: (boolean) -> ())
 	screenGui.DisplayOrder = 10
 	screenGui.Parent = playerGui
 
-	-- 빌드 버튼
+	-- 빌드 버튼 (인벤토리 위로 여유 확보)
 	buildButton = Instance.new("TextButton")
 	buildButton.Name = "BuildButton"
 	buildButton.Size = UDim2.new(0, 70, 0, 70)
-	buildButton.Position = UDim2.new(1, -90, 1, -90)
+	buildButton.Position = UDim2.new(1, -90, 1, -115)
 	buildButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
 	buildButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 	buildButton.Text = "빌드"
@@ -45,10 +46,27 @@ function BuildUI.init(onToggle: (boolean) -> ())
 	stroke.Transparency = 0.5
 	stroke.Parent = buildButton
 
+	-- B 단축키 배지
+	shortcutLabel = Instance.new("TextLabel")
+	shortcutLabel.Size = UDim2.new(0, 22, 0, 16)
+	shortcutLabel.Position = UDim2.new(1, -24, 0, -2)
+	shortcutLabel.AnchorPoint = Vector2.new(0, 0)
+	shortcutLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	shortcutLabel.BackgroundTransparency = 0.3
+	shortcutLabel.TextColor3 = Color3.fromRGB(220, 220, 240)
+	shortcutLabel.TextSize = 11
+	shortcutLabel.Font = Enum.Font.GothamBold
+	shortcutLabel.Text = "B"
+	shortcutLabel.Parent = buildButton
+
+	local badgeCorner = Instance.new("UICorner")
+	badgeCorner.CornerRadius = UDim.new(0, 5)
+	badgeCorner.Parent = shortcutLabel
+
 	-- 클릭 이벤트
 	buildButton.MouseButton1Click:Connect(function()
 		if _onToggle then
-			_onToggle(true) -- 토글 요청
+			_onToggle(true)
 		end
 	end)
 end

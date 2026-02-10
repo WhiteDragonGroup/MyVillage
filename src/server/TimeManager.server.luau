@@ -1,18 +1,23 @@
 -- TimeManager.server.luau
--- 1분 = 1시간 (24분 = 하루)
+-- 6배속 시간 시스템 (실제 10분 = 게임 1시간, 하루 = 실제 4시간)
+-- 서버 시작 시점의 KST 시간을 기준으로 6배속 진행
 
 local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
 
--- 설정
-local MINUTES_PER_HOUR = 1  -- 실제 1분 = 게임 1시간
-local START_HOUR = 8        -- 시작 시간 (오전 8시)
+local TIME_SCALE = 6    -- 6배속
+local UTC_OFFSET = 9    -- KST (UTC+9)
 
--- 시작 시간 설정
-Lighting.ClockTime = START_HOUR
+-- 서버 시작 시점의 실제 KST 시간을 기준점으로
+local startRealTime = os.time()
+local startDate = os.date("!*t", startRealTime)
+local startGameHours = ((startDate.hour + UTC_OFFSET) % 24) + startDate.min / 60 + startDate.sec / 3600
 
--- 시간 흐름
-while true do
-	task.wait(MINUTES_PER_HOUR * 60 / 60)  -- 1초마다 1분 (60초 = 1시간)
-
-	Lighting.ClockTime = (Lighting.ClockTime + 1/60) % 24
+local function updateTime()
+	local elapsed = os.time() - startRealTime
+	local gameElapsedHours = (elapsed * TIME_SCALE) / 3600
+	Lighting.ClockTime = (startGameHours + gameElapsedHours) % 24
 end
+
+updateTime()
+RunService.Heartbeat:Connect(updateTime)

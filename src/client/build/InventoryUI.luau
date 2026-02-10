@@ -21,7 +21,7 @@ local _inventory = {}  -- { {itemName, count} }
 
 local SLOT_SIZE = 70
 local SLOT_PADDING = 8
-local BAR_HEIGHT = 90
+local BAR_HEIGHT = 100
 local SLIDE_TIME = 0.25
 
 function InventoryUI.init(onItemSelected: (string) -> ())
@@ -142,6 +142,24 @@ function InventoryUI._renderSlots()
 		countCorner.CornerRadius = UDim.new(0, 6)
 		countCorner.Parent = countLabel
 
+		-- 단축키 번호 표시
+		if i <= 9 then
+			local keyLabel = Instance.new("TextLabel")
+			keyLabel.Size = UDim2.new(0, 18, 0, 16)
+			keyLabel.Position = UDim2.new(0, 2, 1, -18)
+			keyLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+			keyLabel.BackgroundTransparency = 0.3
+			keyLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
+			keyLabel.TextSize = 11
+			keyLabel.Font = Enum.Font.GothamBold
+			keyLabel.Text = tostring(i)
+			keyLabel.Parent = slot
+
+			local keyCorner = Instance.new("UICorner")
+			keyCorner.CornerRadius = UDim.new(0, 4)
+			keyCorner.Parent = keyLabel
+		end
+
 		-- 클릭 이벤트
 		slot.MouseButton1Click:Connect(function()
 			if _onItemSelected then
@@ -176,6 +194,15 @@ function InventoryUI.hide()
 		Position = UDim2.new(0, 0, 1, BAR_HEIGHT)
 	})
 	tween:Play()
+end
+
+-- 숫자키로 아이템 선택
+function InventoryUI.selectByIndex(index: number)
+	if not _visible or not _onItemSelected then return end
+	local item = _inventory[index]
+	if item then
+		_onItemSelected(item.itemName)
+	end
 end
 
 function InventoryUI.isVisible(): boolean

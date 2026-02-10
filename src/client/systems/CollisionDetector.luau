@@ -1,39 +1,41 @@
 -- CollisionDetector.luau
 -- workspace:GetPartsInPart() 기반 건물 겹침 감지
 
+local Players = game:GetService("Players")
+
 local CollisionDetector = {}
-
--- OverlapParams 캐시
-local _overlapParams = nil
-
-local function getOverlapParams()
-	if not _overlapParams then
-		_overlapParams = OverlapParams.new()
-		_overlapParams.FilterType = Enum.RaycastFilterType.Exclude
-		_overlapParams.FilterDescendantsInstances = {}
-	end
-	return _overlapParams
-end
 
 -- 충돌 체크
 -- part: BasePart (체크할 건물 파트)
--- ignoreParts: {BasePart}? (무시할 파트 목록 - 자기 자신 등)
+-- ignoreParts: {Instance}? (무시할 파트/모델 목록 - 자기 자신 등)
 -- 반환: boolean (충돌 여부), {BasePart} (충돌 파트 목록)
-function CollisionDetector.checkCollision(part: BasePart, ignoreParts: { BasePart }?): (boolean, { BasePart })
-	local params = getOverlapParams()
+function CollisionDetector.checkCollision(part: BasePart, ignoreParts: { Instance }?): (boolean, { BasePart })
+	local params = OverlapParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
 
-	-- 무시할 파트 설정
-	local filterList = ignoreParts or {}
-	-- 프리뷰/PlacementPreview 파트도 무시
-	local previewParts = {}
-	for _, p in workspace:GetDescendants() do
-		if p.Name == "PlacementPreview" and p:IsA("BasePart") then
-			table.insert(previewParts, p)
+	local combined = {}
+
+	-- 무시할 파트/모델 추가
+	if ignoreParts then
+		for _, p in ignoreParts do
+			table.insert(combined, p)
 		end
 	end
-	local combined = {}
-	for _, p in filterList do table.insert(combined, p) end
-	for _, p in previewParts do table.insert(combined, p) end
+
+	-- 프리뷰 파트 무시
+	for _, p in workspace:GetDescendants() do
+		if p.Name == "PlacementPreview" and p:IsA("BasePart") then
+			table.insert(combined, p)
+		end
+	end
+
+	-- 모든 플레이어 캐릭터 무시
+	for _, plr in Players:GetPlayers() do
+		if plr.Character then
+			table.insert(combined, plr.Character)
+		end
+	end
+
 	params.FilterDescendantsInstances = combined
 
 	local touchingParts = workspace:GetPartsInPart(part, params)
@@ -52,11 +54,6 @@ function CollisionDetector.checkCollision(part: BasePart, ignoreParts: { BasePar
 	end
 
 	return #collidingParts > 0, collidingParts
-end
-
--- 서버용 충돌 체크 (같은 로직)
-function CollisionDetector.checkCollisionServer(part: BasePart, ignoreParts: { BasePart }?): (boolean, { BasePart })
-	return CollisionDetector.checkCollision(part, ignoreParts)
 end
 
 return CollisionDetector

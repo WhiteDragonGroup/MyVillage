@@ -1,5 +1,5 @@
 -- MoveHandleUI.luau
--- 이동/회전 드래그 핸들 + Place 버튼 (BillboardGui)
+-- 이동/회전 드래그 핸들 + Place 버튼
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -12,12 +12,11 @@ local MoveHandleUI = {}
 local screenGui = nil
 local panel = nil
 local placeButton = nil
-local rotateLeftButton = nil
-local rotateRightButton = nil
+
 local _callbacks = {}
 local _visible = false
 
-local BUTTON_SIZE = 44
+local BUTTON_SIZE = 48
 local PANEL_PADDING = 8
 
 function MoveHandleUI.init(callbacks: {
@@ -34,23 +33,26 @@ function MoveHandleUI.init(callbacks: {
 	screenGui.DisplayOrder = 20
 	screenGui.Parent = playerGui
 
-	-- 하단 중앙 패널
+	-- 하단 중앙 패널 (인벤토리 위)
+	local panelWidth = (BUTTON_SIZE + PANEL_PADDING) * 4 + PANEL_PADDING * 2
+	local panelHeight = BUTTON_SIZE + PANEL_PADDING * 2
+
 	panel = Instance.new("Frame")
 	panel.Name = "MovePanel"
-	panel.Size = UDim2.new(0, (BUTTON_SIZE + PANEL_PADDING) * 4 + PANEL_PADDING * 2, 0, BUTTON_SIZE + PANEL_PADDING * 2)
-	panel.Position = UDim2.new(0.5, -panel.Size.X.Offset / 2, 1, -140)
-	panel.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-	panel.BackgroundTransparency = 0.15
+	panel.Size = UDim2.new(0, panelWidth, 0, panelHeight)
+	panel.Position = UDim2.new(0.5, -panelWidth / 2, 1, -110 - panelHeight)
+	panel.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+	panel.BackgroundTransparency = 0.1
 	panel.BorderSizePixel = 0
 	panel.Visible = false
 	panel.Parent = screenGui
 
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 10)
+	corner.CornerRadius = UDim.new(0, 12)
 	corner.Parent = panel
 
 	local stroke = Instance.new("UIStroke")
-	stroke.Color = Color3.fromRGB(80, 80, 100)
+	stroke.Color = Color3.fromRGB(70, 70, 90)
 	stroke.Thickness = 1
 	stroke.Parent = panel
 
@@ -66,35 +68,35 @@ function MoveHandleUI.init(callbacks: {
 	padding.PaddingRight = UDim.new(0, PANEL_PADDING)
 	padding.Parent = panel
 
-	-- 왼쪽 회전
-	rotateLeftButton = MoveHandleUI._createButton(panel, "RotateLeft", "↶", Color3.fromRGB(80, 80, 120), 1, function()
+	-- 왼쪽 회전 (반시계 화살표)
+	MoveHandleUI._createButton(panel, "RotateLeft", "↺", "Q", Color3.fromRGB(70, 90, 140), 1, function()
 		if _callbacks.onRotateLeft then _callbacks.onRotateLeft() end
 	end)
 
-	-- 오른쪽 회전
-	rotateRightButton = MoveHandleUI._createButton(panel, "RotateRight", "↷", Color3.fromRGB(80, 80, 120), 2, function()
+	-- 오른쪽 회전 (시계 화살표)
+	MoveHandleUI._createButton(panel, "RotateRight", "↻", "E", Color3.fromRGB(70, 90, 140), 2, function()
 		if _callbacks.onRotateRight then _callbacks.onRotateRight() end
 	end)
 
 	-- Place 버튼
-	placeButton = MoveHandleUI._createButton(panel, "Place", "배치", Color3.fromRGB(50, 180, 50), 3, function()
+	placeButton = MoveHandleUI._createButton(panel, "Place", "배치", nil, Color3.fromRGB(50, 180, 50), 3, function()
 		if _callbacks.onPlace then _callbacks.onPlace() end
 	end)
 
-	-- Cancel 버튼
-	MoveHandleUI._createButton(panel, "Cancel", "취소", Color3.fromRGB(150, 50, 50), 4, function()
+	-- Cancel 버튼 (ESC 힌트)
+	MoveHandleUI._createButton(panel, "Cancel", "취소", "Esc", Color3.fromRGB(150, 50, 50), 4, function()
 		if _callbacks.onCancel then _callbacks.onCancel() end
 	end)
 end
 
-function MoveHandleUI._createButton(parent, name, text, color, order, callback)
+function MoveHandleUI._createButton(parent, name, text, shortcut, color, order, callback)
 	local btn = Instance.new("TextButton")
 	btn.Name = name
 	btn.Size = UDim2.new(0, BUTTON_SIZE, 0, BUTTON_SIZE)
 	btn.BackgroundColor3 = color
 	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	btn.Text = text
-	btn.TextSize = 18
+	btn.TextSize = 20
 	btn.Font = Enum.Font.GothamBold
 	btn.LayoutOrder = order
 	btn.AutoButtonColor = true
@@ -103,6 +105,24 @@ function MoveHandleUI._createButton(parent, name, text, color, order, callback)
 	local btnCorner = Instance.new("UICorner")
 	btnCorner.CornerRadius = UDim.new(0, 10)
 	btnCorner.Parent = btn
+
+	-- 단축키 힌트 배지
+	if shortcut then
+		local badge = Instance.new("TextLabel")
+		badge.Size = UDim2.new(0, 24, 0, 14)
+		badge.Position = UDim2.new(0.5, -12, 1, -16)
+		badge.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+		badge.BackgroundTransparency = 0.4
+		badge.TextColor3 = Color3.fromRGB(200, 200, 220)
+		badge.TextSize = 10
+		badge.Font = Enum.Font.GothamBold
+		badge.Text = shortcut
+		badge.Parent = btn
+
+		local badgeCorner = Instance.new("UICorner")
+		badgeCorner.CornerRadius = UDim.new(0, 4)
+		badgeCorner.Parent = badge
+	end
 
 	btn.MouseButton1Click:Connect(callback)
 	return btn
