@@ -4,9 +4,12 @@
 
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local TIME_SCALE = 6    -- 6배속
-local UTC_OFFSET = 9    -- KST (UTC+9)
+local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
+
+local TIME_SCALE = BalanceConfig.TIME_SCALE
+local UTC_OFFSET = BalanceConfig.UTC_OFFSET
 
 -- 서버 시작 시점의 실제 KST 시간을 기준점으로
 local startRealTime = os.time()

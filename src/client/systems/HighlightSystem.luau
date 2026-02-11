@@ -67,10 +67,13 @@ end
 
 -- 특정 대상에 직접 Highlight 적용 (별도 인스턴스, 이동 중 프리뷰 등)
 function HighlightSystem.applyTo(target: BasePart, color: Color3, fillTransparency: number?): Highlight
-	-- 기존 하이라이트 제거
 	local existing = target:FindFirstChild("BuildHighlight")
 	if existing then
-		existing:Destroy()
+		-- 기존 하이라이트 색상만 업데이트
+		existing.FillColor = color
+		existing.OutlineColor = color
+		existing.FillTransparency = fillTransparency or 0.7
+		return existing
 	end
 
 	local highlight = Instance.new("Highlight")

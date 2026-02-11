@@ -4,6 +4,9 @@
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -102,7 +105,7 @@ local function updateTime()
 	periodLabel.Text = period
 
 	-- 아이콘 변경 (낮/밤)
-	if hours >= 6 and hours < 18 then
+	if hours >= BalanceConfig.DAY_START_HOUR and hours < BalanceConfig.NIGHT_START_HOUR then
 		icon.Text = "☀️"
 		stroke.Color = Color3.fromRGB(255, 200, 100)  -- 낮 = 따뜻한 색
 	else

@@ -2,11 +2,13 @@
 -- 플레이어 접속 시 빈 플롯 배정 + 인벤토리 초기화
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local plotsFolder = workspace:WaitForChild("Plots")
 
 local serverScript = script.Parent
 local InventoryManager = require(serverScript:WaitForChild("InventoryManager"))
+local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
 
 -- 빈 플롯 랜덤으로 찾기
 local function findEmptyPlot()
@@ -48,10 +50,10 @@ Players.PlayerAdded:Connect(function(player)
 
 		-- 플레이어가 스폰되면 자기 땅으로 이동
 		player.CharacterAdded:Connect(function(character)
-			task.wait(0.5)
+			task.wait(BalanceConfig.SPAWN_DELAY)
 			local buildZone = plot:FindFirstChild("BuildZone", true)
 			if buildZone and character:FindFirstChild("HumanoidRootPart") then
-				character.HumanoidRootPart.CFrame = buildZone.CFrame + Vector3.new(0, 5, 0)
+				character.HumanoidRootPart.CFrame = buildZone.CFrame + Vector3.new(0, BalanceConfig.SPAWN_HEIGHT_OFFSET, 0)
 			end
 		end)
 	else

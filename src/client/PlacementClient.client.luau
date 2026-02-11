@@ -13,6 +13,7 @@ local mouse = player:GetMouse()
 -- 모듈 로드
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local Constants = require(shared:WaitForChild("Constants"))
+local BalanceConfig = require(shared:WaitForChild("BalanceConfig"))
 
 local clientScript = script.Parent
 local BuildUI = require(clientScript:WaitForChild("build"):WaitForChild("BuildUI"))
@@ -46,6 +47,7 @@ local previewPart = nil            -- 배치/이동 프리뷰 파트
 local previewItemName = nil        -- 배치 중인 아이템 이름
 local currentRotationY = 0         -- 현재 Y 회전 (라디안)
 local originalCFrame = nil         -- 이동 전 원래 CFrame (Cancel 복원용)
+local originalColor = nil          -- 프리뷰 원래 색상 (충돌 표시 복원용)
 local hoveredPart = nil            -- 현재 호버 중인 파트
 local currentBuildZone = nil       -- 현재 드래그 중인 BuildZone
 local hasCollision = false         -- 현재 충돌 상태
@@ -108,6 +110,7 @@ local function removePreview()
 		previewPart:Destroy()
 		previewPart = nil
 	end
+	originalColor = nil
 end
 
 -- 충돌 상태 업데이트 (프리뷰 파트 기준)
@@ -122,10 +125,15 @@ local function updateCollisionState()
 	hasCollision = colliding
 
 	if colliding then
-		HighlightSystem.applyTo(previewPart, Constants.HIGHLIGHT_COLORS.Collision, 0.5)
+		if not originalColor then
+			originalColor = previewPart.Color
+		end
+		previewPart.Color = Color3.fromRGB(255, 50, 50)
 		MoveHandleUI.setPlaceEnabled(false)
 	else
-		HighlightSystem.applyTo(previewPart, Constants.HIGHLIGHT_COLORS.Selected, 0.6)
+		if originalColor then
+			previewPart.Color = originalColor
+		end
 		MoveHandleUI.setPlaceEnabled(true)
 	end
 end
@@ -235,6 +243,7 @@ local function toMoving(building: BasePart)
 	selectedBuildingId = building:GetAttribute("BuildingId")
 	originalCFrame = building.CFrame
 	previewItemName = building:GetAttribute("ItemName")
+	originalColor = nil -- 이전 색상 초기화
 
 	-- 건물을 투명하게 (이동 프리뷰로 전환)
 	building.Transparency = 0.5
@@ -295,7 +304,7 @@ local function toPlacingNew(itemName: string)
 	if character then
 		local hrp = character:FindFirstChild("HumanoidRootPart")
 		if hrp then
-			local frontPos = hrp.Position + hrp.CFrame.LookVector * 10
+			local frontPos = hrp.Position + hrp.CFrame.LookVector * BalanceConfig.PLACEMENT_PREVIEW_DISTANCE
 			local snappedCFrame = GridSnap.snapToGrid(currentBuildZone, frontPos, previewPart.Size)
 			previewPart.CFrame = snappedCFrame
 		end

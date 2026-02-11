@@ -40,7 +40,7 @@ function MoveHandleUI.init(callbacks: {
 	panel = Instance.new("Frame")
 	panel.Name = "MovePanel"
 	panel.Size = UDim2.new(0, panelWidth, 0, panelHeight)
-	panel.Position = UDim2.new(0.5, -panelWidth / 2, 1, -110 - panelHeight)
+	panel.Position = UDim2.new(0.5, -panelWidth / 2, 1, -85 - panelHeight)
 	panel.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 	panel.BackgroundTransparency = 0.1
 	panel.BorderSizePixel = 0

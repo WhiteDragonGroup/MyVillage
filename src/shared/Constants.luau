@@ -1,11 +1,14 @@
 -- Constants.luau
 -- 빌드 시스템 상수 및 건물 카탈로그
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
+
 local Constants = {}
 
--- 그리드 설정
-Constants.GRID_SIZE = 2       -- 2 stud 단위 스냅
-Constants.ROTATION_STEP = 90  -- 90도 단위 회전
+-- 그리드 설정 (BalanceConfig에서 재노출 — 기존 참조 호환)
+Constants.GRID_SIZE = BalanceConfig.GRID_SIZE
+Constants.ROTATION_STEP = BalanceConfig.ROTATION_STEP
 
 -- 건물 유형
 Constants.BuildingType = {
@@ -60,10 +63,7 @@ Constants.BuildState = {
 	Moving = "Moving",
 }
 
--- 시작 인벤토리 (플레이어에게 기본 지급)
-Constants.DEFAULT_INVENTORY = {
-	{ itemName = "DummyBlock", count = 20 },
-	{ itemName = "DummyBlock2", count = 20 },
-}
+-- 시작 인벤토리 (BalanceConfig에서 재노출 — 기존 참조 호환)
+Constants.DEFAULT_INVENTORY = BalanceConfig.DEFAULT_INVENTORY
 
 return Constants
