@@ -12,5 +12,6 @@ BalanceConfig.Building = require(script:WaitForChild("BuildingConfig"))
 BalanceConfig.Spawn = require(script:WaitForChild("SpawnConfig"))
 BalanceConfig.Pet = require(script:WaitForChild("PetConfig"))
 BalanceConfig.Upgrade = require(script:WaitForChild("UpgradeConfig"))
+BalanceConfig.Currency = require(script:WaitForChild("CurrencyConfig"))
 
 return BalanceConfig

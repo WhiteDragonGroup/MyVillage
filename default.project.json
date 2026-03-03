@@ -44,6 +44,12 @@
         },
         "UpgradeStateChanged": {
           "$className": "RemoteEvent"
+        },
+        "CurrencyUpdate": {
+          "$className": "RemoteEvent"
+        },
+        "GetCurrency": {
+          "$className": "RemoteFunction"
         }
       },
       "Items": {
@@ -215,6 +221,12 @@
             "Shape": "Ball"
           }
         }
+      }
+    },
+
+    "ServerStorage": {
+      "Buildings": {
+        "$className": "Folder"
       }
     },
 

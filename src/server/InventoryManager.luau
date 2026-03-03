@@ -11,13 +11,22 @@ local InventoryManager = {}
 -- 플레이어별 인벤토리 저장소 { [Player]: { [itemName]: count } }
 local inventories = {}
 
--- 플레이어 인벤토리 초기화
-function InventoryManager.initPlayer(player: Player)
+-- 플레이어 인벤토리 초기화 (저장된 데이터가 있으면 복원)
+function InventoryManager.initPlayer(player: Player, savedInventory: { { itemName: string, count: number } }?)
 	inventories[player] = {}
 
-	-- 기본 인벤토리 지급
-	for _, item in Constants.DEFAULT_INVENTORY do
-		inventories[player][item.itemName] = item.count
+	if savedInventory and #savedInventory > 0 then
+		-- 저장된 인벤토리 복원
+		for _, item in savedInventory do
+			if item.itemName and item.count then
+				inventories[player][item.itemName] = item.count
+			end
+		end
+	else
+		-- 기본 인벤토리 지급
+		for _, item in Constants.DEFAULT_INVENTORY do
+			inventories[player][item.itemName] = item.count
+		end
 	end
 
 	InventoryManager._notifyClient(player)
@@ -79,6 +88,11 @@ function InventoryManager.hasItem(player: Player, itemName: string, amount: numb
 
 	amount = amount or 1
 	return (inv[itemName] or 0) >= amount
+end
+
+-- 저장용 데이터 반환
+function InventoryManager.getSaveData(player: Player): { { itemName: string, count: number } }
+	return InventoryManager.getInventory(player)
 end
 
 -- 클라이언트에 인벤토리 업데이트 전송

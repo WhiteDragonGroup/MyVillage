@@ -8,8 +8,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
 
-local TIME_SCALE = BalanceConfig.TIME_SCALE
-local UTC_OFFSET = BalanceConfig.UTC_OFFSET
+local TIME_SCALE = BalanceConfig.Time.TIME_SCALE
+local UTC_OFFSET = BalanceConfig.Time.UTC_OFFSET
 
 -- 서버 시작 시점의 실제 KST 시간을 기준점으로
 local startRealTime = os.time()

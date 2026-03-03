@@ -105,7 +105,7 @@ local function updateTime()
 	periodLabel.Text = period
 
 	-- 아이콘 변경 (낮/밤)
-	if hours >= BalanceConfig.DAY_START_HOUR and hours < BalanceConfig.NIGHT_START_HOUR then
+	if hours >= BalanceConfig.Time.DAY_START_HOUR and hours < BalanceConfig.Time.NIGHT_START_HOUR then
 		icon.Text = "☀️"
 		stroke.Color = Color3.fromRGB(255, 200, 100)  -- 낮 = 따뜻한 색
 	else

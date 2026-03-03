@@ -87,24 +87,41 @@ local function createPetModel(petData, position: Vector3): BasePart
 end
 
 ----------------------------------------------------------------
--- 플레이어 초기화
+-- 플레이어 초기화 (저장된 데이터가 있으면 복원)
 ----------------------------------------------------------------
-function PetManager.initPlayer(player: Player)
+function PetManager.initPlayer(player: Player, savedPets: { any }?)
 	_playerPets[player] = {}
 
-	-- 기본 펫 지급
-	for _, defaultPet in PetCfg.DEFAULT_PETS do
-		local petId = HttpService:GenerateGUID(false)
-		local petData = {
-			petId = petId,
-			petName = defaultPet.petName,
-			petType = defaultPet.petType,
-			rarity = defaultPet.rarity,
-			ownerId = player.UserId,
-			assignedBuildingId = "",
-			model = nil,
-		}
-		_playerPets[player][petId] = petData
+	if savedPets and #savedPets > 0 then
+		-- 저장된 펫 복원
+		for _, savedPet in savedPets do
+			local petId = savedPet.petId or HttpService:GenerateGUID(false)
+			local petData = {
+				petId = petId,
+				petName = savedPet.petName or "???",
+				petType = savedPet.petType or "Construction",
+				rarity = savedPet.rarity or "일반",
+				ownerId = player.UserId,
+				assignedBuildingId = "", -- 접속 시 배치 해제 (건물 복원 후 재배치 필요)
+				model = nil,
+			}
+			_playerPets[player][petId] = petData
+		end
+	else
+		-- 기본 펫 지급
+		for _, defaultPet in PetCfg.DEFAULT_PETS do
+			local petId = HttpService:GenerateGUID(false)
+			local petData = {
+				petId = petId,
+				petName = defaultPet.petName,
+				petType = defaultPet.petType,
+				rarity = defaultPet.rarity,
+				ownerId = player.UserId,
+				assignedBuildingId = "",
+				model = nil,
+			}
+			_playerPets[player][petId] = petData
+		end
 	end
 
 	-- 펫 모델 스폰 (플롯이 배정된 뒤)
@@ -322,6 +339,25 @@ function PetManager._startWander(petData, buildZone: BasePart)
 			end
 		end
 	end)
+end
+
+----------------------------------------------------------------
+-- 저장용 데이터 반환
+----------------------------------------------------------------
+function PetManager.getSaveData(player: Player): { any }
+	local pets = _playerPets[player]
+	if not pets then return {} end
+
+	local result = {}
+	for _, petData in pets do
+		table.insert(result, {
+			petId = petData.petId,
+			petName = petData.petName,
+			petType = petData.petType,
+			rarity = petData.rarity,
+		})
+	end
+	return result
 end
 
 ----------------------------------------------------------------

@@ -3,6 +3,7 @@
 -- startUpgrade, cancelUpgrade, addProgress, completeUpgrade
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
@@ -18,11 +19,18 @@ local UpgradeManager = {}
 -- 활성 업그레이드 루프 { [buildingId] = true }
 local _activeLoops = {}
 
--- 업그레이드 완료 콜백 (PetManager 연결용)
-local _onCompleteCallback = nil
+-- 외부 콜백
+local _onCompleteCallback = nil  -- (Player, petId) → 펫 해제
+local _spendCoinsFunc = nil      -- (Player, amount) → boolean
+local _hasCoinsFunc = nil        -- (Player, amount) → boolean
 
 function UpgradeManager.setOnCompleteCallback(callback: (Player, string) -> ())
 	_onCompleteCallback = callback
+end
+
+function UpgradeManager.setCurrencyFunctions(hasCoins, spendCoins)
+	_hasCoinsFunc = hasCoins
+	_spendCoinsFunc = spendCoins
 end
 
 ----------------------------------------------------------------
@@ -39,8 +47,16 @@ function UpgradeManager.startUpgrade(player: Player, building: BasePart): (boole
 		return false, "이미 수리중"
 	end
 
-	-- 비용 체크 (현재 무료)
-	-- local cost = UpgradeCfg.COST[level] or 0
+	-- 비용 체크
+	local cost = UpgradeCfg.COST[level] or 0
+	if cost > 0 then
+		if not _hasCoinsFunc or not _hasCoinsFunc(player, cost) then
+			return false, "코인 부족 (" .. cost .. " 필요)"
+		end
+		if not _spendCoinsFunc(player, cost) then
+			return false, "코인 차감 실패"
+		end
+	end
 
 	-- 상태 변경
 	building:SetAttribute("UpgradeState", Constants.UpgradeState.Upgrading)
@@ -147,8 +163,8 @@ function UpgradeManager._completeUpgrade(player: Player, building: BasePart, bui
 	local assignedPetId = building:GetAttribute("AssignedPetId") or ""
 	building:SetAttribute("AssignedPetId", "")
 
-	-- 외형 변화 적용
-	UpgradeManager.applyVisualUpgrade(building, newLevel)
+	-- 외형 변화 적용 (모델 스왑 또는 크기/색상 변경)
+	local newBuilding = UpgradeManager.applyVisualUpgrade(building, newLevel)
 
 	-- 펫 자동 해제 콜백
 	if _onCompleteCallback and assignedPetId ~= "" then
@@ -158,15 +174,102 @@ function UpgradeManager._completeUpgrade(player: Player, building: BasePart, bui
 	-- 클라이언트 알림
 	upgradeStateChanged:FireClient(player, buildingId, "completed", newLevel)
 
-	print(player.Name .. " - " .. (building:GetAttribute("ItemName") or "?") .. " 레벨업! Lv." .. newLevel)
+	local itemName = (newBuilding or building):GetAttribute("ItemName") or "?"
+	print(player.Name .. " - " .. itemName .. " 레벨업! Lv." .. newLevel)
 
 	return assignedPetId
 end
 
 ----------------------------------------------------------------
--- 외형 변화 적용 (크기 증가 + 색상 밝아짐)
+-- 모델 스왑 (ServerStorage에 레벨별 모델이 있을 때)
+-- ServerStorage/Buildings/{ItemName}/Level{N} 구조
 ----------------------------------------------------------------
-function UpgradeManager.applyVisualUpgrade(building: BasePart, level: number)
+function UpgradeManager._swapModel(oldBuilding: BasePart, template: Instance): BasePart?
+	local parent = oldBuilding.Parent
+	local cframe = oldBuilding.CFrame
+	local itemName = oldBuilding:GetAttribute("ItemName") or ""
+
+	-- 기존 속성 전부 복사
+	local attrs = {}
+	for _, key in {"BuildingId", "ItemName", "OwnerId", "Level", "UpgradeState", "UpgradeProgress", "AssignedPetId"} do
+		attrs[key] = oldBuilding:GetAttribute(key)
+	end
+
+	-- 새 모델 클론
+	local newModel = template:Clone()
+	local newBuilding: BasePart
+
+	if newModel:IsA("BasePart") then
+		-- Part 템플릿: 바로 사용
+		newBuilding = newModel
+		newBuilding.CFrame = cframe
+	elseif newModel:IsA("Model") then
+		-- Model 템플릿: PivotTo로 위치 설정, PrimaryPart에 속성 부여
+		newModel:PivotTo(cframe)
+		newBuilding = newModel.PrimaryPart or newModel:FindFirstChildWhichIsA("BasePart")
+		if not newBuilding then
+			warn("모델 스왑 실패: PrimaryPart 없음 - " .. itemName)
+			newModel:Destroy()
+			return nil
+		end
+	else
+		newModel:Destroy()
+		return nil
+	end
+
+	newBuilding.Anchored = true
+
+	-- 속성 적용
+	for key, value in attrs do
+		newBuilding:SetAttribute(key, value)
+	end
+
+	-- CollisionBox 생성
+	local collisionSize = Constants.getCollisionSize(itemName)
+	local box = Instance.new("Part")
+	box.Name = "CollisionBox"
+	box.Size = collisionSize
+	box.Transparency = 1
+	box.Anchored = true
+	box.CanCollide = false
+	box.CanQuery = true
+	box.CanTouch = false
+	box.CFrame = newBuilding.CFrame
+	box:SetAttribute("IsCollisionBox", true)
+	box.Parent = newBuilding
+
+	-- 부모 설정 & 기존 건물 제거
+	newModel.Parent = parent
+	oldBuilding:Destroy()
+
+	return newBuilding
+end
+
+----------------------------------------------------------------
+-- 외형 변화 적용
+-- 1순위: ServerStorage에 레벨별 모델이 있으면 스왑
+-- 2순위: 없으면 크기 스케일 + 색상 밝기 변경 (폴백)
+----------------------------------------------------------------
+function UpgradeManager.applyVisualUpgrade(building: BasePart, level: number): BasePart
+	local itemName = building:GetAttribute("ItemName") or ""
+
+	-- 1. ServerStorage/Buildings/{ItemName}/Level{N} 확인
+	local buildingsFolder = ServerStorage:FindFirstChild("Buildings")
+	if buildingsFolder then
+		local itemFolder = buildingsFolder:FindFirstChild(itemName)
+		if itemFolder then
+			local levelModel = itemFolder:FindFirstChild("Level" .. level)
+			if levelModel then
+				local newBuilding = UpgradeManager._swapModel(building, levelModel)
+				if newBuilding then
+					print("모델 스왑 완료: " .. itemName .. " → Level" .. level)
+					return newBuilding
+				end
+			end
+		end
+	end
+
+	-- 2. 폴백: 크기/색상 변경
 	-- 원본 크기 저장 (최초 1회)
 	local origSizeX = building:GetAttribute("OrigSizeX")
 	if not origSizeX then
@@ -200,6 +303,8 @@ function UpgradeManager.applyVisualUpgrade(building: BasePart, level: number)
 		math.min(1, origColor.G + brighten),
 		math.min(1, origColor.B + brighten)
 	)
+
+	return building
 end
 
 ----------------------------------------------------------------

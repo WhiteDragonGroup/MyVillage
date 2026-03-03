@@ -152,7 +152,9 @@ function UpgradeUI.show(level: number, itemName: string?)
 	local infoLabel = dialog:FindFirstChild("InfoLabel")
 	if infoLabel then
 		local buildingLabel = itemName or "건물"
-		infoLabel.Text = buildingLabel .. "\nLv." .. level .. " → Lv." .. nextLevel .. "\n비용: 무료"
+		local cost = BalanceConfig.Upgrade.COST[level] or 0
+		local costText = if cost > 0 then (cost .. " 코인") else "무료"
+		infoLabel.Text = buildingLabel .. "\nLv." .. level .. " → Lv." .. nextLevel .. "\n비용: " .. costText
 
 		if nextLevel > maxLevel then
 			infoLabel.Text = "이미 최대 레벨입니다! (Lv." .. maxLevel .. ")"

@@ -22,6 +22,7 @@ local SelectionUI = require(clientScript:WaitForChild("build"):WaitForChild("Sel
 local MoveHandleUI = require(clientScript:WaitForChild("build"):WaitForChild("MoveHandleUI"))
 local UpgradeUI = require(clientScript:WaitForChild("build"):WaitForChild("UpgradeUI"))
 local PetListUI = require(clientScript:WaitForChild("build"):WaitForChild("PetListUI"))
+local CurrencyUI = require(clientScript:WaitForChild("build"):WaitForChild("CurrencyUI"))
 
 local HighlightSystem = require(clientScript:WaitForChild("systems"):WaitForChild("HighlightSystem"))
 local CollisionDetector = require(clientScript:WaitForChild("systems"):WaitForChild("CollisionDetector"))
@@ -44,6 +45,8 @@ local assignPetEvent = remotes:WaitForChild("AssignPet")
 local unassignPetEvent = remotes:WaitForChild("UnassignPet")
 local getPetsFunc = remotes:WaitForChild("GetPets")
 local upgradeStateChangedEvent = remotes:WaitForChild("UpgradeStateChanged")
+local currencyUpdateEvent = remotes:WaitForChild("CurrencyUpdate")
+local getCurrencyFunc = remotes:WaitForChild("GetCurrency")
 
 local itemsFolder = ReplicatedStorage:WaitForChild("Items")
 
@@ -693,6 +696,23 @@ task.spawn(function()
 	if inv then
 		inventory = inv
 		InventoryUI.updateInventory(inv)
+	end
+end)
+
+----------------------------------------------------------------
+-- 코인 동기화
+----------------------------------------------------------------
+
+CurrencyUI.init()
+
+currencyUpdateEvent.OnClientEvent:Connect(function(coins)
+	CurrencyUI.updateCoins(coins)
+end)
+
+task.spawn(function()
+	local coins = getCurrencyFunc:InvokeServer()
+	if coins then
+		CurrencyUI.updateCoins(coins)
 	end
 end)
 
