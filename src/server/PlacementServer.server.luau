@@ -14,8 +14,11 @@ local getInventoryFunc = remotes:WaitForChild("GetInventory")
 local itemsFolder = ReplicatedStorage:WaitForChild("Items")
 local plotsFolder = workspace:WaitForChild("Plots")
 
+local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
+
 local serverScript = script.Parent
 local InventoryManager = require(serverScript:WaitForChild("InventoryManager"))
+local UpgradeManager = require(serverScript:WaitForChild("UpgradeManager"))
 
 ----------------------------------------------------------------
 -- 유틸리티
@@ -48,12 +51,53 @@ local function findBuildingById(plot, buildingId: string): BasePart?
 	return nil
 end
 
--- 서버 충돌 체크 (플레이어 캐릭터 제외)
-local function checkServerCollision(part: BasePart, ignoreParts: { Instance }?): boolean
+-- CollisionBox 생성 (건물의 자식으로 추가, 투명 충돌 판정용)
+local function createCollisionBox(parent: BasePart, itemName: string): BasePart
+	local collisionSize = Constants.getCollisionSize(itemName)
+
+	local box = Instance.new("Part")
+	box.Name = "CollisionBox"
+	box.Size = collisionSize
+	box.Transparency = 1
+	box.Anchored = true
+	box.CanCollide = false
+	box.CanQuery = true
+	box.CanTouch = false
+	box.CFrame = parent.CFrame
+	box:SetAttribute("IsCollisionBox", true)
+	box.Parent = parent
+
+	-- 건물 이동 시 CollisionBox도 따라가도록 CFrame 동기화는
+	-- 부모-자식 관계로 자동 처리됨 (Weld 불필요 — 서버에서 건물 CFrame 직접 조작)
+
+	return box
+end
+
+-- CollisionBox CFrame 동기화 (건물 CFrame 변경 후 호출)
+local function syncCollisionBox(building: BasePart)
+	local box = building:FindFirstChild("CollisionBox")
+	if box then
+		box.CFrame = building.CFrame
+	end
+end
+
+-- 서버 충돌 체크 (CollisionBox 기반)
+-- probeSize: 배치할 건물의 충돌 사이즈, probeCFrame: 배치 위치
+local function checkServerCollision(probeCFrame: CFrame, probeSize: Vector3, ignoreParts: { Instance }?): boolean
+	-- 임시 프로브 파트 생성
+	local probe = Instance.new("Part")
+	probe.Size = probeSize
+	probe.CFrame = probeCFrame
+	probe.Anchored = true
+	probe.CanCollide = false
+	probe.CanQuery = true
+	probe.Transparency = 1
+	probe.Parent = workspace
+
 	local params = OverlapParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 
-	local combined = {}
+	local combined = { probe }
 	if ignoreParts then
 		for _, p in ignoreParts do
 			table.insert(combined, p)
@@ -69,11 +113,12 @@ local function checkServerCollision(part: BasePart, ignoreParts: { Instance }?):
 
 	params.FilterDescendantsInstances = combined
 
-	local touching = workspace:GetPartsInPart(part, params)
+	local touching = workspace:GetPartsInPart(probe, params)
+	probe:Destroy()
 
-	-- 배치된 건물(BuildingId 있는 것)만 충돌로 판정
+	-- CollisionBox 파트만 충돌로 판정
 	for _, p in touching do
-		if p:GetAttribute("BuildingId") ~= nil then
+		if p:GetAttribute("IsCollisionBox") == true then
 			return true
 		end
 	end
@@ -123,28 +168,35 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe)
 		return
 	end
 
-	-- 6. 건물 생성 (충돌 체크용 임시 파트)
+	-- 6. 서버 충돌 체크 (CollisionBox 기반, 고정 사이즈)
+	local collisionSize = Constants.getCollisionSize(itemName)
+	if checkServerCollision(cframe, collisionSize) then
+		warn(player.Name .. " - 충돌 감지, 배치 취소")
+		return
+	end
+
+	-- 7. 인벤토리 차감
+	InventoryManager.removeItem(player, itemName)
+
+	-- 8. 건물 생성
 	local item = template:Clone()
 	item.CFrame = cframe
 	item.Anchored = true
 	item.CanCollide = true
 	item.Parent = plot
 
-	-- 7. 서버 충돌 체크
-	if checkServerCollision(item, { item }) then
-		item:Destroy()
-		warn(player.Name .. " - 충돌 감지, 배치 취소")
-		return
-	end
-
-	-- 8. 인벤토리 차감
-	InventoryManager.removeItem(player, itemName)
-
 	-- 9. 건물 속성 설정
 	local buildingId = HttpService:GenerateGUID(false)
 	item:SetAttribute("BuildingId", buildingId)
 	item:SetAttribute("ItemName", itemName)
 	item:SetAttribute("OwnerId", player.UserId)
+	item:SetAttribute("Level", 1)
+	item:SetAttribute("UpgradeState", "")
+	item:SetAttribute("UpgradeProgress", 0)
+	item:SetAttribute("AssignedPetId", "")
+
+	-- 10. CollisionBox 생성 (고정 사이즈 충돌 판정용)
+	createCollisionBox(item, itemName)
 
 	print(player.Name .. " → " .. plot.Name .. "에 " .. itemName .. " 배치 완료 (ID: " .. buildingId .. ")")
 end)
@@ -179,6 +231,12 @@ moveBuildingEvent.OnServerEvent:Connect(function(player, buildingId, newCFrame)
 		return
 	end
 
+	-- 4.5. 수리중 가드
+	if UpgradeManager.isUpgrading(building) then
+		warn(player.Name .. " - 수리중인 건물 이동 불가")
+		return
+	end
+
 	-- 5. BuildZone 범위 체크
 	local buildZone = plot:FindFirstChild("BuildZone", true)
 	if not buildZone or not isInsideBuildZone(buildZone, newCFrame.Position) then
@@ -186,17 +244,25 @@ moveBuildingEvent.OnServerEvent:Connect(function(player, buildingId, newCFrame)
 		return
 	end
 
-	-- 6. 서버 충돌 체크 (자기 자신 제외)
-	local oldCFrame = building.CFrame
-	building.CFrame = newCFrame
+	-- 6. 서버 충돌 체크 (CollisionBox 기반, 자기 자신 제외)
+	local itemName = building:GetAttribute("ItemName") or ""
+	local collisionSize = Constants.getCollisionSize(itemName)
+	local myCollisionBox = building:FindFirstChild("CollisionBox")
+	local ignoreParts = {}
+	if myCollisionBox then
+		table.insert(ignoreParts, myCollisionBox)
+	end
 
-	if checkServerCollision(building, { building }) then
-		building.CFrame = oldCFrame -- 원래 위치로 복원
+	if checkServerCollision(newCFrame, collisionSize, ignoreParts) then
 		warn(player.Name .. " - 충돌 감지, 이동 취소")
 		return
 	end
 
-	print(player.Name .. " - " .. (building:GetAttribute("ItemName") or "?") .. " 이동 완료")
+	-- 이동 적용
+	building.CFrame = newCFrame
+	syncCollisionBox(building)
+
+	print(player.Name .. " - " .. (itemName or "?") .. " 이동 완료")
 end)
 
 ----------------------------------------------------------------
@@ -226,6 +292,12 @@ storeBuildingEvent.OnServerEvent:Connect(function(player, buildingId)
 	-- 4. 소유권 확인
 	if building:GetAttribute("OwnerId") ~= player.UserId then
 		warn(player.Name .. " - 소유하지 않은 건물 저장 시도")
+		return
+	end
+
+	-- 4.5. 수리중 가드
+	if UpgradeManager.isUpgrading(building) then
+		warn(player.Name .. " - 수리중인 건물 보관 불가")
 		return
 	end
 

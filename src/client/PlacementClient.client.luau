@@ -20,11 +20,16 @@ local BuildUI = require(clientScript:WaitForChild("build"):WaitForChild("BuildUI
 local InventoryUI = require(clientScript:WaitForChild("build"):WaitForChild("InventoryUI"))
 local SelectionUI = require(clientScript:WaitForChild("build"):WaitForChild("SelectionUI"))
 local MoveHandleUI = require(clientScript:WaitForChild("build"):WaitForChild("MoveHandleUI"))
+local UpgradeUI = require(clientScript:WaitForChild("build"):WaitForChild("UpgradeUI"))
+local PetListUI = require(clientScript:WaitForChild("build"):WaitForChild("PetListUI"))
 
 local HighlightSystem = require(clientScript:WaitForChild("systems"):WaitForChild("HighlightSystem"))
 local CollisionDetector = require(clientScript:WaitForChild("systems"):WaitForChild("CollisionDetector"))
 local GridSnap = require(clientScript:WaitForChild("systems"):WaitForChild("GridSnap"))
 local DragHandler = require(clientScript:WaitForChild("systems"):WaitForChild("DragHandler"))
+local UpgradeDisplay = require(clientScript:WaitForChild("systems"):WaitForChild("UpgradeDisplay"))
+local PetVisuals = require(clientScript:WaitForChild("systems"):WaitForChild("PetVisuals"))
+local LevelBadge = require(clientScript:WaitForChild("systems"):WaitForChild("LevelBadge"))
 
 -- Remotes
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -33,6 +38,12 @@ local moveBuildingEvent = remotes:WaitForChild("MoveBuilding")
 local storeBuildingEvent = remotes:WaitForChild("StoreBuilding")
 local getInventoryFunc = remotes:WaitForChild("GetInventory")
 local inventoryUpdateEvent = remotes:WaitForChild("InventoryUpdate")
+local startUpgradeEvent = remotes:WaitForChild("StartUpgrade")
+local cancelUpgradeEvent = remotes:WaitForChild("CancelUpgrade")
+local assignPetEvent = remotes:WaitForChild("AssignPet")
+local unassignPetEvent = remotes:WaitForChild("UnassignPet")
+local getPetsFunc = remotes:WaitForChild("GetPets")
+local upgradeStateChangedEvent = remotes:WaitForChild("UpgradeStateChanged")
 
 local itemsFolder = ReplicatedStorage:WaitForChild("Items")
 
@@ -56,6 +67,15 @@ local inventory = {}               -- 로컬 인벤토리 캐시
 -- 렌더 연결
 local renderConnection = nil
 
+-- 이동 종료 시 CollisionBox 복원
+local function restoreCollisionBox(building: BasePart)
+	local box = building:FindFirstChild("CollisionBox")
+	if box then
+		box.CanQuery = true
+		box.CFrame = building.CFrame
+	end
+end
+
 ----------------------------------------------------------------
 -- 유틸리티 함수
 ----------------------------------------------------------------
@@ -69,6 +89,18 @@ local function getMyBuildZone(): BasePart?
 		if plot:GetAttribute("Owner") == player.Name then
 			local bz = plot:FindFirstChild("BuildZone", true)
 			if bz then return bz end
+		end
+	end
+	return nil
+end
+
+-- 플레이어 플롯 찾기
+local function getMyPlot()
+	local plotsFolder = workspace:FindFirstChild("Plots")
+	if not plotsFolder then return nil end
+	for _, plot in plotsFolder:GetChildren() do
+		if plot:GetAttribute("Owner") == player.Name then
+			return plot
 		end
 	end
 	return nil
@@ -99,6 +131,7 @@ local function createPreview(itemName: string): BasePart?
 	part.Anchored = true
 	part.CanQuery = false
 	part.CanTouch = false
+	part:SetAttribute("ItemName", itemName) -- CollisionDetector에서 collisionSize 조회용
 	part.Parent = workspace
 	return part
 end
@@ -113,14 +146,23 @@ local function removePreview()
 	originalColor = nil
 end
 
--- 충돌 상태 업데이트 (프리뷰 파트 기준)
+-- 충돌 상태 업데이트 (프리뷰 파트 기준, CollisionBox 기반)
 local function updateCollisionState()
 	if not previewPart then
 		hasCollision = false
 		return
 	end
 
-	local colliding = CollisionDetector.checkCollision(previewPart, { previewPart })
+	-- 이동 중인 건물의 CollisionBox를 무시 목록에 추가
+	local ignoreParts = { previewPart }
+	if currentState == BuildState.Moving and selectedBuilding then
+		local myBox = selectedBuilding:FindFirstChild("CollisionBox")
+		if myBox then
+			table.insert(ignoreParts, myBox)
+		end
+	end
+
+	local colliding = CollisionDetector.checkCollision(previewPart, ignoreParts)
 
 	hasCollision = colliding
 
@@ -155,6 +197,8 @@ local function toIdle()
 	InventoryUI.hide()
 	SelectionUI.hide()
 	MoveHandleUI.hide()
+	UpgradeUI.hide()
+	PetListUI.hide()
 	HighlightSystem.clear()
 	DragHandler.stopDrag()
 	removePreview()
@@ -178,6 +222,8 @@ local function toBuildMode()
 	BuildUI.setBuildMode(true)
 	SelectionUI.hide()
 	MoveHandleUI.hide()
+	UpgradeUI.hide()
+	PetListUI.hide()
 	DragHandler.stopDrag()
 	removePreview()
 
@@ -226,6 +272,17 @@ local function toSelected(building: BasePart)
 	-- UI
 	InventoryUI.hide()
 	MoveHandleUI.hide()
+	UpgradeUI.hide()
+	PetListUI.hide()
+
+	-- 건물 상태에 따라 동적 버튼 표시
+	local upgradeState = building:GetAttribute("UpgradeState") or ""
+	if upgradeState == Constants.UpgradeState.Upgrading then
+		SelectionUI.showUpgrading()
+	else
+		local level = building:GetAttribute("Level") or 1
+		SelectionUI.showNormal(level, BalanceConfig.Upgrade.MAX_LEVEL)
+	end
 	SelectionUI.show()
 
 	-- 호버 렌더링 중지
@@ -249,6 +306,12 @@ local function toMoving(building: BasePart)
 	building.Transparency = 0.5
 	building.CanCollide = false
 	previewPart = building -- 기존 건물을 프리뷰로 사용
+
+	-- 이동 중 CollisionBox 비활성화 (자기 자신과 충돌 방지)
+	local myBox = building:FindFirstChild("CollisionBox")
+	if myBox then
+		myBox.CanQuery = false
+	end
 
 	-- BuildZone 찾기
 	currentBuildZone = getMyBuildZone()
@@ -298,14 +361,15 @@ local function toPlacingNew(itemName: string)
 		return
 	end
 
-	-- 캐릭터 눈앞에 초기 배치
+	-- 캐릭터 눈앞에 초기 배치 (그리드 클램핑에 collisionSize 사용)
 	currentRotationY = 0
+	local collisionSize = Constants.getCollisionSize(itemName)
 	local character = player.Character
 	if character then
 		local hrp = character:FindFirstChild("HumanoidRootPart")
 		if hrp then
-			local frontPos = hrp.Position + hrp.CFrame.LookVector * BalanceConfig.PLACEMENT_PREVIEW_DISTANCE
-			local snappedCFrame = GridSnap.snapToGrid(currentBuildZone, frontPos, previewPart.Size)
+			local frontPos = hrp.Position + hrp.CFrame.LookVector * BalanceConfig.Building.PLACEMENT_PREVIEW_DISTANCE
+			local snappedCFrame = GridSnap.snapToGrid(currentBuildZone, frontPos, collisionSize)
 			previewPart.CFrame = snappedCFrame
 		end
 	end
@@ -345,6 +409,7 @@ BuildUI.init(function()
 			selectedBuilding.CFrame = originalCFrame
 			selectedBuilding.Transparency = 0
 			selectedBuilding.CanCollide = true
+			restoreCollisionBox(selectedBuilding)
 			DragHandler.stopDrag()
 			previewPart = nil
 		elseif currentState == BuildState.PlacingNew then
@@ -362,7 +427,7 @@ InventoryUI.init(function(itemName: string)
 	end
 end)
 
--- SelectionUI: Store/Cancel/Move
+-- SelectionUI: 동적 버튼 콜백
 SelectionUI.init({
 	onStore = function()
 		if currentState == BuildState.Selected and selectedBuilding then
@@ -387,6 +452,82 @@ SelectionUI.init({
 			toMoving(selectedBuilding)
 		end
 	end,
+
+	onUpgrade = function()
+		if currentState == BuildState.Selected and selectedBuilding then
+			local level = selectedBuilding:GetAttribute("Level") or 1
+			local itemName = selectedBuilding:GetAttribute("ItemName")
+			local buildingInfo = Constants.BUILDINGS[itemName]
+			local displayName = buildingInfo and buildingInfo.name or itemName
+			UpgradeUI.show(level, displayName)
+		end
+	end,
+
+	onCancelUpgrade = function()
+		if currentState == BuildState.Selected and selectedBuilding then
+			local buildingId = selectedBuilding:GetAttribute("BuildingId")
+			if buildingId then
+				cancelUpgradeEvent:FireServer(buildingId)
+			end
+			HighlightSystem.clear()
+			toBuildMode()
+		end
+	end,
+
+	onAssignPet = function()
+		if currentState == BuildState.Selected and selectedBuilding then
+			local buildingId = selectedBuilding:GetAttribute("BuildingId")
+			-- 서버에서 펫 목록 가져오기
+			task.spawn(function()
+				local pets = getPetsFunc:InvokeServer()
+				if pets and #pets > 0 then
+					PetListUI.show(pets, buildingId)
+				else
+					PetListUI.show({}, buildingId)
+				end
+			end)
+		end
+	end,
+})
+
+-- UpgradeUI: 업그레이드 확인 다이얼로그
+UpgradeUI.init({
+	onConfirm = function()
+		if selectedBuilding then
+			local buildingId = selectedBuilding:GetAttribute("BuildingId")
+			if buildingId then
+				startUpgradeEvent:FireServer(buildingId)
+			end
+		end
+		UpgradeUI.hide()
+		HighlightSystem.clear()
+		toBuildMode()
+	end,
+
+	onCancel = function()
+		UpgradeUI.hide()
+	end,
+})
+
+-- PetListUI: 펫 배치/회수
+PetListUI.init({
+	onAssign = function(petId, buildingId)
+		assignPetEvent:FireServer(petId, buildingId)
+		PetListUI.hide()
+		HighlightSystem.clear()
+		toBuildMode()
+	end,
+
+	onUnassign = function(petId)
+		unassignPetEvent:FireServer(petId)
+		PetListUI.hide()
+		HighlightSystem.clear()
+		toBuildMode()
+	end,
+
+	onClose = function()
+		PetListUI.hide()
+	end,
 })
 
 -- 배치 확정 (UI 버튼 + 마우스 클릭 공용)
@@ -408,6 +549,7 @@ local function confirmPlace()
 		selectedBuilding.Transparency = 0
 		selectedBuilding.CanCollide = true
 		HighlightSystem.removeFrom(selectedBuilding)
+		restoreCollisionBox(selectedBuilding)
 		previewPart = nil
 
 		if buildingId then
@@ -438,6 +580,7 @@ MoveHandleUI.init({
 			selectedBuilding.CFrame = originalCFrame
 			selectedBuilding.Transparency = 0
 			selectedBuilding.CanCollide = true
+			restoreCollisionBox(selectedBuilding)
 			HighlightSystem.removeFrom(selectedBuilding)
 			DragHandler.stopDrag()
 			previewPart = nil
@@ -456,6 +599,9 @@ MoveHandleUI.init({
 
 -- 마우스/키보드 입력 (gameProcessed로 UI 클릭과 구분)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	-- 다이얼로그가 열려 있으면 입력 무시
+	if UpgradeUI.isVisible() or PetListUI.isVisible() then return end
+
 	-- 마우스 클릭: 배치 확정 / BuildMode에서 건물 선택
 	if input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessed then
 		if currentState == BuildState.PlacingNew or currentState == BuildState.Moving then
@@ -479,6 +625,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			selectedBuilding.CFrame = originalCFrame
 			selectedBuilding.Transparency = 0
 			selectedBuilding.CanCollide = true
+			restoreCollisionBox(selectedBuilding)
 			HighlightSystem.removeFrom(selectedBuilding)
 			DragHandler.stopDrag()
 			previewPart = nil
@@ -500,6 +647,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 				selectedBuilding.CFrame = originalCFrame
 				selectedBuilding.Transparency = 0
 				selectedBuilding.CanCollide = true
+				restoreCollisionBox(selectedBuilding)
 				DragHandler.stopDrag()
 				previewPart = nil
 			elseif currentState == BuildState.PlacingNew then
@@ -548,4 +696,44 @@ task.spawn(function()
 	end
 end)
 
-print("PlacementClient 로드됨 - 빌드 시스템 v2")
+----------------------------------------------------------------
+-- 업그레이드/펫 이벤트 수신
+----------------------------------------------------------------
+
+upgradeStateChangedEvent.OnClientEvent:Connect(function(buildingId, action, data)
+	-- 업그레이드 완료/취소 시 선택 중이면 UI 갱신
+	if currentState == BuildState.Selected and selectedBuilding then
+		if selectedBuilding:GetAttribute("BuildingId") == buildingId then
+			-- UI 갱신 (건물 상태 변경 반영)
+			task.wait(0.1) -- 속성 반영 대기
+			toSelected(selectedBuilding)
+		end
+	end
+end)
+
+----------------------------------------------------------------
+-- 플롯 감시 (업그레이드 게이지 + 펫 비주얼)
+----------------------------------------------------------------
+
+task.spawn(function()
+	-- 플롯이 배정될 때까지 대기
+	local plotsFolder = workspace:WaitForChild("Plots")
+	local myPlot = nil
+
+	while not myPlot do
+		task.wait(0.5)
+		for _, plot in plotsFolder:GetChildren() do
+			if plot:GetAttribute("Owner") == player.Name then
+				myPlot = plot
+				break
+			end
+		end
+	end
+
+	-- 업그레이드 게이지 + 펫 비주얼 + 레벨 뱃지 감시 시작
+	UpgradeDisplay.scanPlot(myPlot)
+	PetVisuals.scanPlot(myPlot)
+	LevelBadge.scanPlot(myPlot)
+end)
+
+print("PlacementClient 로드됨 - 빌드 시스템 v3 (업그레이드 + 펫)")

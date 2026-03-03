@@ -23,6 +23,27 @@
         },
         "InventoryUpdate": {
           "$className": "RemoteEvent"
+        },
+        "StartUpgrade": {
+          "$className": "RemoteEvent"
+        },
+        "CancelUpgrade": {
+          "$className": "RemoteEvent"
+        },
+        "AssignPet": {
+          "$className": "RemoteEvent"
+        },
+        "UnassignPet": {
+          "$className": "RemoteEvent"
+        },
+        "GetPets": {
+          "$className": "RemoteFunction"
+        },
+        "PetUpdate": {
+          "$className": "RemoteEvent"
+        },
+        "UpgradeStateChanged": {
+          "$className": "RemoteEvent"
         }
       },
       "Items": {
@@ -88,6 +109,110 @@
             "Color": [0.2, 0.6, 1],
             "Size": [2, 4, 6],
             "Material": "SmoothPlastic"
+          }
+        },
+        "Blacksmith": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [0.7, 0.3, 0.2],
+            "Size": [6, 5, 6],
+            "Material": "Slate"
+          }
+        },
+        "Inn": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [0.6, 0.45, 0.25],
+            "Size": [7, 5, 6],
+            "Material": "WoodPlanks"
+          }
+        },
+        "Fountain": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [0.7, 0.85, 0.95],
+            "Size": [4, 3, 4],
+            "Material": "Marble"
+          }
+        },
+        "Market": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [0.85, 0.7, 0.3],
+            "Size": [8, 4, 6],
+            "Material": "WoodPlanks"
+          }
+        },
+        "Library": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [0.4, 0.25, 0.15],
+            "Size": [7, 6, 7],
+            "Material": "Brick"
+          }
+        },
+        "MagicTower": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [0.4, 0.2, 0.6],
+            "Size": [5, 12, 5],
+            "Material": "Neon"
+          }
+        },
+        "Brewery": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [0.75, 0.55, 0.2],
+            "Size": [6, 5, 8],
+            "Material": "WoodPlanks"
+          }
+        },
+        "Pavilion": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [0.5, 0.8, 0.5],
+            "Size": [8, 4, 8],
+            "Material": "Marble"
+          }
+        },
+        "Temple": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [0.9, 0.75, 0.3],
+            "Size": [10, 8, 10],
+            "Material": "Marble"
+          }
+        },
+        "WorldTree": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [0.15, 0.5, 0.2],
+            "Size": [6, 14, 6],
+            "Material": "Grass"
+          }
+        }
+      },
+      "Pets": {
+        "$className": "Folder",
+        "ConstructionPet": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "CanCollide": false,
+            "Color": [0.55, 0.78, 0.55],
+            "Size": [2, 2, 2],
+            "Material": "SmoothPlastic",
+            "Shape": "Ball"
           }
         }
       }

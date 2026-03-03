@@ -8,6 +8,9 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local mouse = player:GetMouse()
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
+
 local DragHandler = {}
 
 local _active = false
@@ -17,6 +20,7 @@ local _currentRotationY = 0
 local _onPositionUpdate = nil  -- (cframe: CFrame) -> ()
 local _renderConnection = nil
 local _gridSnap = nil
+local _collisionSize = nil  -- 충돌 판정용 고정 사이즈
 
 function DragHandler.init(gridSnapModule)
 	_gridSnap = gridSnapModule
@@ -43,6 +47,10 @@ function DragHandler.startDrag(
 	_currentRotationY = initialRotationY
 	_onPositionUpdate = onPositionUpdate
 
+	-- 건물 종류에 따른 충돌 사이즈 결정
+	local itemName = targetPart:GetAttribute("ItemName")
+	_collisionSize = if itemName then Constants.getCollisionSize(itemName) else targetPart.Size
+
 	-- 매 프레임 위치 업데이트
 	_renderConnection = RunService.RenderStepped:Connect(function()
 		if not _active or not _buildZone or not _targetPart then return end
@@ -56,7 +64,8 @@ function DragHandler.startDrag(
 		local result = workspace:Raycast(unitRay.Origin, unitRay.Direction * 1000, rayParams)
 
 		if result then
-			local snappedCFrame = _gridSnap.snapToGrid(_buildZone, result.Position, _targetPart.Size, _currentRotationY)
+			-- 그리드 스냅에 collisionSize 사용 (바운딩 박스 클램핑용)
+			local snappedCFrame = _gridSnap.snapToGrid(_buildZone, result.Position, _collisionSize, _currentRotationY)
 			local finalCFrame = _gridSnap.applyRotation(snappedCFrame, _currentRotationY)
 
 			if _onPositionUpdate then
