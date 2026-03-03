@@ -117,10 +117,14 @@ local function findBuildingMainPart(part: BasePart): BasePart?
 	if not part then return nil end
 	local current = part
 	while current and current ~= workspace do
+		-- 플롯에 도달하면 탐색 중단 (플롯은 Owner 속성이 있음)
+		if current:GetAttribute("Owner") ~= nil then
+			break
+		end
 		if current:IsA("BasePart") and current:GetAttribute("BuildingId") ~= nil then
 			return current
 		end
-		-- Model이면 그 안에서 BuildingId를 가진 파트 탐색
+		-- 건물 Model이면 그 안에서 BuildingId를 가진 파트 탐색
 		if current:IsA("Model") then
 			for _, desc in current:GetDescendants() do
 				if desc:IsA("BasePart") and desc:GetAttribute("BuildingId") ~= nil then

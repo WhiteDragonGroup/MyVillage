@@ -9,10 +9,11 @@ local HighlightSystem = {}
 local _currentHighlight = nil  -- 현재 활성 Highlight 인스턴스
 local _currentTarget = nil      -- 현재 하이라이트 대상
 
--- BasePart의 부모 Model 찾기 (Highlight용)
+-- BasePart의 부모 건물 Model 찾기 (Highlight용)
+-- 플롯(Owner 속성 있음)은 제외하고 건물 Model만 반환
 local function getHighlightTarget(part: BasePart): Instance
 	local parent = part.Parent
-	if parent and parent:IsA("Model") then
+	if parent and parent:IsA("Model") and parent:GetAttribute("Owner") == nil then
 		return parent
 	end
 	return part

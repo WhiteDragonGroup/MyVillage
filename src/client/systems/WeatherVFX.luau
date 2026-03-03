@@ -12,6 +12,7 @@ local BalanceConfig = require(shared:WaitForChild("BalanceConfig"))
 local WeatherCfg = BalanceConfig.Weather
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local weatherChangedEvent = remotes:WaitForChild("WeatherChanged")
+local getWeatherFunc = remotes:WaitForChild("GetWeather")
 local weatherFolder = ReplicatedStorage:WaitForChild("Weather")
 
 local camera = workspace.CurrentCamera
@@ -303,6 +304,15 @@ function WeatherVFX.init()
 
 	-- 날씨 변경 이벤트 수신
 	weatherChangedEvent.OnClientEvent:Connect(onWeatherChanged)
+
+	-- 서버에서 현재 날씨 가져오기 (PlayerAdded 이벤트를 놓칠 수 있으므로)
+	task.spawn(function()
+		local weather = getWeatherFunc:InvokeServer()
+		if weather then
+			print("[WeatherVFX] 서버에서 현재 날씨 수신:", weather)
+			onWeatherChanged(weather)
+		end
+	end)
 
 	print("[WeatherVFX] 초기화 완료")
 end

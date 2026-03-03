@@ -45,6 +45,12 @@ Players.PlayerAdded:Connect(function(player)
 	weatherChangedEvent:FireClient(player, currentWeather)
 end)
 
+-- 클라이언트 요청 시 현재 날씨 반환 (init 후 동기화용)
+local getWeatherFunc = remotes:WaitForChild("GetWeather")
+getWeatherFunc.OnServerInvoke = function(_player)
+	return currentWeather
+end
+
 -- 초기 날씨 설정
 changeWeather()
 print("[WeatherManager] 초기 날씨:", currentWeather)

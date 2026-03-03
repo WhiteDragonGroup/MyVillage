@@ -53,6 +53,9 @@
         },
         "WeatherChanged": {
           "$className": "RemoteEvent"
+        },
+        "GetWeather": {
+          "$className": "RemoteFunction"
         }
       },
       "Weather": {
@@ -69,9 +72,6 @@
         "Sunny": {
           "$className": "Folder"
         }
-      },
-      "Buildings": {
-        "$className": "Folder"
       },
       "Items": {
         "$className": "Folder",
