@@ -162,14 +162,17 @@ local function restoreBuildings(player, plot, savedBuildings: { any })
 			item.Parent = plot
 			mainPart = item
 		elseif item:IsA("Model") then
-			item:PivotTo(cf)
-			item.Parent = plot
 			mainPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
 			if not mainPart then
 				warn("건물 복원 실패 - BasePart 없음: " .. itemName)
 				item:Destroy()
 				continue
 			end
+			-- PivotTo 보정: mainPart가 정확히 cf에 오도록
+			local pivotCF = item:GetPivot()
+			local mainToPivot = mainPart.CFrame:ToObjectSpace(pivotCF)
+			item:PivotTo(cf * mainToPivot)
+			item.Parent = plot
 			mainPart.Anchored = true
 		end
 

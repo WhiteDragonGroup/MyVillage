@@ -9,6 +9,15 @@ local HighlightSystem = {}
 local _currentHighlight = nil  -- 현재 활성 Highlight 인스턴스
 local _currentTarget = nil      -- 현재 하이라이트 대상
 
+-- BasePart의 부모 Model 찾기 (Highlight용)
+local function getHighlightTarget(part: BasePart): Instance
+	local parent = part.Parent
+	if parent and parent:IsA("Model") then
+		return parent
+	end
+	return part
+end
+
 -- Highlight 인스턴스 생성/업데이트
 local function ensureHighlight(target: BasePart, color: Color3, fillTransparency: number?)
 	if _currentTarget == target and _currentHighlight then
@@ -22,6 +31,9 @@ local function ensureHighlight(target: BasePart, color: Color3, fillTransparency
 	-- 기존 제거
 	HighlightSystem.clear()
 
+	-- Model이면 Model 전체 하이라이트
+	local adornee = getHighlightTarget(target)
+
 	-- 새 Highlight 생성
 	local highlight = Instance.new("Highlight")
 	highlight.Name = "BuildHighlight"
@@ -29,8 +41,8 @@ local function ensureHighlight(target: BasePart, color: Color3, fillTransparency
 	highlight.OutlineColor = color
 	highlight.FillTransparency = fillTransparency or 0.7
 	highlight.OutlineTransparency = 0.3
-	highlight.Adornee = target
-	highlight.Parent = target
+	highlight.Adornee = adornee
+	highlight.Parent = adornee
 
 	_currentHighlight = highlight
 	_currentTarget = target
@@ -67,9 +79,9 @@ end
 
 -- 특정 대상에 직접 Highlight 적용 (별도 인스턴스, 이동 중 프리뷰 등)
 function HighlightSystem.applyTo(target: BasePart, color: Color3, fillTransparency: number?): Highlight
-	local existing = target:FindFirstChild("BuildHighlight")
+	local adornee = getHighlightTarget(target)
+	local existing = adornee:FindFirstChild("BuildHighlight")
 	if existing then
-		-- 기존 하이라이트 색상만 업데이트
 		existing.FillColor = color
 		existing.OutlineColor = color
 		existing.FillTransparency = fillTransparency or 0.7
@@ -82,15 +94,16 @@ function HighlightSystem.applyTo(target: BasePart, color: Color3, fillTransparen
 	highlight.OutlineColor = color
 	highlight.FillTransparency = fillTransparency or 0.7
 	highlight.OutlineTransparency = 0.3
-	highlight.Adornee = target
-	highlight.Parent = target
+	highlight.Adornee = adornee
+	highlight.Parent = adornee
 
 	return highlight
 end
 
 -- 특정 대상의 하이라이트 제거
 function HighlightSystem.removeFrom(target: BasePart)
-	local existing = target:FindFirstChild("BuildHighlight")
+	local adornee = getHighlightTarget(target)
+	local existing = adornee:FindFirstChild("BuildHighlight")
 	if existing then
 		existing:Destroy()
 	end

@@ -245,8 +245,6 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 		item.Parent = plot
 		mainPart = item
 	elseif item:IsA("Model") then
-		item:PivotTo(cframe)
-		item.Parent = plot
 		mainPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
 		if not mainPart then
 			warn(player.Name .. " - 모델에 BasePart 없음: " .. itemName)
@@ -254,6 +252,11 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 			InventoryManager.addItem(player, itemName, 1, level) -- 인벤토리 복구
 			return
 		end
+		-- PivotTo 보정: mainPart가 정확히 cframe에 오도록
+		local pivotCF = item:GetPivot()
+		local mainToPivot = mainPart.CFrame:ToObjectSpace(pivotCF)
+		item:PivotTo(cframe * mainToPivot)
+		item.Parent = plot
 		mainPart.Anchored = true
 	end
 
@@ -335,10 +338,12 @@ moveBuildingEvent.OnServerEvent:Connect(function(player, buildingId, newCFrame)
 		return
 	end
 
-	-- 이동 적용 (Model이면 PivotTo로 전체 이동)
+	-- 이동 적용 (Model이면 PivotTo로 전체 이동, 보정 포함)
 	local parentModel = building.Parent
 	if parentModel and parentModel:IsA("Model") then
-		parentModel:PivotTo(newCFrame)
+		local pivotCF = parentModel:GetPivot()
+		local mainToPivot = building.CFrame:ToObjectSpace(pivotCF)
+		parentModel:PivotTo(newCFrame * mainToPivot)
 	else
 		building.CFrame = newCFrame
 	end
