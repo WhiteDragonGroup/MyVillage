@@ -70,6 +70,9 @@
           "$className": "Folder"
         }
       },
+      "Buildings": {
+        "$className": "Folder"
+      },
       "Items": {
         "$className": "Folder",
         "DummyBlock": {
@@ -243,9 +246,6 @@
     },
 
     "ServerStorage": {
-      "Buildings": {
-        "$className": "Folder"
-      }
     },
 
     "ServerScriptService": {

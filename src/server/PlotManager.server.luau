@@ -135,14 +135,15 @@ local function restoreBuildings(player, plot, savedBuildings: { any })
 		local level = bData.level or 1
 
 		-- 레벨별 모델이 있으면 사용, 없으면 기본 템플릿
-		local ServerStorage = game:GetService("ServerStorage")
-		local buildingsFolder = ServerStorage:FindFirstChild("Buildings")
+		local buildingsFolder = ReplicatedStorage:FindFirstChild("Buildings")
 		local useModel = nil
 
 		if buildingsFolder then
 			local itemFolder = buildingsFolder:FindFirstChild(itemName)
 			if itemFolder then
+				-- "Level1" 또는 "Mine_1" 형식 모두 지원
 				useModel = itemFolder:FindFirstChild("Level" .. level)
+					or itemFolder:FindFirstChild(itemName .. "_" .. level)
 			end
 		end
 
@@ -283,6 +284,39 @@ Players.PlayerAdded:Connect(function(player)
 	else
 		print(player.Name .. " - 빈 플롯 없음!")
 	end
+
+	-- 채팅 명령어: !reset → DataStore 초기화 + 기본 인벤토리 재지급
+	-- (Roblox TextChatService가 "/" 접두사를 가로채므로 "!" 사용)
+	player.Chatted:Connect(function(msg)
+		if msg:lower() == "!reset" then
+			-- 1. DataStore 삭제
+			DataStoreManager.saveOverride(player, {})
+
+			-- 2. 현재 배치된 건물 모두 제거
+			local resetPlot = getPlayerPlot(player)
+			if resetPlot then
+				UpgradeManager.cleanupPlayer(resetPlot)
+				local toDestroy = {}
+				for _, child in resetPlot:GetDescendants() do
+					if child:IsA("BasePart") and child:GetAttribute("BuildingId") ~= nil then
+						-- Model이면 Model 통째로, 아니면 파트만
+						local root = if child.Parent and child.Parent:IsA("Model") then child.Parent else child
+						toDestroy[root] = true
+					end
+				end
+				for obj in toDestroy do
+					obj:Destroy()
+				end
+			end
+
+			-- 3. 인벤토리/펫/코인 초기화 (기본값)
+			InventoryManager.initPlayer(player, nil)
+			PetManager.initPlayer(player, nil)
+			CurrencyManager.initPlayer(player, nil)
+
+			print(player.Name .. " - !reset 완료! 기본 상태로 초기화됨")
+		end
+	end)
 end)
 
 ----------------------------------------------------------------
@@ -297,11 +331,16 @@ Players.PlayerRemoving:Connect(function(player)
 		-- 업그레이드 루프 정리
 		UpgradeManager.cleanupPlayer(plot)
 
-		-- 배치된 건물 제거
+		-- 배치된 건물 제거 (Model이면 전체 제거)
+		local toDestroy = {}
 		for _, child in plot:GetDescendants() do
 			if child:IsA("BasePart") and child:GetAttribute("BuildingId") ~= nil then
-				child:Destroy()
+				local root = if child.Parent and child.Parent:IsA("Model") then child.Parent else child
+				toDestroy[root] = true
 			end
+		end
+		for obj in toDestroy do
+			obj:Destroy()
 		end
 
 		plot:SetAttribute("Owner", "")
@@ -319,36 +358,6 @@ Players.PlayerRemoving:Connect(function(player)
 
 	-- DataStore 캐시 제거
 	DataStoreManager.removePlayer(player)
-end)
-
-----------------------------------------------------------------
--- 채팅 명령어: /reset → DataStore 초기화 + 기본 인벤토리 재지급
-----------------------------------------------------------------
-Players.PlayerAdded:Connect(function(player)
-	player.Chatted:Connect(function(msg)
-		if msg:lower() == "/reset" then
-			-- 1. DataStore 삭제
-			DataStoreManager.saveOverride(player, {})
-
-			-- 2. 현재 배치된 건물 모두 제거
-			local plot = getPlayerPlot(player)
-			if plot then
-				UpgradeManager.cleanupPlayer(plot)
-				for _, child in plot:GetDescendants() do
-					if child:IsA("BasePart") and child:GetAttribute("BuildingId") ~= nil then
-						child:Destroy()
-					end
-				end
-			end
-
-			-- 3. 인벤토리/펫/코인 초기화 (기본값)
-			InventoryManager.initPlayer(player, nil)
-			PetManager.initPlayer(player, nil)
-			CurrencyManager.initPlayer(player, nil)
-
-			print(player.Name .. " - /reset 완료! 기본 상태로 초기화됨")
-		end
-	end)
 end)
 
 print("PlotManager 로드됨 (DataStore 통합)")

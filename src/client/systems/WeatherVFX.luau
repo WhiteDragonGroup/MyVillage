@@ -45,13 +45,14 @@ local function createRainFallback(): Part
 	emitter.Name = "RainParticle"
 	emitter.Color = ColorSequence.new(Color3.fromRGB(120, 160, 220))
 	emitter.Size = NumberSequence.new(0.05, 0.05)
-	emitter.Lifetime = NumberRange.new(0.4, 0.8)
-	emitter.Rate = 300
+	emitter.Lifetime = NumberRange.new(0.6, 1.2)
+	emitter.Rate = 500
 	emitter.Speed = NumberRange.new(60, 80)
-	emitter.SpreadAngle = Vector2.new(5, 5)
+	emitter.SpreadAngle = Vector2.new(10, 10)
 	emitter.EmissionDirection = Enum.NormalId.Bottom
 	emitter.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0.3),
+		NumberSequenceKeypoint.new(0.8, 0.3),
 		NumberSequenceKeypoint.new(1, 1),
 	})
 	emitter.Parent = part
@@ -63,11 +64,11 @@ local function createFrostFallback(): Part
 	local emitter = Instance.new("ParticleEmitter")
 	emitter.Name = "FrostParticle"
 	emitter.Color = ColorSequence.new(Color3.fromRGB(220, 230, 255))
-	emitter.Size = NumberSequence.new(0.1, 0.2)
-	emitter.Lifetime = NumberRange.new(1.5, 3)
-	emitter.Rate = 60
-	emitter.Speed = NumberRange.new(5, 15)
-	emitter.SpreadAngle = Vector2.new(30, 30)
+	emitter.Size = NumberSequence.new(0.15, 0.3)
+	emitter.Lifetime = NumberRange.new(2, 4)
+	emitter.Rate = 120
+	emitter.Speed = NumberRange.new(8, 20)
+	emitter.SpreadAngle = Vector2.new(40, 40)
 	emitter.EmissionDirection = Enum.NormalId.Bottom
 	emitter.RotSpeed = NumberRange.new(-90, 90)
 	emitter.Transparency = NumberSequence.new({
@@ -84,7 +85,7 @@ local function createThunderStormFallback(): Part
 	-- 비 파티클 Rate 증가 (폭풍)
 	local emitter = part:FindFirstChildWhichIsA("ParticleEmitter")
 	if emitter then
-		emitter.Rate = 500
+		emitter.Rate = 800
 		emitter.Speed = NumberRange.new(80, 100)
 		emitter.Color = ColorSequence.new(Color3.fromRGB(100, 130, 180))
 	end
@@ -235,12 +236,12 @@ local function spawnEffects(weatherType: string)
 	end
 end
 
--- 카메라 앞 위치 업데이트
+-- 카메라 기준 위치 업데이트 (위쪽에서 넓게 덮음)
 local function updateEffectPositions()
 	if not effectContainer then return end
 
 	local camCFrame = camera.CFrame
-	local targetCFrame = camCFrame * CFrame.new(0, 5, -WeatherCfg.CAMERA_OFFSET)
+	local targetCFrame = camCFrame * WeatherCfg.EFFECT_OFFSET
 
 	for _, child in effectContainer:GetChildren() do
 		if child:IsA("BasePart") then

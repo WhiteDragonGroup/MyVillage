@@ -111,41 +111,112 @@ local function getMyPlot()
 	return nil
 end
 
--- 파트가 배치된 건물인지 확인 (BuildingId 속성으로 식별)
+-- 파트 또는 조상에서 BuildingId를 가진 메인파트 찾기
+-- Model 자식 파트 클릭 시에도 모델 내부에서 mainPart 탐색
+local function findBuildingMainPart(part: BasePart): BasePart?
+	if not part then return nil end
+	local current = part
+	while current and current ~= workspace do
+		if current:IsA("BasePart") and current:GetAttribute("BuildingId") ~= nil then
+			return current
+		end
+		-- Model이면 그 안에서 BuildingId를 가진 파트 탐색
+		if current:IsA("Model") then
+			for _, desc in current:GetDescendants() do
+				if desc:IsA("BasePart") and desc:GetAttribute("BuildingId") ~= nil then
+					return desc
+				end
+			end
+		end
+		current = current.Parent
+	end
+	return nil
+end
+
+-- 파트가 배치된 건물인지 확인 (BuildingId 속성으로 식별, 조상 탐색)
 local function isBuildingPart(part: BasePart): boolean
-	if not part then return false end
-	return part:GetAttribute("BuildingId") ~= nil
+	return findBuildingMainPart(part) ~= nil
 end
 
--- 파트가 내 건물인지 확인
+-- 파트가 내 건물인지 확인 (조상 탐색)
 local function isMyBuilding(part: BasePart): boolean
-	if not part then return false end
-	local ownerId = part:GetAttribute("OwnerId")
-	return ownerId == player.UserId
+	local mainPart = findBuildingMainPart(part)
+	if not mainPart then return false end
+	return mainPart:GetAttribute("OwnerId") == player.UserId
 end
 
--- 프리뷰 파트 생성
-local function createPreview(itemName: string): BasePart?
-	local template = itemsFolder:FindFirstChild(itemName)
-	if not template then return nil end
+-- 프리뷰 파트 생성 (레벨별 모델 우선 사용)
+local buildingsFolder = ReplicatedStorage:FindFirstChild("Buildings")
 
-	local part = template:Clone()
-	part.Name = "PlacementPreview"
-	part.Transparency = 0.5
-	part.CanCollide = false
-	part.Anchored = true
-	part.CanQuery = false
-	part.CanTouch = false
-	part:SetAttribute("ItemName", itemName) -- CollisionDetector에서 collisionSize 조회용
-	part.Parent = workspace
-	return part
+local function createPreview(itemName: string, level: number?): BasePart?
+	local lvl = level or 1
+	local useModel = nil
+
+	-- Buildings 폴더에서 레벨별 모델 탐색
+	if buildingsFolder then
+		local itemFolder = buildingsFolder:FindFirstChild(itemName)
+		if itemFolder then
+			useModel = itemFolder:FindFirstChild("Level" .. lvl)
+				or itemFolder:FindFirstChild(itemName .. "_" .. lvl)
+		end
+	end
+
+	local item
+	if useModel then
+		item = useModel:Clone()
+	else
+		local template = itemsFolder:FindFirstChild(itemName)
+		if not template then return nil end
+		item = template:Clone()
+	end
+
+	-- BasePart vs Model 분기
+	local mainPart: BasePart
+	if item:IsA("BasePart") then
+		item.Name = "PlacementPreview"
+		item.Transparency = 0.5
+		item.CanCollide = false
+		item.Anchored = true
+		item.CanQuery = false
+		item.CanTouch = false
+		item:SetAttribute("ItemName", itemName)
+		item.Parent = workspace
+		mainPart = item
+	elseif item:IsA("Model") then
+		item.Name = "PlacementPreview"
+		item.Parent = workspace
+		mainPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+		if not mainPart then
+			item:Destroy()
+			return nil
+		end
+		-- 모든 파트를 프리뷰 상태로
+		for _, desc in item:GetDescendants() do
+			if desc:IsA("BasePart") then
+				desc.Transparency = 0.5
+				desc.CanCollide = false
+				desc.Anchored = true
+				desc.CanQuery = false
+				desc.CanTouch = false
+			end
+		end
+		mainPart:SetAttribute("ItemName", itemName)
+	end
+
+	return mainPart
 end
 
 -- 프리뷰 제거
 local function removePreview()
 	if previewPart then
 		HighlightSystem.removeFrom(previewPart)
-		previewPart:Destroy()
+		-- Model 자식인 경우 부모 Model도 함께 제거
+		local parent = previewPart.Parent
+		if parent and parent:IsA("Model") and parent.Name == "PlacementPreview" then
+			parent:Destroy()
+		else
+			previewPart:Destroy()
+		end
 		previewPart = nil
 	end
 	originalColor = nil
@@ -248,11 +319,12 @@ local function toBuildMode()
 		if currentState ~= BuildState.BuildMode then return end
 
 		local target = mouse.Target
-		if target and isBuildingPart(target) and isMyBuilding(target) then
-			if hoveredPart ~= target then
+		local mainTarget = findBuildingMainPart(target)
+		if mainTarget and isMyBuilding(mainTarget) then
+			if hoveredPart ~= mainTarget then
 				HighlightSystem.clear()
-				hoveredPart = target
-				HighlightSystem.setHover(target)
+				hoveredPart = mainTarget
+				HighlightSystem.setHover(mainTarget)
 			end
 		else
 			if hoveredPart then
@@ -308,9 +380,16 @@ local function toMoving(building: BasePart)
 	originalColor = nil -- 이전 색상 초기화
 
 	-- 건물을 투명하게 (이동 프리뷰로 전환)
-	building.Transparency = 0.5
-	building.CanCollide = false
-	previewPart = building -- 기존 건물을 프리뷰로 사용
+	local bModelParent = building.Parent
+	if bModelParent and bModelParent:IsA("Model") then
+		for _, d in bModelParent:GetDescendants() do
+			if d:IsA("BasePart") then d.Transparency = 0.5; d.CanCollide = false end
+		end
+	else
+		building.Transparency = 0.5
+		building.CanCollide = false
+	end
+	previewPart = building -- mainPart를 프리뷰로 사용
 
 	-- 이동 중 CollisionBox 비활성화 (자기 자신과 충돌 방지)
 	local myBox = building:FindFirstChild("CollisionBox")
@@ -336,7 +415,13 @@ local function toMoving(building: BasePart)
 		DragHandler.init(GridSnap)
 		DragHandler.startDrag(currentBuildZone, previewPart, currentRotationY, function(newCFrame)
 			if previewPart then
-				previewPart.CFrame = newCFrame
+				-- Model이면 PivotTo로 전체 이동
+				local moveParent = previewPart.Parent
+				if moveParent and moveParent:IsA("Model") then
+					moveParent:PivotTo(newCFrame)
+				else
+					previewPart.CFrame = newCFrame
+				end
 				updateCollisionState()
 			end
 		end)
@@ -360,7 +445,7 @@ local function toPlacingNew(itemName: string, level: number?)
 
 	-- 프리뷰 생성
 	removePreview()
-	previewPart = createPreview(itemName)
+	previewPart = createPreview(itemName, previewLevel)
 	if not previewPart then
 		print("아이템 템플릿 없음:", itemName)
 		toBuildMode()
@@ -376,7 +461,13 @@ local function toPlacingNew(itemName: string, level: number?)
 		if hrp then
 			local frontPos = hrp.Position + hrp.CFrame.LookVector * BalanceConfig.Building.PLACEMENT_PREVIEW_DISTANCE
 			local snappedCFrame = GridSnap.snapToGrid(currentBuildZone, frontPos, collisionSize)
-			previewPart.CFrame = snappedCFrame
+			-- Model이면 PivotTo, BasePart이면 CFrame 직접 설정
+			local parentModel = previewPart.Parent
+			if parentModel and parentModel:IsA("Model") and parentModel.Name == "PlacementPreview" then
+				parentModel:PivotTo(snappedCFrame)
+			else
+				previewPart.CFrame = snappedCFrame
+			end
 		end
 	end
 
@@ -392,7 +483,13 @@ local function toPlacingNew(itemName: string, level: number?)
 	DragHandler.init(GridSnap)
 	DragHandler.startDrag(currentBuildZone, previewPart, currentRotationY, function(newCFrame)
 		if previewPart then
-			previewPart.CFrame = newCFrame
+			-- Model이면 PivotTo로 전체 이동
+			local parentModel = previewPart.Parent
+			if parentModel and parentModel:IsA("Model") and parentModel.Name == "PlacementPreview" then
+				parentModel:PivotTo(newCFrame)
+			else
+				previewPart.CFrame = newCFrame
+			end
 			updateCollisionState()
 		end
 	end)
@@ -411,10 +508,18 @@ BuildUI.init(function()
 	elseif currentState == BuildState.Selected or currentState == BuildState.Moving or currentState == BuildState.PlacingNew then
 		-- 빌드모드에서 나가기
 		if currentState == BuildState.Moving and selectedBuilding and originalCFrame then
-			-- 이동 취소: 원래 위치 복원
-			selectedBuilding.CFrame = originalCFrame
-			selectedBuilding.Transparency = 0
-			selectedBuilding.CanCollide = true
+			-- 이동 취소: 원래 위치/투명도 복원 (Model 지원)
+			local rParent = selectedBuilding.Parent
+			if rParent and rParent:IsA("Model") then
+				rParent:PivotTo(originalCFrame)
+				for _, d in rParent:GetDescendants() do
+					if d:IsA("BasePart") then d.Transparency = 0; d.CanCollide = true end
+				end
+			else
+				selectedBuilding.CFrame = originalCFrame
+				selectedBuilding.Transparency = 0
+				selectedBuilding.CanCollide = true
+			end
 			restoreCollisionBox(selectedBuilding)
 			DragHandler.stopDrag()
 			previewPart = nil
@@ -552,8 +657,16 @@ local function confirmPlace()
 		local buildingId = selectedBuilding:GetAttribute("BuildingId")
 		DragHandler.stopDrag()
 
-		selectedBuilding.Transparency = 0
-		selectedBuilding.CanCollide = true
+		-- 투명도/충돌 복원 (Model 지원)
+		local cp = selectedBuilding.Parent
+		if cp and cp:IsA("Model") then
+			for _, d in cp:GetDescendants() do
+				if d:IsA("BasePart") then d.Transparency = 0; d.CanCollide = true end
+			end
+		else
+			selectedBuilding.Transparency = 0
+			selectedBuilding.CanCollide = true
+		end
 		HighlightSystem.removeFrom(selectedBuilding)
 		restoreCollisionBox(selectedBuilding)
 		previewPart = nil
@@ -583,9 +696,17 @@ MoveHandleUI.init({
 
 	onCancel = function()
 		if currentState == BuildState.Moving and selectedBuilding and originalCFrame then
-			selectedBuilding.CFrame = originalCFrame
-			selectedBuilding.Transparency = 0
-			selectedBuilding.CanCollide = true
+			local rp = selectedBuilding.Parent
+			if rp and rp:IsA("Model") then
+				rp:PivotTo(originalCFrame)
+				for _, d in rp:GetDescendants() do
+					if d:IsA("BasePart") then d.Transparency = 0; d.CanCollide = true end
+				end
+			else
+				selectedBuilding.CFrame = originalCFrame
+				selectedBuilding.Transparency = 0
+				selectedBuilding.CanCollide = true
+			end
 			restoreCollisionBox(selectedBuilding)
 			HighlightSystem.removeFrom(selectedBuilding)
 			DragHandler.stopDrag()
@@ -614,8 +735,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			confirmPlace()
 		elseif currentState == BuildState.BuildMode then
 			local target = mouse.Target
-			if target and isBuildingPart(target) and isMyBuilding(target) then
-				toSelected(target)
+			local mainPart = findBuildingMainPart(target)
+			if mainPart and isMyBuilding(mainPart) then
+				toSelected(mainPart)
 			end
 		end
 	end
@@ -628,9 +750,17 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			removePreview()
 			toBuildMode()
 		elseif currentState == BuildState.Moving and selectedBuilding and originalCFrame then
-			selectedBuilding.CFrame = originalCFrame
-			selectedBuilding.Transparency = 0
-			selectedBuilding.CanCollide = true
+			local ep = selectedBuilding.Parent
+			if ep and ep:IsA("Model") then
+				ep:PivotTo(originalCFrame)
+				for _, d in ep:GetDescendants() do
+					if d:IsA("BasePart") then d.Transparency = 0; d.CanCollide = true end
+				end
+			else
+				selectedBuilding.CFrame = originalCFrame
+				selectedBuilding.Transparency = 0
+				selectedBuilding.CanCollide = true
+			end
 			restoreCollisionBox(selectedBuilding)
 			HighlightSystem.removeFrom(selectedBuilding)
 			DragHandler.stopDrag()
@@ -650,9 +780,17 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			toIdle()
 		elseif currentState == BuildState.Selected or currentState == BuildState.Moving or currentState == BuildState.PlacingNew then
 			if currentState == BuildState.Moving and selectedBuilding and originalCFrame then
-				selectedBuilding.CFrame = originalCFrame
-				selectedBuilding.Transparency = 0
-				selectedBuilding.CanCollide = true
+				local bp = selectedBuilding.Parent
+				if bp and bp:IsA("Model") then
+					bp:PivotTo(originalCFrame)
+					for _, d in bp:GetDescendants() do
+						if d:IsA("BasePart") then d.Transparency = 0; d.CanCollide = true end
+					end
+				else
+					selectedBuilding.CFrame = originalCFrame
+					selectedBuilding.Transparency = 0
+					selectedBuilding.CanCollide = true
+				end
 				restoreCollisionBox(selectedBuilding)
 				DragHandler.stopDrag()
 				previewPart = nil

@@ -187,16 +187,28 @@ end)
 game:BindToClose(function()
 	_autoSaveActive = false
 
-	local threads = {}
-	for _, player in Players:GetPlayers() do
-		local t = task.spawn(function()
+	local playerList = Players:GetPlayers()
+	if #playerList == 0 then return end
+
+	local remaining = #playerList
+	local done = Instance.new("BindableEvent")
+
+	for _, player in playerList do
+		task.spawn(function()
 			DataStoreManager.savePlayer(player)
+			remaining -= 1
+			if remaining <= 0 then
+				done:Fire()
+			end
 		end)
-		table.insert(threads, t)
 	end
 
-	-- 최대 30초 대기
-	task.wait(math.min(30, #threads * 2))
+	-- 모든 저장 완료 또는 최대 30초 대기
+	task.delay(30, function()
+		done:Fire()
+	end)
+	done.Event:Wait()
+	done:Destroy()
 end)
 
 return DataStoreManager

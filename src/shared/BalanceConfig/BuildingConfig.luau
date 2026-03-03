@@ -18,8 +18,6 @@ BuildingConfig.PLACEMENT_PREVIEW_DISTANCE = 10
 -- DEFAULT_INVENTORY: 플레이어 최초 접속 시 기본 지급 건물
 --   itemName = Items 폴더 내 템플릿 이름, count = 지급 수량
 BuildingConfig.DEFAULT_INVENTORY = {
-	{ itemName = "DummyBlock", count = 20 },
-	{ itemName = "DummyBlock2", count = 20 },
 	{ itemName = "TownHall", count = 1 },
 	{ itemName = "Garden", count = 3 },
 	{ itemName = "Mine", count = 2 },

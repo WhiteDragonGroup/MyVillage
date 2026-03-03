@@ -51,6 +51,26 @@ local function findBuildingById(plot, buildingId: string): BasePart?
 	return nil
 end
 
+-- 건물 전체 제거 (Model이면 Model 통째로, BasePart이면 그것만)
+local function destroyBuilding(mainPart: BasePart)
+	local parent = mainPart.Parent
+	if parent and parent:IsA("Model") then
+		parent:Destroy()
+	else
+		mainPart:Destroy()
+	end
+end
+
+-- 건물 전체 제거 (Model이면 Model 통째로, BasePart이면 그것만)
+local function destroyBuilding(mainPart: BasePart)
+	local parent = mainPart.Parent
+	if parent and parent:IsA("Model") then
+		parent:Destroy()
+	else
+		mainPart:Destroy()
+	end
+end
+
 -- CollisionBox 생성 (건물의 자식으로 추가, 투명 충돌 판정용)
 local function createCollisionBox(parent: BasePart, itemName: string): BasePart
 	local collisionSize = Constants.getCollisionSize(itemName)
@@ -182,15 +202,31 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 	InventoryManager.removeItem(player, itemName, 1, level)
 
 	-- 8. 건물 생성 (레벨별 모델 확인)
-	local ServerStorage = game:GetService("ServerStorage")
-	local buildingsFolder = ServerStorage:FindFirstChild("Buildings")
+	local buildingsFolder = ReplicatedStorage:FindFirstChild("Buildings")
 	local useModel = nil
 
 	if buildingsFolder then
 		local itemFolder = buildingsFolder:FindFirstChild(itemName)
 		if itemFolder then
+			-- "Level1" 또는 "Mine_1" 형식 모두 지원
 			useModel = itemFolder:FindFirstChild("Level" .. level)
+				or itemFolder:FindFirstChild(itemName .. "_" .. level)
+			-- 디버그: 모델 탐색 결과
+			print("[PlaceBuilding] " .. itemName .. " Lv" .. level
+				.. " | Buildings폴더=" .. tostring(buildingsFolder ~= nil)
+				.. " | 아이템폴더=" .. tostring(itemFolder ~= nil)
+				.. " | 모델=" .. tostring(useModel))
+			if itemFolder then
+				print("[PlaceBuilding] " .. itemName .. " 폴더 자식:")
+				for _, c in itemFolder:GetChildren() do
+					print("  → " .. c.Name .. " (" .. c.ClassName .. ")")
+				end
+			end
+		else
+			print("[PlaceBuilding] Buildings/" .. itemName .. " 폴더 없음")
 		end
+	else
+		print("[PlaceBuilding] Buildings 폴더 없음!")
 	end
 
 	local item
@@ -299,8 +335,13 @@ moveBuildingEvent.OnServerEvent:Connect(function(player, buildingId, newCFrame)
 		return
 	end
 
-	-- 이동 적용
-	building.CFrame = newCFrame
+	-- 이동 적용 (Model이면 PivotTo로 전체 이동)
+	local parentModel = building.Parent
+	if parentModel and parentModel:IsA("Model") then
+		parentModel:PivotTo(newCFrame)
+	else
+		building.CFrame = newCFrame
+	end
 	syncCollisionBox(building)
 
 	print(player.Name .. " - " .. (itemName or "?") .. " 이동 완료")
@@ -349,8 +390,8 @@ storeBuildingEvent.OnServerEvent:Connect(function(player, buildingId)
 		InventoryManager.addItem(player, itemName, 1, level)
 	end
 
-	-- 6. 건물 제거
-	building:Destroy()
+	-- 6. 건물 제거 (Model이면 전체 제거)
+	destroyBuilding(building)
 
 	print(player.Name .. " - " .. (itemName or "?") .. " 저장 완료")
 end)

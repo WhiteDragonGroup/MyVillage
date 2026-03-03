@@ -90,6 +90,17 @@ end
 -- 플레이어 초기화 (저장된 데이터가 있으면 복원)
 ----------------------------------------------------------------
 function PetManager.initPlayer(player: Player, savedPets: { any }?)
+	-- 기존 펫 모델 제거 (리셋 시 월드에 남아있는 모델 정리)
+	local existingPets = _playerPets[player]
+	if existingPets then
+		for petId, petData in existingPets do
+			_wanderLoops[petId] = nil
+			if petData.model and petData.model.Parent then
+				petData.model:Destroy()
+			end
+		end
+	end
+
 	_playerPets[player] = {}
 
 	if savedPets and #savedPets > 0 then
