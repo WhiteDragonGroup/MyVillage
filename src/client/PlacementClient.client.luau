@@ -383,7 +383,7 @@ local function toMoving(building: BasePart)
 	local bModelParent = building.Parent
 	if bModelParent and bModelParent:IsA("Model") then
 		for _, d in bModelParent:GetDescendants() do
-			if d:IsA("BasePart") then d.Transparency = 0.5; d.CanCollide = false end
+			if d:IsA("BasePart") and not d:GetAttribute("IsCollisionBox") then d.Transparency = 0.5; d.CanCollide = false end
 		end
 	else
 		building.Transparency = 0.5
@@ -513,7 +513,7 @@ BuildUI.init(function()
 			if rParent and rParent:IsA("Model") then
 				rParent:PivotTo(originalCFrame)
 				for _, d in rParent:GetDescendants() do
-					if d:IsA("BasePart") then d.Transparency = 0; d.CanCollide = true end
+					if d:IsA("BasePart") and not d:GetAttribute("IsCollisionBox") then d.Transparency = 0; d.CanCollide = true end
 				end
 			else
 				selectedBuilding.CFrame = originalCFrame
@@ -661,7 +661,7 @@ local function confirmPlace()
 		local cp = selectedBuilding.Parent
 		if cp and cp:IsA("Model") then
 			for _, d in cp:GetDescendants() do
-				if d:IsA("BasePart") then d.Transparency = 0; d.CanCollide = true end
+				if d:IsA("BasePart") and not d:GetAttribute("IsCollisionBox") then d.Transparency = 0; d.CanCollide = true end
 			end
 		else
 			selectedBuilding.Transparency = 0
@@ -700,7 +700,7 @@ MoveHandleUI.init({
 			if rp and rp:IsA("Model") then
 				rp:PivotTo(originalCFrame)
 				for _, d in rp:GetDescendants() do
-					if d:IsA("BasePart") then d.Transparency = 0; d.CanCollide = true end
+					if d:IsA("BasePart") and not d:GetAttribute("IsCollisionBox") then d.Transparency = 0; d.CanCollide = true end
 				end
 			else
 				selectedBuilding.CFrame = originalCFrame
@@ -754,7 +754,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			if ep and ep:IsA("Model") then
 				ep:PivotTo(originalCFrame)
 				for _, d in ep:GetDescendants() do
-					if d:IsA("BasePart") then d.Transparency = 0; d.CanCollide = true end
+					if d:IsA("BasePart") and not d:GetAttribute("IsCollisionBox") then d.Transparency = 0; d.CanCollide = true end
 				end
 			else
 				selectedBuilding.CFrame = originalCFrame
@@ -784,7 +784,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 				if bp and bp:IsA("Model") then
 					bp:PivotTo(originalCFrame)
 					for _, d in bp:GetDescendants() do
-						if d:IsA("BasePart") then d.Transparency = 0; d.CanCollide = true end
+						if d:IsA("BasePart") and not d:GetAttribute("IsCollisionBox") then d.Transparency = 0; d.CanCollide = true end
 					end
 				else
 					selectedBuilding.CFrame = originalCFrame

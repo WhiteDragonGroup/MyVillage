@@ -222,6 +222,9 @@ local function spawnEffects(weatherType: string)
 
 		if fallbackPart then
 			fallbackPart.Parent = effectContainer
+			print("[WeatherVFX] 폴백 파티클 생성: " .. weatherType .. " | 파트크기=" .. tostring(fallbackPart.Size))
+		else
+			warn("[WeatherVFX] 폴백 파티클 생성 실패: " .. weatherType)
 		end
 	end
 
@@ -240,6 +243,9 @@ end
 local function updateEffectPositions()
 	if not effectContainer then return end
 
+	-- 카메라 참조 갱신 (씬 전환 시 변경될 수 있음)
+	camera = workspace.CurrentCamera
+	if not camera then return end
 	local camCFrame = camera.CFrame
 	local targetCFrame = camCFrame * WeatherCfg.EFFECT_OFFSET
 
