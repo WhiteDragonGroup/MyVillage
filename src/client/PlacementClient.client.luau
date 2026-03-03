@@ -695,7 +695,13 @@ inventoryUpdateEvent.OnClientEvent:Connect(function(inv)
 end)
 
 task.spawn(function()
-	local inv = getInventoryFunc:InvokeServer()
+	-- 서버 초기화 대기 후 인벤토리 로드 (최대 5회 재시도)
+	local inv
+	for _ = 1, 5 do
+		inv = getInventoryFunc:InvokeServer()
+		if inv and #inv > 0 then break end
+		task.wait(1)
+	end
 	if inv then
 		inventory = inv
 		InventoryUI.updateInventory(inv)

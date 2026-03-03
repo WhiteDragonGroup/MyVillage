@@ -321,4 +321,34 @@ Players.PlayerRemoving:Connect(function(player)
 	DataStoreManager.removePlayer(player)
 end)
 
+----------------------------------------------------------------
+-- 채팅 명령어: /reset → DataStore 초기화 + 기본 인벤토리 재지급
+----------------------------------------------------------------
+Players.PlayerAdded:Connect(function(player)
+	player.Chatted:Connect(function(msg)
+		if msg:lower() == "/reset" then
+			-- 1. DataStore 삭제
+			DataStoreManager.saveOverride(player, {})
+
+			-- 2. 현재 배치된 건물 모두 제거
+			local plot = getPlayerPlot(player)
+			if plot then
+				UpgradeManager.cleanupPlayer(plot)
+				for _, child in plot:GetDescendants() do
+					if child:IsA("BasePart") and child:GetAttribute("BuildingId") ~= nil then
+						child:Destroy()
+					end
+				end
+			end
+
+			-- 3. 인벤토리/펫/코인 초기화 (기본값)
+			InventoryManager.initPlayer(player, nil)
+			PetManager.initPlayer(player, nil)
+			CurrencyManager.initPlayer(player, nil)
+
+			print(player.Name .. " - /reset 완료! 기본 상태로 초기화됨")
+		end
+	end)
+end)
+
 print("PlotManager 로드됨 (DataStore 통합)")

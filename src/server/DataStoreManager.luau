@@ -118,6 +118,30 @@ function DataStoreManager.savePlayer(player: Player): boolean
 end
 
 ----------------------------------------------------------------
+-- 데이터 강제 덮어쓰기 (/reset 등)
+----------------------------------------------------------------
+function DataStoreManager.saveOverride(player: Player, data: { [string]: any }): boolean
+	if not _dataStore then
+		_loadedData[player] = {}
+		return false
+	end
+
+	local key = getKey(player)
+	local success, err = pcall(function()
+		_dataStore:SetAsync(key, data)
+	end)
+
+	if success then
+		_loadedData[player] = data
+		print("DataStore 강제 저장 완료: " .. player.Name)
+	else
+		warn("DataStore 강제 저장 실패: " .. player.Name .. " - " .. tostring(err))
+	end
+
+	return success
+end
+
+----------------------------------------------------------------
 -- 플레이어 데이터 제거 (메모리에서만)
 ----------------------------------------------------------------
 function DataStoreManager.removePlayer(player: Player)
