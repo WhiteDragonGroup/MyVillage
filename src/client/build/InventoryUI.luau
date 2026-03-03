@@ -15,16 +15,16 @@ local InventoryUI = {}
 local screenGui = nil
 local barFrame = nil
 local contentFrame = nil
-local _onItemSelected = nil  -- 콜백: (itemName) -> ()
+local _onItemSelected = nil  -- 콜백: (itemName, level) -> ()
 local _visible = false
-local _inventory = {}  -- { {itemName, count} }
+local _inventory = {}  -- { {itemName, count, level} }
 
 local SLOT_SIZE = 70
 local SLOT_PADDING = 8
 local BAR_HEIGHT = 100
 local SLIDE_TIME = 0.25
 
-function InventoryUI.init(onItemSelected: (string) -> ())
+function InventoryUI.init(onItemSelected: (string, number) -> ())
 	_onItemSelected = onItemSelected
 
 	screenGui = Instance.new("ScreenGui")
@@ -160,10 +160,29 @@ function InventoryUI._renderSlots()
 			keyCorner.Parent = keyLabel
 		end
 
+		-- 레벨 뱃지 (Lv2 이상)
+		local itemLevel = item.level or 1
+		if itemLevel > 1 then
+			local lvlLabel = Instance.new("TextLabel")
+			lvlLabel.Size = UDim2.new(0, 26, 0, 16)
+			lvlLabel.Position = UDim2.new(0, 2, 1, -18)
+			lvlLabel.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
+			lvlLabel.BackgroundTransparency = 0.15
+			lvlLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+			lvlLabel.TextSize = 10
+			lvlLabel.Font = Enum.Font.GothamBold
+			lvlLabel.Text = "Lv" .. itemLevel
+			lvlLabel.Parent = slot
+
+			local lvlCorner = Instance.new("UICorner")
+			lvlCorner.CornerRadius = UDim.new(0, 4)
+			lvlCorner.Parent = lvlLabel
+		end
+
 		-- 클릭 이벤트
 		slot.MouseButton1Click:Connect(function()
 			if _onItemSelected then
-				_onItemSelected(item.itemName)
+				_onItemSelected(item.itemName, itemLevel)
 			end
 		end)
 	end
@@ -201,7 +220,7 @@ function InventoryUI.selectByIndex(index: number)
 	if not _visible or not _onItemSelected then return end
 	local item = _inventory[index]
 	if item then
-		_onItemSelected(item.itemName)
+		_onItemSelected(item.itemName, item.level or 1)
 	end
 end
 

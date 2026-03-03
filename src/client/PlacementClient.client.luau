@@ -60,6 +60,7 @@ local selectedBuilding = nil       -- 선택된 건물 (BasePart)
 local selectedBuildingId = nil     -- 선택된 건물 ID
 local previewPart = nil            -- 배치/이동 프리뷰 파트
 local previewItemName = nil        -- 배치 중인 아이템 이름
+local previewLevel = 1             -- 배치 중인 아이템 레벨
 local currentRotationY = 0         -- 현재 Y 회전 (라디안)
 local originalCFrame = nil         -- 이동 전 원래 CFrame (Cancel 복원용)
 local originalColor = nil          -- 프리뷰 원래 색상 (충돌 표시 복원용)
@@ -343,10 +344,11 @@ local function toMoving(building: BasePart)
 end
 
 -- PlacingNew 상태로 전환 (인벤토리에서 새 건물 배치)
-local function toPlacingNew(itemName: string)
+local function toPlacingNew(itemName: string, level: number?)
 	setState(BuildState.PlacingNew)
 
 	previewItemName = itemName
+	previewLevel = level or 1
 
 	-- BuildZone 찾기
 	currentBuildZone = getMyBuildZone()
@@ -424,10 +426,10 @@ BuildUI.init(function()
 	end
 end)
 
--- InventoryUI: 아이템 선택
-InventoryUI.init(function(itemName: string)
+-- InventoryUI: 아이템 선택 (레벨 포함)
+InventoryUI.init(function(itemName: string, level: number)
 	if currentState == BuildState.BuildMode then
-		toPlacingNew(itemName)
+		toPlacingNew(itemName, level)
 	end
 end)
 
@@ -542,7 +544,7 @@ local function confirmPlace()
 		local finalCFrame = previewPart.CFrame
 		DragHandler.stopDrag()
 		removePreview()
-		placeBuildingEvent:FireServer(previewItemName, finalCFrame)
+		placeBuildingEvent:FireServer(previewItemName, finalCFrame, previewLevel)
 		toBuildMode()
 
 	elseif currentState == BuildState.Moving and selectedBuilding then

@@ -117,8 +117,19 @@ local function restoreBuildings(player, plot, savedBuildings: { any })
 		else
 			-- v1(구버전): 절대좌표 → 인벤토리로 반환 (플롯 변경 시 위치가 맞지 않음)
 			warn("구버전 건물 데이터 → 인벤토리로 반환: " .. itemName)
-			InventoryManager.addItem(player, itemName)
+			InventoryManager.addItem(player, itemName, 1, bData.level or 1)
 			continue
+		end
+
+		-- 복원 위치가 BuildZone 범위 밖이면 인벤토리로 반환
+		if buildZone then
+			local localPos = buildZone.CFrame:PointToObjectSpace(cf.Position)
+			local halfSize = buildZone.Size / 2
+			if math.abs(localPos.X) > halfSize.X or math.abs(localPos.Z) > halfSize.Z then
+				warn("건물 복원 위치가 BuildZone 밖 → 인벤토리로 반환: " .. itemName)
+				InventoryManager.addItem(player, itemName, 1, bData.level or 1)
+				continue
+			end
 		end
 
 		local level = bData.level or 1

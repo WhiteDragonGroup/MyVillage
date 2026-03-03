@@ -129,12 +129,15 @@ end
 ----------------------------------------------------------------
 -- PlaceBuilding: 인벤토리에서 새 건물 배치
 ----------------------------------------------------------------
-placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe)
+placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, level)
 	-- 1. 타입 검증
 	if typeof(itemName) ~= "string" or typeof(cframe) ~= "CFrame" then
 		warn(player.Name .. " - 잘못된 요청 형식")
 		return
 	end
+	-- 레벨 검증
+	if typeof(level) ~= "number" then level = 1 end
+	level = math.clamp(math.floor(level), 1, 5)
 
 	-- 2. 아이템 템플릿 확인
 	local template = itemsFolder:FindFirstChild(itemName)
@@ -162,9 +165,9 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe)
 		return
 	end
 
-	-- 5. 인벤토리 확인 & 차감
-	if not InventoryManager.hasItem(player, itemName) then
-		warn(player.Name .. " - 인벤토리에 " .. itemName .. " 없음")
+	-- 5. 인벤토리 확인 (레벨 포함)
+	if not InventoryManager.hasItem(player, itemName, 1, level) then
+		warn(player.Name .. " - 인벤토리에 " .. itemName .. " Lv" .. level .. " 없음")
 		return
 	end
 
@@ -176,10 +179,26 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe)
 	end
 
 	-- 7. 인벤토리 차감
-	InventoryManager.removeItem(player, itemName)
+	InventoryManager.removeItem(player, itemName, 1, level)
 
-	-- 8. 건물 생성
-	local item = template:Clone()
+	-- 8. 건물 생성 (레벨별 모델 확인)
+	local ServerStorage = game:GetService("ServerStorage")
+	local buildingsFolder = ServerStorage:FindFirstChild("Buildings")
+	local useModel = nil
+
+	if buildingsFolder and level > 1 then
+		local itemFolder = buildingsFolder:FindFirstChild(itemName)
+		if itemFolder then
+			useModel = itemFolder:FindFirstChild("Level" .. level)
+		end
+	end
+
+	local item
+	if useModel then
+		item = useModel:Clone()
+	else
+		item = template:Clone()
+	end
 	item.CFrame = cframe
 	item.Anchored = true
 	item.CanCollide = true
@@ -190,7 +209,7 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe)
 	item:SetAttribute("BuildingId", buildingId)
 	item:SetAttribute("ItemName", itemName)
 	item:SetAttribute("OwnerId", player.UserId)
-	item:SetAttribute("Level", 1)
+	item:SetAttribute("Level", level)
 	item:SetAttribute("UpgradeState", "")
 	item:SetAttribute("UpgradeProgress", 0)
 	item:SetAttribute("AssignedPetId", "")
@@ -198,7 +217,12 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe)
 	-- 10. CollisionBox 생성 (고정 사이즈 충돌 판정용)
 	createCollisionBox(item, itemName)
 
-	print(player.Name .. " → " .. plot.Name .. "에 " .. itemName .. " 배치 완료 (ID: " .. buildingId .. ")")
+	-- 11. 레벨별 외형 적용 (모델 스왑 없는 경우)
+	if not useModel and level > 1 then
+		UpgradeManager.applyVisualUpgrade(item, level)
+	end
+
+	print(player.Name .. " → " .. plot.Name .. "에 " .. itemName .. " Lv" .. level .. " 배치 완료 (ID: " .. buildingId .. ")")
 end)
 
 ----------------------------------------------------------------
@@ -301,10 +325,11 @@ storeBuildingEvent.OnServerEvent:Connect(function(player, buildingId)
 		return
 	end
 
-	-- 5. 인벤토리에 추가
+	-- 5. 인벤토리에 추가 (레벨 보존)
 	local itemName = building:GetAttribute("ItemName")
+	local level = building:GetAttribute("Level") or 1
 	if itemName then
-		InventoryManager.addItem(player, itemName)
+		InventoryManager.addItem(player, itemName, 1, level)
 	end
 
 	-- 6. 건물 제거
