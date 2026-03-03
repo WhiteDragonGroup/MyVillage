@@ -186,7 +186,7 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 	local buildingsFolder = ServerStorage:FindFirstChild("Buildings")
 	local useModel = nil
 
-	if buildingsFolder and level > 1 then
+	if buildingsFolder then
 		local itemFolder = buildingsFolder:FindFirstChild(itemName)
 		if itemFolder then
 			useModel = itemFolder:FindFirstChild("Level" .. level)
@@ -199,27 +199,44 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 	else
 		item = template:Clone()
 	end
-	item.CFrame = cframe
-	item.Anchored = true
-	item.CanCollide = true
-	item.Parent = plot
 
-	-- 9. 건물 속성 설정
+	-- 8.1. 위치/부모 설정 (BasePart vs Model 분기)
+	local mainPart: BasePart
+	if item:IsA("BasePart") then
+		item.CFrame = cframe
+		item.Anchored = true
+		item.CanCollide = true
+		item.Parent = plot
+		mainPart = item
+	elseif item:IsA("Model") then
+		item:PivotTo(cframe)
+		item.Parent = plot
+		mainPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+		if not mainPart then
+			warn(player.Name .. " - 모델에 BasePart 없음: " .. itemName)
+			item:Destroy()
+			InventoryManager.addItem(player, itemName, 1, level) -- 인벤토리 복구
+			return
+		end
+		mainPart.Anchored = true
+	end
+
+	-- 9. 건물 속성 설정 (mainPart에 부여)
 	local buildingId = HttpService:GenerateGUID(false)
-	item:SetAttribute("BuildingId", buildingId)
-	item:SetAttribute("ItemName", itemName)
-	item:SetAttribute("OwnerId", player.UserId)
-	item:SetAttribute("Level", level)
-	item:SetAttribute("UpgradeState", "")
-	item:SetAttribute("UpgradeProgress", 0)
-	item:SetAttribute("AssignedPetId", "")
+	mainPart:SetAttribute("BuildingId", buildingId)
+	mainPart:SetAttribute("ItemName", itemName)
+	mainPart:SetAttribute("OwnerId", player.UserId)
+	mainPart:SetAttribute("Level", level)
+	mainPart:SetAttribute("UpgradeState", "")
+	mainPart:SetAttribute("UpgradeProgress", 0)
+	mainPart:SetAttribute("AssignedPetId", "")
 
 	-- 10. CollisionBox 생성 (고정 사이즈 충돌 판정용)
-	createCollisionBox(item, itemName)
+	createCollisionBox(mainPart, itemName)
 
 	-- 11. 레벨별 외형 적용 (모델 스왑 없는 경우)
 	if not useModel and level > 1 then
-		UpgradeManager.applyVisualUpgrade(item, level)
+		UpgradeManager.applyVisualUpgrade(mainPart, level)
 	end
 
 	print(player.Name .. " → " .. plot.Name .. "에 " .. itemName .. " Lv" .. level .. " 배치 완료 (ID: " .. buildingId .. ")")

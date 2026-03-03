@@ -139,7 +139,7 @@ local function restoreBuildings(player, plot, savedBuildings: { any })
 		local buildingsFolder = ServerStorage:FindFirstChild("Buildings")
 		local useModel = nil
 
-		if buildingsFolder and level > 1 then
+		if buildingsFolder then
 			local itemFolder = buildingsFolder:FindFirstChild(itemName)
 			if itemFolder then
 				useModel = itemFolder:FindFirstChild("Level" .. level)
@@ -153,22 +153,27 @@ local function restoreBuildings(player, plot, savedBuildings: { any })
 			item = template:Clone()
 		end
 
+		-- 위치/부모 설정 (BasePart vs Model 분기)
+		local mainPart: BasePart
 		if item:IsA("BasePart") then
 			item.CFrame = cf
+			item.Anchored = true
+			item.Parent = plot
+			mainPart = item
 		elseif item:IsA("Model") then
 			item:PivotTo(cf)
+			item.Parent = plot
+			mainPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+			if not mainPart then
+				warn("건물 복원 실패 - BasePart 없음: " .. itemName)
+				item:Destroy()
+				continue
+			end
+			mainPart.Anchored = true
 		end
-		item.Anchored = true
-		item.Parent = plot
 
 		-- 속성 설정
 		local buildingId = bData.buildingId or HttpService:GenerateGUID(false)
-		local mainPart = if item:IsA("BasePart") then item else (item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart"))
-		if not mainPart then
-			warn("건물 복원 실패 - BasePart 없음: " .. itemName)
-			item:Destroy()
-			continue
-		end
 
 		mainPart:SetAttribute("BuildingId", buildingId)
 		mainPart:SetAttribute("ItemName", itemName)
