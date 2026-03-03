@@ -31,6 +31,7 @@ local DragHandler = require(clientScript:WaitForChild("systems"):WaitForChild("D
 local UpgradeDisplay = require(clientScript:WaitForChild("systems"):WaitForChild("UpgradeDisplay"))
 local PetVisuals = require(clientScript:WaitForChild("systems"):WaitForChild("PetVisuals"))
 local LevelBadge = require(clientScript:WaitForChild("systems"):WaitForChild("LevelBadge"))
+local WeatherVFX = require(clientScript:WaitForChild("systems"):WaitForChild("WeatherVFX"))
 
 -- Remotes
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -756,4 +757,7 @@ task.spawn(function()
 	LevelBadge.scanPlot(myPlot)
 end)
 
-print("PlacementClient 로드됨 - 빌드 시스템 v3 (업그레이드 + 펫)")
+-- 날씨 VFX 초기화
+WeatherVFX.init()
+
+print("PlacementClient 로드됨 - 빌드 시스템 v3 (업그레이드 + 펫 + 날씨)")

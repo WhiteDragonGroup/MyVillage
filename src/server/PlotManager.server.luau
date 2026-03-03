@@ -60,15 +60,21 @@ function gatherBuildingData(player): { any }
 	local plot = getPlayerPlot(player)
 	if not plot then return {} end
 
+	-- BuildZone 기준 상대좌표로 저장 (플롯이 바뀌어도 올바른 위치 복원)
+	local buildZone = plot:FindFirstChild("BuildZone", true)
+
 	local buildings = {}
 	for _, child in plot:GetDescendants() do
 		if child:IsA("BasePart") and child:GetAttribute("BuildingId") ~= nil then
 			local cf = child.CFrame
+			-- BuildZone 기준 상대 CFrame 변환
+			local saveCFrame = if buildZone then buildZone.CFrame:ToObjectSpace(cf) else cf
 			table.insert(buildings, {
 				buildingId = child:GetAttribute("BuildingId"),
 				itemName = child:GetAttribute("ItemName") or "",
 				level = child:GetAttribute("Level") or 1,
-				cframe = DataStoreManager.serializeCFrame(cf),
+				cframe = DataStoreManager.serializeCFrame(saveCFrame),
+				dataVersion = 2, -- 상대좌표 표시
 				upgradeState = child:GetAttribute("UpgradeState") or "",
 				upgradeProgress = child:GetAttribute("UpgradeProgress") or 0,
 			})
@@ -83,6 +89,9 @@ end
 local function restoreBuildings(player, plot, savedBuildings: { any })
 	if not savedBuildings or #savedBuildings == 0 then return end
 
+	-- 새 플롯의 BuildZone (상대좌표 → 월드좌표 변환용)
+	local buildZone = plot:FindFirstChild("BuildZone", true)
+
 	for _, bData in savedBuildings do
 		local itemName = bData.itemName
 		if not itemName or itemName == "" then continue end
@@ -94,10 +103,21 @@ local function restoreBuildings(player, plot, savedBuildings: { any })
 			continue
 		end
 
-		-- CFrame 복원
-		local cf = DataStoreManager.deserializeCFrame(bData.cframe)
-		if not cf then
+		-- CFrame 복원 (상대좌표 → 월드좌표)
+		local savedCF = DataStoreManager.deserializeCFrame(bData.cframe)
+		if not savedCF then
 			warn("건물 복원 실패 - CFrame 없음: " .. itemName)
+			continue
+		end
+
+		local cf
+		if bData.dataVersion == 2 and buildZone then
+			-- v2: BuildZone 기준 상대좌표 → 새 플롯 기준 월드좌표
+			cf = buildZone.CFrame:ToWorldSpace(savedCF)
+		else
+			-- v1(구버전): 절대좌표 → 인벤토리로 반환 (플롯 변경 시 위치가 맞지 않음)
+			warn("구버전 건물 데이터 → 인벤토리로 반환: " .. itemName)
+			InventoryManager.addItem(player, itemName)
 			continue
 		end
 
@@ -230,13 +250,20 @@ Players.PlayerAdded:Connect(function(player)
 		restoreBuildings(player, plot, savedData.buildings)
 
 		-- 5. 플레이어가 스폰되면 자기 땅으로 이동
-		player.CharacterAdded:Connect(function(character)
+		local function teleportToPlot(character)
 			task.wait(BalanceConfig.Spawn.DELAY)
 			local buildZone = plot:FindFirstChild("BuildZone", true)
 			if buildZone and character:FindFirstChild("HumanoidRootPart") then
 				character.HumanoidRootPart.CFrame = buildZone.CFrame + Vector3.new(0, BalanceConfig.Spawn.HEIGHT_OFFSET, 0)
 			end
-		end)
+		end
+
+		player.CharacterAdded:Connect(teleportToPlot)
+
+		-- DataStore 로드 중 이미 캐릭터가 스폰됐으면 즉시 텔레포트
+		if player.Character then
+			task.spawn(teleportToPlot, player.Character)
+		end
 	else
 		print(player.Name .. " - 빈 플롯 없음!")
 	end

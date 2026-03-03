@@ -50,6 +50,24 @@
         },
         "GetCurrency": {
           "$className": "RemoteFunction"
+        },
+        "WeatherChanged": {
+          "$className": "RemoteEvent"
+        }
+      },
+      "Weather": {
+        "$className": "Folder",
+        "Rain": {
+          "$className": "Folder"
+        },
+        "Frost": {
+          "$className": "Folder"
+        },
+        "ThunderStorm": {
+          "$className": "Folder"
+        },
+        "Sunny": {
+          "$className": "Folder"
         }
       },
       "Items": {
