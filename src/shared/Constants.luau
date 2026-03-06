@@ -39,8 +39,6 @@ Constants.RARITY_COLORS = {
 -- 건물 카탈로그
 -- collisionSize: 충돌 판정용 고정 사이즈 (모델 실제 크기와 무관, 레벨 변경에도 불변)
 Constants.BUILDINGS = {
-	DummyBlock  = { name = "더미블록",  types = {"장식"}, rarity = "일반", collisionSize = Vector3.new(4, 4, 4) },
-	DummyBlock2 = { name = "더미블록2", types = {"장식"}, rarity = "일반", collisionSize = Vector3.new(2, 4, 6) },
 	TownHall    = { name = "마을회관",  types = {"지원"}, rarity = "일반", collisionSize = Vector3.new(8, 6, 8) },
 	Garden      = { name = "텃밭",      types = {"일터"}, rarity = "일반", collisionSize = Vector3.new(6, 2, 6) },
 	Mine        = { name = "광산",      types = {"일터"}, rarity = "희귀", collisionSize = Vector3.new(6, 4, 6) },

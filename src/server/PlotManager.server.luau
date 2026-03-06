@@ -247,6 +247,42 @@ function getPlayerPlot(player)
 	return nil
 end
 
+-- 리셋 로직 (DataStore 초기화 + 건물 제거 + 기본 인벤토리)
+local function resetPlayerData(player: Player)
+	-- 1. DataStore 삭제
+	DataStoreManager.saveOverride(player, {})
+
+	-- 2. 현재 배치된 건물 모두 제거
+	local resetPlot = getPlayerPlot(player)
+	if resetPlot then
+		UpgradeManager.cleanupPlayer(resetPlot)
+		local toDestroy = {}
+		for _, child in resetPlot:GetDescendants() do
+			if child:IsA("BasePart") and child:GetAttribute("BuildingId") ~= nil then
+				local root = if child.Parent and child.Parent:IsA("Model") then child.Parent else child
+				toDestroy[root] = true
+			end
+		end
+		for obj in toDestroy do
+			obj:Destroy()
+		end
+	end
+
+	-- 3. 인벤토리/펫/코인 초기화 (기본값)
+	InventoryManager.initPlayer(player, nil)
+	PetManager.initPlayer(player, nil)
+	CurrencyManager.initPlayer(player, nil)
+
+	print(player.Name .. " - reset 완료! 기본 상태로 초기화됨")
+end
+
+-- /reset RemoteEvent 핸들러 (TextChatCommand에서 호출)
+local remotes = ReplicatedStorage:WaitForChild("Remotes")
+local resetDataEvent = remotes:WaitForChild("ResetData")
+resetDataEvent.OnServerEvent:Connect(function(player)
+	resetPlayerData(player)
+end)
+
 ----------------------------------------------------------------
 -- 플레이어 접속
 ----------------------------------------------------------------
@@ -288,38 +324,6 @@ Players.PlayerAdded:Connect(function(player)
 		print(player.Name .. " - 빈 플롯 없음!")
 	end
 
-	-- 채팅 명령어: !reset → DataStore 초기화 + 기본 인벤토리 재지급
-	-- (Roblox TextChatService가 "/" 접두사를 가로채므로 "!" 사용)
-	player.Chatted:Connect(function(msg)
-		if msg:lower() == "!reset" then
-			-- 1. DataStore 삭제
-			DataStoreManager.saveOverride(player, {})
-
-			-- 2. 현재 배치된 건물 모두 제거
-			local resetPlot = getPlayerPlot(player)
-			if resetPlot then
-				UpgradeManager.cleanupPlayer(resetPlot)
-				local toDestroy = {}
-				for _, child in resetPlot:GetDescendants() do
-					if child:IsA("BasePart") and child:GetAttribute("BuildingId") ~= nil then
-						-- Model이면 Model 통째로, 아니면 파트만
-						local root = if child.Parent and child.Parent:IsA("Model") then child.Parent else child
-						toDestroy[root] = true
-					end
-				end
-				for obj in toDestroy do
-					obj:Destroy()
-				end
-			end
-
-			-- 3. 인벤토리/펫/코인 초기화 (기본값)
-			InventoryManager.initPlayer(player, nil)
-			PetManager.initPlayer(player, nil)
-			CurrencyManager.initPlayer(player, nil)
-
-			print(player.Name .. " - !reset 완료! 기본 상태로 초기화됨")
-		end
-	end)
 end)
 
 ----------------------------------------------------------------

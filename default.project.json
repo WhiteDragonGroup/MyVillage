@@ -56,6 +56,9 @@
         },
         "GetWeather": {
           "$className": "RemoteFunction"
+        },
+        "ResetData": {
+          "$className": "RemoteEvent"
         }
       },
       "Weather": {
@@ -75,15 +78,6 @@
       },
       "Items": {
         "$className": "Folder",
-        "DummyBlock": {
-          "$className": "Part",
-          "$properties": {
-            "Anchored": true,
-            "Color": [1, 0.5, 0],
-            "Size": [4, 4, 4],
-            "Material": "SmoothPlastic"
-          }
-        },
         "TownHall": {
           "$className": "Part",
           "$properties": {
@@ -127,15 +121,6 @@
             "Color": [0.3, 0.7, 0.9],
             "Size": [8, 2, 8],
             "Material": "Foil"
-          }
-        },
-        "DummyBlock2": {
-          "$className": "Part",
-          "$properties": {
-            "Anchored": true,
-            "Color": [0.2, 0.6, 1],
-            "Size": [2, 4, 6],
-            "Material": "SmoothPlastic"
           }
         },
         "Blacksmith": {

@@ -24,7 +24,7 @@ function CurrencyUI.init()
 	local frame = Instance.new("Frame")
 	frame.Name = "CoinFrame"
 	frame.Size = UDim2.new(0, 140, 0, 36)
-	frame.Position = UDim2.new(0.5, -70, 0, 10)
+	frame.Position = UDim2.new(1, -150, 0, 10)
 	frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 	frame.BackgroundTransparency = 0.15
 	frame.BorderSizePixel = 0

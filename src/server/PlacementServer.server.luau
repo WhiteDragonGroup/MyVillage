@@ -101,23 +101,13 @@ local function syncCollisionBox(building: BasePart)
 	end
 end
 
--- 서버 충돌 체크 (CollisionBox 기반)
+-- 서버 충돌 체크 (CollisionBox 기반, GetPartBoundsInBox 사용)
 -- probeSize: 배치할 건물의 충돌 사이즈, probeCFrame: 배치 위치
 local function checkServerCollision(probeCFrame: CFrame, probeSize: Vector3, ignoreParts: { Instance }?): boolean
-	-- 임시 프로브 파트 생성
-	local probe = Instance.new("Part")
-	probe.Size = probeSize
-	probe.CFrame = probeCFrame
-	probe.Anchored = true
-	probe.CanCollide = false
-	probe.CanQuery = true
-	probe.Transparency = 1
-	probe.Parent = workspace
-
 	local params = OverlapParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 
-	local combined = { probe }
+	local combined = {}
 	if ignoreParts then
 		for _, p in ignoreParts do
 			table.insert(combined, p)
@@ -133,8 +123,7 @@ local function checkServerCollision(probeCFrame: CFrame, probeSize: Vector3, ign
 
 	params.FilterDescendantsInstances = combined
 
-	local touching = workspace:GetPartsInPart(probe, params)
-	probe:Destroy()
+	local touching = workspace:GetPartBoundsInBox(probeCFrame, probeSize, params)
 
 	-- CollisionBox 파트만 충돌로 판정
 	for _, p in touching do

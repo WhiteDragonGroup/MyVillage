@@ -63,7 +63,6 @@ local previewItemName = nil        -- 배치 중인 아이템 이름
 local previewLevel = 1             -- 배치 중인 아이템 레벨
 local currentRotationY = 0         -- 현재 Y 회전 (라디안)
 local originalCFrame = nil         -- 이동 전 원래 CFrame (Cancel 복원용)
-local originalColor = nil          -- 프리뷰 원래 색상 (충돌 표시 복원용)
 local hoveredPart = nil            -- 현재 호버 중인 파트
 local currentBuildZone = nil       -- 현재 드래그 중인 BuildZone
 local hasCollision = false         -- 현재 충돌 상태
@@ -150,13 +149,12 @@ local function isMyBuilding(part: BasePart): boolean
 end
 
 -- 프리뷰 파트 생성 (레벨별 모델 우선 사용)
-local buildingsFolder = ReplicatedStorage:FindFirstChild("Buildings")
-
 local function createPreview(itemName: string, level: number?): BasePart?
 	local lvl = level or 1
 	local useModel = nil
 
-	-- Buildings 폴더에서 레벨별 모델 탐색
+	-- Buildings 폴더에서 레벨별 모델 탐색 (매번 동적 탐색 — 서버와 동일)
+	local buildingsFolder = ReplicatedStorage:FindFirstChild("Buildings")
 	if buildingsFolder then
 		local itemFolder = buildingsFolder:FindFirstChild(itemName)
 		if itemFolder then
@@ -223,7 +221,6 @@ local function removePreview()
 		end
 		previewPart = nil
 	end
-	originalColor = nil
 end
 
 -- 충돌 상태 업데이트 (프리뷰 파트 기준, CollisionBox 기반)
@@ -235,6 +232,11 @@ local function updateCollisionState()
 
 	-- 이동 중인 건물의 CollisionBox를 무시 목록에 추가
 	local ignoreParts = { previewPart }
+	-- Model 프리뷰의 모든 파트도 무시
+	local parentModel = previewPart.Parent
+	if parentModel and parentModel:IsA("Model") then
+		table.insert(ignoreParts, parentModel)
+	end
 	if currentState == BuildState.Moving and selectedBuilding then
 		local myBox = selectedBuilding:FindFirstChild("CollisionBox")
 		if myBox then
@@ -242,20 +244,18 @@ local function updateCollisionState()
 		end
 	end
 
-	local colliding = CollisionDetector.checkCollision(previewPart, ignoreParts)
+	-- 올바른 아이템 이름으로 충돌 사이즈 사용
+	local itemName = previewItemName or previewPart:GetAttribute("ItemName") or ""
+	local colliding = CollisionDetector.checkCollisionBySize(previewPart.CFrame, itemName, ignoreParts)
 
 	hasCollision = colliding
 
+	-- Highlight로 충돌 시각 피드백 (Model 전체에 적용됨)
 	if colliding then
-		if not originalColor then
-			originalColor = previewPart.Color
-		end
-		previewPart.Color = Color3.fromRGB(255, 50, 50)
+		HighlightSystem.applyTo(previewPart, Constants.HIGHLIGHT_COLORS.Collision, 0.5)
 		MoveHandleUI.setPlaceEnabled(false)
 	else
-		if originalColor then
-			previewPart.Color = originalColor
-		end
+		HighlightSystem.applyTo(previewPart, Constants.HIGHLIGHT_COLORS.Selected, 0.6)
 		MoveHandleUI.setPlaceEnabled(true)
 	end
 end
@@ -381,7 +381,6 @@ local function toMoving(building: BasePart)
 	selectedBuildingId = building:GetAttribute("BuildingId")
 	originalCFrame = building.CFrame
 	previewItemName = building:GetAttribute("ItemName")
-	originalColor = nil -- 이전 색상 초기화
 
 	-- 건물을 투명하게 (이동 프리뷰로 전환)
 	local bModelParent = building.Parent
@@ -419,10 +418,11 @@ local function toMoving(building: BasePart)
 		DragHandler.init(GridSnap)
 		DragHandler.startDrag(currentBuildZone, previewPart, currentRotationY, function(newCFrame)
 			if previewPart then
-				-- Model이면 PivotTo로 전체 이동
+				-- Model이면 PivotTo 보정 (mainPart가 정확히 newCFrame에 오도록)
 				local moveParent = previewPart.Parent
 				if moveParent and moveParent:IsA("Model") then
-					moveParent:PivotTo(newCFrame)
+					local mainToPivot = previewPart.CFrame:ToObjectSpace(moveParent:GetPivot())
+					moveParent:PivotTo(newCFrame * mainToPivot)
 				else
 					previewPart.CFrame = newCFrame
 				end
@@ -465,10 +465,11 @@ local function toPlacingNew(itemName: string, level: number?)
 		if hrp then
 			local frontPos = hrp.Position + hrp.CFrame.LookVector * BalanceConfig.Building.PLACEMENT_PREVIEW_DISTANCE
 			local snappedCFrame = GridSnap.snapToGrid(currentBuildZone, frontPos, collisionSize)
-			-- Model이면 PivotTo, BasePart이면 CFrame 직접 설정
+			-- Model이면 PivotTo 보정 (mainPart가 정확히 snappedCFrame에 오도록)
 			local parentModel = previewPart.Parent
 			if parentModel and parentModel:IsA("Model") and parentModel.Name == "PlacementPreview" then
-				parentModel:PivotTo(snappedCFrame)
+				local mainToPivot = previewPart.CFrame:ToObjectSpace(parentModel:GetPivot())
+				parentModel:PivotTo(snappedCFrame * mainToPivot)
 			else
 				previewPart.CFrame = snappedCFrame
 			end
@@ -487,10 +488,11 @@ local function toPlacingNew(itemName: string, level: number?)
 	DragHandler.init(GridSnap)
 	DragHandler.startDrag(currentBuildZone, previewPart, currentRotationY, function(newCFrame)
 		if previewPart then
-			-- Model이면 PivotTo로 전체 이동
+			-- Model이면 PivotTo 보정 (mainPart가 정확히 newCFrame에 오도록)
 			local parentModel = previewPart.Parent
 			if parentModel and parentModel:IsA("Model") and parentModel.Name == "PlacementPreview" then
-				parentModel:PivotTo(newCFrame)
+				local mainToPivot = previewPart.CFrame:ToObjectSpace(parentModel:GetPivot())
+				parentModel:PivotTo(newCFrame * mainToPivot)
 			else
 				previewPart.CFrame = newCFrame
 			end

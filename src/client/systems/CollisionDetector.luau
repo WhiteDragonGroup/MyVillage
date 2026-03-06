@@ -1,6 +1,7 @@
 -- CollisionDetector.luau
 -- CollisionBox 기반 건물 겹침 감지
 -- 건물 종류별 고정 사이즈(collisionSize)를 사용하여 판정
+-- GetPartBoundsInBox 사용 (probe Part 불필요, 즉시 반영)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -16,21 +17,10 @@ local CollisionDetector = {}
 function CollisionDetector.checkCollisionBySize(targetCFrame: CFrame, itemName: string, ignoreParts: { Instance }?): (boolean, { BasePart })
 	local collisionSize = Constants.getCollisionSize(itemName)
 
-	-- 임시 프로브 파트 생성
-	local probe = Instance.new("Part")
-	probe.Name = "_CollisionProbe"
-	probe.Size = collisionSize
-	probe.CFrame = targetCFrame
-	probe.Anchored = true
-	probe.CanCollide = false
-	probe.CanQuery = true
-	probe.Transparency = 1
-	probe.Parent = workspace
-
 	local params = OverlapParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 
-	local combined = { probe }
+	local combined = {}
 
 	if ignoreParts then
 		for _, p in ignoreParts do
@@ -38,9 +28,9 @@ function CollisionDetector.checkCollisionBySize(targetCFrame: CFrame, itemName: 
 		end
 	end
 
-	-- PlacementPreview 무시
+	-- PlacementPreview 무시 (BasePart 또는 Model 모두)
 	for _, p in workspace:GetDescendants() do
-		if p.Name == "PlacementPreview" and p:IsA("BasePart") then
+		if p.Name == "PlacementPreview" then
 			table.insert(combined, p)
 		end
 	end
@@ -54,8 +44,8 @@ function CollisionDetector.checkCollisionBySize(targetCFrame: CFrame, itemName: 
 
 	params.FilterDescendantsInstances = combined
 
-	local touchingParts = workspace:GetPartsInPart(probe, params)
-	probe:Destroy()
+	-- probe Part 없이 직접 박스 쿼리 (즉시 반영, 프레임 지연 없음)
+	local touchingParts = workspace:GetPartBoundsInBox(targetCFrame, collisionSize, params)
 
 	-- CollisionBox 파트만 충돌로 판정
 	local collidingParts = {}

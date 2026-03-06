@@ -18,21 +18,7 @@ BuildingConfig.PLACEMENT_PREVIEW_DISTANCE = 10
 -- DEFAULT_INVENTORY: 플레이어 최초 접속 시 기본 지급 건물
 --   itemName = Items 폴더 내 템플릿 이름, count = 지급 수량
 BuildingConfig.DEFAULT_INVENTORY = {
-	{ itemName = "TownHall", count = 1 },
-	{ itemName = "Garden", count = 3 },
 	{ itemName = "Mine", count = 2 },
-	{ itemName = "Lab", count = 1 },
-	{ itemName = "HotSpring", count = 2 },
-	{ itemName = "Blacksmith", count = 2 },
-	{ itemName = "Inn", count = 3 },
-	{ itemName = "Fountain", count = 5 },
-	{ itemName = "Market", count = 2 },
-	{ itemName = "Library", count = 1 },
-	{ itemName = "MagicTower", count = 1 },
-	{ itemName = "Brewery", count = 1 },
-	{ itemName = "Pavilion", count = 1 },
-	{ itemName = "Temple", count = 1 },
-	{ itemName = "WorldTree", count = 1 },
 }
 
 return BuildingConfig
