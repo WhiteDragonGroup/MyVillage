@@ -59,6 +59,9 @@
         },
         "ResetData": {
           "$className": "RemoteEvent"
+        },
+        "LightningStrike": {
+          "$className": "RemoteEvent"
         }
       },
       "Weather": {

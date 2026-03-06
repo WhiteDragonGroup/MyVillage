@@ -61,16 +61,6 @@ local function destroyBuilding(mainPart: BasePart)
 	end
 end
 
--- 건물 전체 제거 (Model이면 Model 통째로, BasePart이면 그것만)
-local function destroyBuilding(mainPart: BasePart)
-	local parent = mainPart.Parent
-	if parent and parent:IsA("Model") then
-		parent:Destroy()
-	else
-		mainPart:Destroy()
-	end
-end
-
 -- CollisionBox 생성 (건물의 자식으로 추가, 투명 충돌 판정용)
 local function createCollisionBox(parent: BasePart, itemName: string): BasePart
 	local collisionSize = Constants.getCollisionSize(itemName)
@@ -242,19 +232,11 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 			return
 		end
 		-- mainPart가 정확히 cframe에 오도록 모델 전체를 이동
+		-- (클라이언트에서 이미 바닥 보정된 CFrame을 전송)
 		local mainToPivot = mainPart.CFrame:ToObjectSpace(item:GetPivot())
 		item:PivotTo(cframe * mainToPivot)
 		item.Parent = plot
 		mainPart.Anchored = true
-
-		-- Model 바닥 보정: 모델 바닥이 BuildZone 상단에 맞도록 Y 조정
-		local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
-		local bbCF, bbSize = item:GetBoundingBox()
-		local modelBottom = bbCF.Position.Y - bbSize.Y / 2
-		local yAdjust = buildZoneTop - modelBottom
-		if math.abs(yAdjust) > 0.01 then
-			item:PivotTo(item:GetPivot() + Vector3.new(0, yAdjust, 0))
-		end
 	end
 
 	-- 9. 건물 속성 설정 (mainPart에 부여)
@@ -338,18 +320,10 @@ moveBuildingEvent.OnServerEvent:Connect(function(player, buildingId, newCFrame)
 	-- 이동 적용 (Model이면 PivotTo로 전체 이동, 보정 포함)
 	local parentModel = building.Parent
 	if parentModel and parentModel:IsA("Model") then
+		-- 클라이언트에서 이미 바닥 보정된 CFrame을 전송
 		local pivotCF = parentModel:GetPivot()
 		local mainToPivot = building.CFrame:ToObjectSpace(pivotCF)
 		parentModel:PivotTo(newCFrame * mainToPivot)
-
-		-- Model 바닥 보정
-		local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
-		local bbCF, bbSize = parentModel:GetBoundingBox()
-		local modelBottom = bbCF.Position.Y - bbSize.Y / 2
-		local yAdjust = buildZoneTop - modelBottom
-		if math.abs(yAdjust) > 0.01 then
-			parentModel:PivotTo(parentModel:GetPivot() + Vector3.new(0, yAdjust, 0))
-		end
 	else
 		building.CFrame = newCFrame
 	end

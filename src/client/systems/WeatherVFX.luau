@@ -26,6 +26,13 @@ local renderConnection: RBXScriptConnection? = nil
 local lightFlickerThread: thread? = nil
 local _appliedEnvInstances: { Instance } = {} -- Lighting/Terrain에 배치한 환경 인스턴스 추적
 
+-- Frost 떨림 관련
+local _frostShiverConnection: RBXScriptConnection? = nil
+local _originalC1Values: { [Motor6D]: CFrame } = {}
+
+-- 번개 VFX
+local lightningStrikeEvent = remotes:WaitForChild("LightningStrike")
+
 ----------------------------------------------------------------
 -- 폴백 파티클 생성 (Weather 폴더에 에셋이 없을 때)
 ----------------------------------------------------------------
@@ -456,6 +463,108 @@ local function showWeatherNotify(message: string)
 	end)
 end
 
+----------------------------------------------------------------
+-- Frost 캐릭터 떨림
+----------------------------------------------------------------
+
+local function startFrostShiver()
+	if _frostShiverConnection then return end
+
+	local character = player.Character
+	if not character then return end
+
+	-- 대상 관절 목록
+	local jointNames = { "Neck", "Left Shoulder", "Right Shoulder" }
+	_originalC1Values = {}
+
+	-- 원래 C1 값 저장
+	for _, jointName in jointNames do
+		local joint = character:FindFirstChild(jointName, true)
+		if joint and joint:IsA("Motor6D") then
+			_originalC1Values[joint] = joint.C1
+		end
+	end
+
+	-- 관절별 고유 시드 (위상 차이용)
+	local jointSeeds: { [Motor6D]: number } = {}
+	local seedCounter = 0
+	for joint, _ in _originalC1Values do
+		seedCounter += 1
+		jointSeeds[joint] = seedCounter * 17.3
+	end
+
+	local elapsed = 0
+	_frostShiverConnection = RunService.RenderStepped:Connect(function(dt)
+		elapsed += dt
+		local char = player.Character
+		if not char then return end
+
+		for joint, originalC1 in _originalC1Values do
+			if joint and joint.Parent then
+				local seed = jointSeeds[joint] or 0
+				local shakeX = math.sin(elapsed * 25 + seed) * 0.02
+				local shakeY = math.cos(elapsed * 30 + seed * 1.3) * 0.015
+				local shakeZ = math.sin(elapsed * 20 + seed * 0.7) * 0.01
+				joint.C1 = originalC1 * CFrame.Angles(shakeX, shakeY, shakeZ)
+			end
+		end
+	end)
+end
+
+local function stopFrostShiver()
+	if _frostShiverConnection then
+		_frostShiverConnection:Disconnect()
+		_frostShiverConnection = nil
+	end
+
+	-- 원래 C1 값 복원
+	for joint, originalC1 in _originalC1Values do
+		if joint and joint.Parent then
+			joint.C1 = originalC1
+		end
+	end
+	_originalC1Values = {}
+end
+
+----------------------------------------------------------------
+-- 번개 VFX (서버에서 위치 수신)
+----------------------------------------------------------------
+
+local function onLightningStrike(position: Vector3)
+	-- 밝은 번개 파트 생성
+	local bolt = Instance.new("Part")
+	bolt.Name = "LightningBolt"
+	bolt.Anchored = true
+	bolt.CanCollide = false
+	bolt.CanQuery = false
+	bolt.CanTouch = false
+	bolt.Material = Enum.Material.Neon
+	bolt.Color = Color3.fromRGB(220, 230, 255)
+	bolt.Size = Vector3.new(1, 40, 1)
+	bolt.CFrame = CFrame.new(position + Vector3.new(0, 20, 0))
+	bolt.Transparency = 0
+	bolt.Parent = workspace
+
+	-- PointLight 추가
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(200, 210, 255)
+	light.Brightness = 8
+	light.Range = 40
+	light.Parent = bolt
+
+	-- 0.2초 후 페이드아웃
+	task.delay(0.15, function()
+		local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		local tween = TweenService:Create(bolt, tweenInfo, { Transparency = 1 })
+		local lightTween = TweenService:Create(light, tweenInfo, { Brightness = 0 })
+		tween:Play()
+		lightTween:Play()
+		tween.Completed:Connect(function()
+			bolt:Destroy()
+		end)
+	end)
+end
+
 local function onWeatherChanged(weatherType: string, message: string?)
 	if weatherType == currentWeather and effectContainer then return end
 	currentWeather = weatherType
@@ -464,6 +573,13 @@ local function onWeatherChanged(weatherType: string, message: string?)
 	-- 알림 메시지 표시
 	if message and message ~= "" then
 		showWeatherNotify(message)
+	end
+
+	-- Frost 떨림 관리
+	if weatherType == "Frost" then
+		startFrostShiver()
+	else
+		stopFrostShiver()
 	end
 
 	if isTransitioning then return end
@@ -488,6 +604,18 @@ function WeatherVFX.init()
 
 	-- 날씨 변경 이벤트 수신
 	weatherChangedEvent.OnClientEvent:Connect(onWeatherChanged)
+
+	-- 번개 VFX 수신
+	lightningStrikeEvent.OnClientEvent:Connect(onLightningStrike)
+
+	-- 캐릭터 리스폰 시 Frost 떨림 재시작
+	player.CharacterAdded:Connect(function()
+		if currentWeather == "Frost" then
+			stopFrostShiver()
+			task.wait(0.5) -- 관절 로드 대기
+			startFrostShiver()
+		end
+	end)
 
 	-- 서버에서 현재 날씨 가져오기 (PlayerAdded 이벤트를 놓칠 수 있으므로)
 	task.spawn(function()

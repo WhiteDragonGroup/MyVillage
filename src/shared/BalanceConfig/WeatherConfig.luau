@@ -33,6 +33,18 @@ WeatherConfig.MESSAGES = {
 	},
 }
 
+-- 번개 설정 (ThunderStorm)
+WeatherConfig.LIGHTNING_INTERVAL_MIN = 3   -- 번개 최소 간격 (초)
+WeatherConfig.LIGHTNING_INTERVAL_MAX = 8   -- 번개 최대 간격 (초)
+WeatherConfig.LIGHTNING_RADIUS = 5         -- 번개 피격 판정 반경
+
+-- 돌연변이 건설 속도 보너스
+WeatherConfig.MUTATION_SPEED_BONUS = {
+	Shocked = 0.3,    -- +30%
+	Gold = 0.5,       -- +50%
+	Inverted = 1.0,   -- +100%
+}
+
 -- VFX 설정
 WeatherConfig.EFFECT_OFFSET = CFrame.new(0, 30, -10) -- 카메라 기준 오프셋 (위 30, 앞 10)
 WeatherConfig.EFFECT_SIZE = Vector3.new(100, 1, 100) -- 이펙트 파트 크기 (넓게 덮음)

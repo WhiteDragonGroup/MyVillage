@@ -4,17 +4,37 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
 
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
 
 local UpgradeCfg = BalanceConfig.Upgrade
 local PetCfg = BalanceConfig.Pet
+local WeatherCfg = BalanceConfig.Weather
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local upgradeStateChanged = remotes:WaitForChild("UpgradeStateChanged")
 
 local UpgradeManager = {}
+
+-- 지연 로드 모듈 (순환 참조 방지)
+local _WeatherState = nil
+local _PetManager = nil
+
+local function getWeatherState()
+	if not _WeatherState then
+		_WeatherState = require(ServerScriptService:WaitForChild("Server"):WaitForChild("WeatherState"))
+	end
+	return _WeatherState
+end
+
+local function getPetManager()
+	if not _PetManager then
+		_PetManager = require(ServerScriptService:WaitForChild("Server"):WaitForChild("PetManager"))
+	end
+	return _PetManager
+end
 
 -- 활성 업그레이드 루프 { [buildingId] = true }
 local _activeLoops = {}
@@ -133,6 +153,24 @@ function UpgradeManager._startProgressLoop(player: Player, building: BasePart, b
 			-- 진행도 증가
 			local progress = building:GetAttribute("UpgradeProgress") or 0
 			local increment = PetCfg.BUILD_SPEED -- 기본 속도
+
+			-- Rain 날씨 보너스 (+50%)
+			if getWeatherState().get() == "Rain" then
+				increment *= 1.5
+			end
+
+			-- 펫 돌연변이 보너스
+			local pm = getPetManager()
+			local petData = pm.getPetData(player, assignedPetId)
+			if petData and petData.mutations then
+				for mutationType, _ in petData.mutations do
+					local bonus = WeatherCfg.MUTATION_SPEED_BONUS[mutationType]
+					if bonus then
+						increment *= (1 + bonus)
+					end
+				end
+			end
+
 			progress = math.min(100, progress + increment)
 			building:SetAttribute("UpgradeProgress", progress)
 
