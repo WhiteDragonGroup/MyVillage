@@ -42,6 +42,20 @@ function GridSnap.snapToGrid(buildZone: BasePart, worldPosition: Vector3, object
 	return bzCFrame * CFrame.new(snappedLocal)
 end
 
+-- Model 바닥 보정: Model 배치 후 바닥이 buildZone 위에 놓이도록 Y 보정
+-- mainPart를 snappedCFrame에 놓았을 때, 모델 바닥이 buildZone 상단에 맞도록 조정
+function GridSnap.adjustModelY(model: Model, mainPart: BasePart, buildZone: BasePart)
+	local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
+	local _, modelSize = model:GetBoundingBox()
+	-- 현재 모델 바닥의 Y (= 바운딩박스 중심 - 높이/2)
+	local bbCF, _ = model:GetBoundingBox()
+	local currentBottom = bbCF.Position.Y - modelSize.Y / 2
+	local yAdjust = buildZoneTop - currentBottom
+	if math.abs(yAdjust) > 0.01 then
+		model:PivotTo(model:GetPivot() + Vector3.new(0, yAdjust, 0))
+	end
+end
+
 -- 스냅된 회전 적용
 function GridSnap.applyRotation(baseCFrame: CFrame, rotationY: number): CFrame
 	return baseCFrame * CFrame.Angles(0, rotationY, 0)

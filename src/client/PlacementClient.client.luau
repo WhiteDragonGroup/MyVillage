@@ -423,6 +423,7 @@ local function toMoving(building: BasePart)
 				if moveParent and moveParent:IsA("Model") then
 					local mainToPivot = previewPart.CFrame:ToObjectSpace(moveParent:GetPivot())
 					moveParent:PivotTo(newCFrame * mainToPivot)
+					GridSnap.adjustModelY(moveParent, previewPart, currentBuildZone)
 				else
 					previewPart.CFrame = newCFrame
 				end
@@ -466,10 +467,11 @@ local function toPlacingNew(itemName: string, level: number?)
 			local frontPos = hrp.Position + hrp.CFrame.LookVector * BalanceConfig.Building.PLACEMENT_PREVIEW_DISTANCE
 			local snappedCFrame = GridSnap.snapToGrid(currentBuildZone, frontPos, collisionSize)
 			-- Model이면 PivotTo 보정 (mainPart가 정확히 snappedCFrame에 오도록)
-			local parentModel = previewPart.Parent
-			if parentModel and parentModel:IsA("Model") and parentModel.Name == "PlacementPreview" then
-				local mainToPivot = previewPart.CFrame:ToObjectSpace(parentModel:GetPivot())
-				parentModel:PivotTo(snappedCFrame * mainToPivot)
+			local pModel = previewPart.Parent
+			if pModel and pModel:IsA("Model") and pModel.Name == "PlacementPreview" then
+				local mainToPivot = previewPart.CFrame:ToObjectSpace(pModel:GetPivot())
+				pModel:PivotTo(snappedCFrame * mainToPivot)
+				GridSnap.adjustModelY(pModel, previewPart, currentBuildZone)
 			else
 				previewPart.CFrame = snappedCFrame
 			end
@@ -493,6 +495,7 @@ local function toPlacingNew(itemName: string, level: number?)
 			if parentModel and parentModel:IsA("Model") and parentModel.Name == "PlacementPreview" then
 				local mainToPivot = previewPart.CFrame:ToObjectSpace(parentModel:GetPivot())
 				parentModel:PivotTo(newCFrame * mainToPivot)
+				GridSnap.adjustModelY(parentModel, previewPart, currentBuildZone)
 			else
 				previewPart.CFrame = newCFrame
 			end
@@ -908,6 +911,9 @@ task.spawn(function()
 	PetVisuals.scanPlot(myPlot)
 	LevelBadge.scanPlot(myPlot)
 end)
+
+-- 펫 VFX 이벤트 수신 초기화
+PetVisuals.init()
 
 -- 날씨 VFX 초기화
 WeatherVFX.init()

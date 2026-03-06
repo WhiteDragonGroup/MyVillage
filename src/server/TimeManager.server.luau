@@ -5,11 +5,15 @@
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
 
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
+local TimeState = require(ServerScriptService:WaitForChild("Server"):WaitForChild("TimeState"))
 
 local TIME_SCALE = BalanceConfig.Time.TIME_SCALE
 local UTC_OFFSET = BalanceConfig.Time.UTC_OFFSET
+local DAY_START = BalanceConfig.Time.DAY_START_HOUR
+local NIGHT_START = BalanceConfig.Time.NIGHT_START_HOUR
 
 -- 서버 시작 시점의 실제 KST 시간을 기준점으로
 local startRealTime = os.time()
@@ -19,7 +23,10 @@ local startGameHours = ((startDate.hour + UTC_OFFSET) % 24) + startDate.min / 60
 local function updateTime()
 	local elapsed = os.time() - startRealTime
 	local gameElapsedHours = (elapsed * TIME_SCALE) / 3600
-	Lighting.ClockTime = (startGameHours + gameElapsedHours) % 24
+	local clockTime = (startGameHours + gameElapsedHours) % 24
+	Lighting.ClockTime = clockTime
+
+	TimeState.update(clockTime, clockTime >= DAY_START and clockTime < NIGHT_START)
 end
 
 updateTime()

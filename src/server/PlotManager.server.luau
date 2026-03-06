@@ -168,12 +168,22 @@ local function restoreBuildings(player, plot, savedBuildings: { any })
 				item:Destroy()
 				continue
 			end
-			-- PivotTo 보정: mainPart가 정확히 cf에 오도록
-			local pivotCF = item:GetPivot()
-			local mainToPivot = mainPart.CFrame:ToObjectSpace(pivotCF)
+			-- mainPart가 정확히 cf에 오도록 모델 전체를 이동
+			local mainToPivot = mainPart.CFrame:ToObjectSpace(item:GetPivot())
 			item:PivotTo(cf * mainToPivot)
 			item.Parent = plot
 			mainPart.Anchored = true
+
+			-- Model 바닥 보정: 모델 바닥이 BuildZone 상단에 맞도록 Y 조정
+			if buildZone then
+				local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
+				local bbCF, bbSize = item:GetBoundingBox()
+				local modelBottom = bbCF.Position.Y - bbSize.Y / 2
+				local yAdjust = buildZoneTop - modelBottom
+				if math.abs(yAdjust) > 0.01 then
+					item:PivotTo(item:GetPivot() + Vector3.new(0, yAdjust, 0))
+				end
+			end
 		end
 
 		-- 속성 설정

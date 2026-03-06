@@ -166,11 +166,13 @@ function PetListUI.show(pets: { any }, buildingId: string)
 		nameLabel.Parent = slot
 
 		-- 상태 표시
+		local levelStr = "Lv." .. (pet.level or 1)
+		local weightStr = string.format("%.1fkg", pet.weight or 0)
 		local statusText = ""
 		if pet.assignedBuildingId ~= "" then
-			statusText = "건설 중"
+			statusText = levelStr .. " | " .. weightStr .. " | 건설 중"
 		else
-			statusText = "대기 중"
+			statusText = levelStr .. " | " .. weightStr .. " | 대기 중"
 		end
 		local statusLabel = Instance.new("TextLabel")
 		statusLabel.Size = UDim2.new(1, -90, 0, 16)

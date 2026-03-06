@@ -40,17 +40,17 @@ Constants.RARITY_COLORS = {
 -- collisionSize: 충돌 판정용 고정 사이즈 (모델 실제 크기와 무관, 레벨 변경에도 불변)
 Constants.BUILDINGS = {
 	TownHall    = { name = "마을회관",  types = {"지원"}, rarity = "일반", collisionSize = Vector3.new(8, 6, 8) },
-	Garden      = { name = "텃밭",      types = {"일터"}, rarity = "일반", collisionSize = Vector3.new(6, 2, 6) },
-	Mine        = { name = "광산",      types = {"일터"}, rarity = "희귀", collisionSize = Vector3.new(6, 4, 6) },
+	Garden      = { name = "텃밭",      types = {"일터"}, rarity = "일반", collisionSize = Vector3.new(6, 2, 6), workTypes = {"농사"} },
+	Mine        = { name = "광산",      types = {"일터"}, rarity = "희귀", collisionSize = Vector3.new(6, 4, 6), workTypes = {"채굴"} },
 	Lab         = { name = "연구소",    types = {"지원"}, rarity = "에픽", collisionSize = Vector3.new(8, 8, 8) },
 	HotSpring   = { name = "온천",      types = {"쉼터"}, rarity = "희귀", collisionSize = Vector3.new(8, 2, 8) },
-	Blacksmith  = { name = "대장간",    types = {"일터"}, rarity = "희귀", collisionSize = Vector3.new(6, 5, 6) },
+	Blacksmith  = { name = "대장간",    types = {"일터"}, rarity = "희귀", collisionSize = Vector3.new(6, 5, 6), workTypes = {"건설"} },
 	Inn         = { name = "여관",      types = {"쉼터"}, rarity = "일반", collisionSize = Vector3.new(7, 5, 6) },
 	Fountain    = { name = "분수대",    types = {"장식"}, rarity = "일반", collisionSize = Vector3.new(4, 3, 4) },
-	Market      = { name = "시장",      types = {"일터"}, rarity = "일반", collisionSize = Vector3.new(8, 4, 6) },
+	Market      = { name = "시장",      types = {"일터"}, rarity = "일반", collisionSize = Vector3.new(8, 4, 6), workTypes = {"농사", "채굴"} },
 	Library     = { name = "도서관",    types = {"지원"}, rarity = "희귀", collisionSize = Vector3.new(7, 6, 7) },
 	MagicTower  = { name = "마법탑",    types = {"지원"}, rarity = "전설", collisionSize = Vector3.new(5, 12, 5) },
-	Brewery     = { name = "양조장",    types = {"일터"}, rarity = "에픽", collisionSize = Vector3.new(6, 5, 8) },
+	Brewery     = { name = "양조장",    types = {"일터"}, rarity = "에픽", collisionSize = Vector3.new(6, 5, 8), workTypes = {"농사"} },
 	Pavilion    = { name = "정자",      types = {"쉼터"}, rarity = "에픽", collisionSize = Vector3.new(8, 4, 8) },
 	Temple      = { name = "신전",      types = {"지원"}, rarity = "신화", collisionSize = Vector3.new(10, 8, 10) },
 	WorldTree   = { name = "세계수",    types = {"쉼터"}, rarity = "신화", collisionSize = Vector3.new(6, 14, 6) },
@@ -59,6 +59,36 @@ Constants.BUILDINGS = {
 -- 펫 유형
 Constants.PetType = {
 	Construction = "건설",
+	Farming = "농사",
+	Mining = "채굴",
+	Buff = "버프",
+}
+
+-- 펫 행동 상태
+Constants.PetState = {
+	Idle = "Idle",
+	Working = "Working",
+	Fatigued = "Fatigued",
+	Resting = "Resting",
+	Wandering = "Wandering",
+	Chatting = "Chatting",
+	Sleeping = "Sleeping",
+	Assigned = "Assigned",
+}
+
+-- 펫 사이즈
+Constants.PetSize = {
+	Small = "Small",
+	Medium = "Medium",
+	Big = "Big",
+	Huge = "Huge",
+	Ultra = "Ultra",
+}
+
+-- 펫 종족
+Constants.PetRace = {
+	Human = "인간", Plant = "식물", Dinosaur = "공룡", Bug = "벌레",
+	Robot = "로봇", Golem = "골렘", Skeleton = "해골",
 }
 
 -- 업그레이드 상태

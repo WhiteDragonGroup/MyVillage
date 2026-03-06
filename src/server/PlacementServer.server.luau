@@ -241,12 +241,20 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 			InventoryManager.addItem(player, itemName, 1, level) -- 인벤토리 복구
 			return
 		end
-		-- PivotTo 보정: mainPart가 정확히 cframe에 오도록
-		local pivotCF = item:GetPivot()
-		local mainToPivot = mainPart.CFrame:ToObjectSpace(pivotCF)
+		-- mainPart가 정확히 cframe에 오도록 모델 전체를 이동
+		local mainToPivot = mainPart.CFrame:ToObjectSpace(item:GetPivot())
 		item:PivotTo(cframe * mainToPivot)
 		item.Parent = plot
 		mainPart.Anchored = true
+
+		-- Model 바닥 보정: 모델 바닥이 BuildZone 상단에 맞도록 Y 조정
+		local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
+		local bbCF, bbSize = item:GetBoundingBox()
+		local modelBottom = bbCF.Position.Y - bbSize.Y / 2
+		local yAdjust = buildZoneTop - modelBottom
+		if math.abs(yAdjust) > 0.01 then
+			item:PivotTo(item:GetPivot() + Vector3.new(0, yAdjust, 0))
+		end
 	end
 
 	-- 9. 건물 속성 설정 (mainPart에 부여)
@@ -333,6 +341,15 @@ moveBuildingEvent.OnServerEvent:Connect(function(player, buildingId, newCFrame)
 		local pivotCF = parentModel:GetPivot()
 		local mainToPivot = building.CFrame:ToObjectSpace(pivotCF)
 		parentModel:PivotTo(newCFrame * mainToPivot)
+
+		-- Model 바닥 보정
+		local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
+		local bbCF, bbSize = parentModel:GetBoundingBox()
+		local modelBottom = bbCF.Position.Y - bbSize.Y / 2
+		local yAdjust = buildZoneTop - modelBottom
+		if math.abs(yAdjust) > 0.01 then
+			parentModel:PivotTo(parentModel:GetPivot() + Vector3.new(0, yAdjust, 0))
+		end
 	else
 		building.CFrame = newCFrame
 	end
