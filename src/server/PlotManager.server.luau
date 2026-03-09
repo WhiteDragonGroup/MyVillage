@@ -25,7 +25,8 @@ end)
 -- 업그레이드에 코인 함수 연결
 UpgradeManager.setCurrencyFunctions(
 	function(player, amount) return CurrencyManager.hasCoins(player, amount) end,
-	function(player, amount) return CurrencyManager.spendCoins(player, amount) end
+	function(player, amount) return CurrencyManager.spendCoins(player, amount) end,
+	function(player, amount) return CurrencyManager.addCoins(player, amount) end
 )
 
 -- GetCurrency Remote

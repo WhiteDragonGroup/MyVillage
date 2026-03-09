@@ -1,6 +1,10 @@
 -- UpgradeDisplay.luau
--- 수리중 건물 위에 BillboardGui 게이지바 + 퍼센트 표시
+-- 수리중 건물 위에 BillboardGui 게이지바 + 작업량 수치 표시
 -- 건물 속성(UpgradeState, UpgradeProgress) 변경 감지
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
+local UpgradeCfg = BalanceConfig.Upgrade
 
 local UpgradeDisplay = {}
 
@@ -54,9 +58,9 @@ local function createGaugeBar(building: BasePart): BillboardGui
 	fillCorner.CornerRadius = UDim.new(0, 5)
 	fillCorner.Parent = fillBar
 
-	-- 퍼센트 텍스트
+	-- 작업량 텍스트
 	local label = Instance.new("TextLabel")
-	label.Name = "PercentLabel"
+	label.Name = "WorkLabel"
 	label.Size = UDim2.new(1, 0, 0, 16)
 	label.Position = UDim2.new(0, 0, 0, BAR_HEIGHT + 2)
 	label.BackgroundTransparency = 1
@@ -65,7 +69,7 @@ local function createGaugeBar(building: BasePart): BillboardGui
 	label.TextStrokeTransparency = 0.5
 	label.TextSize = 12
 	label.Font = Enum.Font.GothamBold
-	label.Text = "0%"
+	label.Text = "0 / 0"
 	label.Parent = billboard
 
 	return billboard
@@ -74,19 +78,20 @@ end
 ----------------------------------------------------------------
 -- 게이지 업데이트
 ----------------------------------------------------------------
-local function updateGauge(billboard: BillboardGui, progress: number)
+local function updateGauge(billboard: BillboardGui, progress: number, requiredWork: number)
 	local bgBar = billboard:FindFirstChild("BgBar")
 	if not bgBar then return end
 
+	local ratio = if requiredWork > 0 then math.clamp(progress / requiredWork, 0, 1) else 0
 	local fillBar = bgBar:FindFirstChild("FillBar")
 	if fillBar then
-		local fillWidth = math.clamp(progress / 100, 0, 1) * (BAR_WIDTH - 2)
+		local fillWidth = ratio * (BAR_WIDTH - 2)
 		fillBar.Size = UDim2.new(0, fillWidth, 1, -2)
 	end
 
-	local label = billboard:FindFirstChild("PercentLabel")
+	local label = billboard:FindFirstChild("WorkLabel")
 	if label then
-		label.Text = math.floor(progress) .. "%"
+		label.Text = math.floor(progress) .. " / " .. requiredWork
 	end
 end
 
@@ -118,7 +123,9 @@ function UpgradeDisplay.watchBuilding(building: BasePart)
 		local billboard = _activeDisplays[building]
 		if billboard then
 			local progress = building:GetAttribute("UpgradeProgress") or 0
-			updateGauge(billboard, progress)
+			local level = building:GetAttribute("Level") or 1
+			local requiredWork = UpgradeCfg.REQUIRED_WORK[level] or 1500
+			updateGauge(billboard, progress, requiredWork)
 		end
 	end))
 
@@ -150,7 +157,9 @@ function UpgradeDisplay._showGauge(building: BasePart)
 	_activeDisplays[building] = billboard
 
 	local progress = building:GetAttribute("UpgradeProgress") or 0
-	updateGauge(billboard, progress)
+	local level = building:GetAttribute("Level") or 1
+	local requiredWork = UpgradeCfg.REQUIRED_WORK[level] or 1500
+	updateGauge(billboard, progress, requiredWork)
 end
 
 function UpgradeDisplay._hideGauge(building: BasePart)

@@ -33,6 +33,14 @@ UpgradeConfig.COLOR_BRIGHTEN = {
 	[5] = 0.12,
 }
 
+-- 레벨별 필요 작업량 (절대값)
+UpgradeConfig.REQUIRED_WORK = {
+	[1] = 1500,  -- Lv.1 → Lv.2
+	[2] = 3000,  -- Lv.2 → Lv.3
+	[3] = 5000,  -- Lv.3 → Lv.4
+	[4] = 8000,  -- Lv.4 → Lv.5
+}
+
 -- 업그레이드 진행도 관련
 UpgradeConfig.PROGRESS_TICK = 1 -- 서버 틱 간격 (초)
 

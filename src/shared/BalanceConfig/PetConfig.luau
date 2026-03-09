@@ -4,8 +4,8 @@
 
 local PetConfig = {}
 
--- 건설 속도: 펫이 매 틱(1초)마다 올리는 진행도 (%)
-PetConfig.BUILD_SPEED = 2 -- 기본 2%/초 → 50초에 완료
+-- 건설 속도: 펫이 매 틱(1초)마다 올리는 작업량 (절대값)
+PetConfig.BUILD_SPEED = 30 -- 기본 30/초 (Lv1→2: 1500/30=50초)
 
 -- 배회 파라미터
 PetConfig.WANDER_RADIUS = 8       -- 배회 반경 (stud)

@@ -3,7 +3,6 @@
 -- startUpgrade, cancelUpgrade, addProgress, completeUpgrade
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ServerStorage = game:GetService("ServerStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
@@ -43,14 +42,16 @@ local _activeLoops = {}
 local _onCompleteCallback = nil  -- (Player, petId) → 펫 해제
 local _spendCoinsFunc = nil      -- (Player, amount) → boolean
 local _hasCoinsFunc = nil        -- (Player, amount) → boolean
+local _addCoinsFunc = nil        -- (Player, amount) → boolean
 
 function UpgradeManager.setOnCompleteCallback(callback: (Player, string) -> ())
 	_onCompleteCallback = callback
 end
 
-function UpgradeManager.setCurrencyFunctions(hasCoins, spendCoins)
+function UpgradeManager.setCurrencyFunctions(hasCoins, spendCoins, addCoins)
 	_hasCoinsFunc = hasCoins
 	_spendCoinsFunc = spendCoins
+	_addCoinsFunc = addCoins
 end
 
 ----------------------------------------------------------------
@@ -104,9 +105,17 @@ function UpgradeManager.cancelUpgrade(player: Player, building: BasePart): (bool
 	end
 
 	local buildingId = building:GetAttribute("BuildingId")
+	local level = building:GetAttribute("Level") or 1
 
 	-- 루프 중단
 	_activeLoops[buildingId] = nil
+
+	-- 코인 환불
+	local cost = UpgradeCfg.COST[level] or 0
+	if cost > 0 and _addCoinsFunc then
+		_addCoinsFunc(player, cost)
+		print(player.Name .. " - 업그레이드 취소 환불: " .. cost .. " 코인")
+	end
 
 	-- 상태 복원
 	building:SetAttribute("UpgradeState", Constants.UpgradeState.None)
@@ -150,6 +159,10 @@ function UpgradeManager._startProgressLoop(player: Player, building: BasePart, b
 				continue
 			end
 
+			-- 필요 작업량 조회
+			local level = building:GetAttribute("Level") or 1
+			local requiredWork = UpgradeCfg.REQUIRED_WORK[level] or 1500
+
 			-- 진행도 증가
 			local progress = building:GetAttribute("UpgradeProgress") or 0
 			local increment = PetCfg.BUILD_SPEED -- 기본 속도
@@ -171,11 +184,11 @@ function UpgradeManager._startProgressLoop(player: Player, building: BasePart, b
 				end
 			end
 
-			progress = math.min(100, progress + increment)
+			progress = math.min(requiredWork, progress + increment)
 			building:SetAttribute("UpgradeProgress", progress)
 
-			-- 100% 도달 시 완료
-			if progress >= 100 then
+			-- 작업량 도달 시 완료
+			if progress >= requiredWork then
 				UpgradeManager._completeUpgrade(player, building, buildingId)
 				break
 			end
@@ -291,12 +304,13 @@ end
 function UpgradeManager.applyVisualUpgrade(building: BasePart, level: number): BasePart
 	local itemName = building:GetAttribute("ItemName") or ""
 
-	-- 1. ServerStorage/Buildings/{ItemName}/Level{N} 확인
-	local buildingsFolder = ServerStorage:FindFirstChild("Buildings")
+	-- 1. ReplicatedStorage/Buildings/{ItemName}/Level{N} 확인
+	local buildingsFolder = ReplicatedStorage:FindFirstChild("Buildings")
 	if buildingsFolder then
 		local itemFolder = buildingsFolder:FindFirstChild(itemName)
 		if itemFolder then
 			local levelModel = itemFolder:FindFirstChild("Level" .. level)
+				or itemFolder:FindFirstChild(itemName .. "_" .. level)
 			if levelModel then
 				local newBuilding = UpgradeManager._swapModel(building, levelModel)
 				if newBuilding then

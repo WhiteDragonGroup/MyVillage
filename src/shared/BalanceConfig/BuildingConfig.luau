@@ -19,6 +19,7 @@ BuildingConfig.PLACEMENT_PREVIEW_DISTANCE = 10
 --   itemName = Items 폴더 내 템플릿 이름, count = 지급 수량
 BuildingConfig.DEFAULT_INVENTORY = {
 	{ itemName = "Mine", count = 2 },
+	{ itemName = "HotSpring", count = 2 },
 }
 
 return BuildingConfig
