@@ -320,10 +320,28 @@ moveBuildingEvent.OnServerEvent:Connect(function(player, buildingId, newCFrame)
 	-- 이동 적용 (Model이면 PivotTo로 전체 이동, 보정 포함)
 	local parentModel = building.Parent
 	if parentModel and parentModel:IsA("Model") then
-		-- 클라이언트에서 이미 바닥 보정된 CFrame을 전송
 		local pivotCF = parentModel:GetPivot()
 		local mainToPivot = building.CFrame:ToObjectSpace(pivotCF)
 		parentModel:PivotTo(newCFrame * mainToPivot)
+
+		-- Model 바닥 보정 (CollisionBox 임시 제거 후 GetBoundingBox)
+		local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
+		local removed = {}
+		for _, part in parentModel:GetDescendants() do
+			if part:IsA("BasePart") and part:GetAttribute("IsCollisionBox") then
+				table.insert(removed, { part = part, parent = part.Parent })
+				part.Parent = nil
+			end
+		end
+		local bbCF, bbSize = parentModel:GetBoundingBox()
+		for _, info in removed do
+			info.part.Parent = info.parent
+		end
+		local modelBottom = bbCF.Position.Y - bbSize.Y / 2
+		local yAdjust = buildZoneTop - modelBottom
+		if math.abs(yAdjust) > 0.01 then
+			parentModel:PivotTo(parentModel:GetPivot() + Vector3.new(0, yAdjust, 0))
+		end
 	else
 		building.CFrame = newCFrame
 	end

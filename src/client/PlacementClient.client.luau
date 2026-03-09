@@ -66,6 +66,7 @@ local originalCFrame = nil         -- 이동 전 원래 CFrame (Cancel 복원용
 local hoveredPart = nil            -- 현재 호버 중인 파트
 local currentBuildZone = nil       -- 현재 드래그 중인 BuildZone
 local hasCollision = false         -- 현재 충돌 상태
+local _lastCollisionDebug = nil    -- 디버그 출력 쓰로틀
 local inventory = {}               -- 로컬 인벤토리 캐시
 
 -- 렌더 연결
@@ -246,7 +247,18 @@ local function updateCollisionState()
 
 	-- 올바른 아이템 이름으로 충돌 사이즈 사용
 	local itemName = previewItemName or previewPart:GetAttribute("ItemName") or ""
-	local colliding = CollisionDetector.checkCollisionBySize(previewPart.CFrame, itemName, ignoreParts)
+	local colliding, collidingParts = CollisionDetector.checkCollisionBySize(previewPart.CFrame, itemName, ignoreParts)
+
+	-- 디버그: 충돌 체크 결과 (1초마다)
+	if not _lastCollisionDebug or (tick() - _lastCollisionDebug) > 1 then
+		_lastCollisionDebug = tick()
+		local collisionSize = Constants.getCollisionSize(itemName)
+		print("[CollisionDebug] item=" .. itemName
+			.. " | pos=" .. tostring(previewPart.CFrame.Position)
+			.. " | size=" .. tostring(collisionSize)
+			.. " | colliding=" .. tostring(colliding)
+			.. " | hits=" .. (#collidingParts))
+	end
 
 	hasCollision = colliding
 
