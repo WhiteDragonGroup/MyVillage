@@ -54,6 +54,8 @@ Constants.BUILDINGS = {
 	Pavilion    = { name = "정자",      types = {"쉼터"}, rarity = "에픽", collisionSize = Vector3.new(8, 4, 8) },
 	Temple      = { name = "신전",      types = {"지원"}, rarity = "신화", collisionSize = Vector3.new(10, 8, 10) },
 	WorldTree   = { name = "세계수",    types = {"쉼터"}, rarity = "신화", collisionSize = Vector3.new(6, 14, 6) },
+	Campfire    = { name = "캠프파이어", types = {"쉼터"}, rarity = "일반", collisionSize = Vector3.new(4, 3, 4) },
+	PotionCafe  = { name = "포션카페",  types = {"지원"}, rarity = "희귀", collisionSize = Vector3.new(6, 5, 6) },
 }
 
 -- 펫 유형
@@ -100,6 +102,36 @@ Constants.UpgradeState = {
 -- 펫 카탈로그
 Constants.PETS = {
 	["초보 건설 슬라임"] = { petType = "Construction", rarity = "일반" },
+}
+
+-- 돌연변이 타입
+Constants.MutationType = {
+	Shocked = "Shocked",     -- 충전된
+	Gold = "Gold",           -- 골드
+	Inverted = "Inverted",   -- 반전된
+	Celestial = "Celestial", -- 셀레스티얼
+	Charged = "Charged",     -- 차지드
+	Potential = "Potential",  -- 포텐셜
+}
+
+-- 돌연변이 표시명
+Constants.MUTATION_NAMES = {
+	Shocked = "충전된",
+	Gold = "골드",
+	Inverted = "반전된",
+	Celestial = "셀레스티얼",
+	Charged = "차지드",
+	Potential = "포텐셜",
+}
+
+-- 돌연변이 색상 (UI/VFX 참조)
+Constants.MUTATION_COLORS = {
+	Shocked = Color3.fromRGB(100, 200, 255),
+	Gold = Color3.fromRGB(255, 215, 0),
+	Inverted = Color3.fromRGB(180, 50, 255),
+	Celestial = Color3.fromRGB(200, 230, 255),
+	Charged = Color3.fromRGB(255, 255, 100),
+	Potential = Color3.fromRGB(100, 255, 150),
 }
 
 -- 하이라이트 색상

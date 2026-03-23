@@ -6,8 +6,10 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 local mouse = player:GetMouse()
 
 -- 모듈 로드
@@ -23,6 +25,12 @@ local MoveHandleUI = require(clientScript:WaitForChild("build"):WaitForChild("Mo
 local UpgradeUI = require(clientScript:WaitForChild("build"):WaitForChild("UpgradeUI"))
 local PetListUI = require(clientScript:WaitForChild("build"):WaitForChild("PetListUI"))
 local CurrencyUI = require(clientScript:WaitForChild("build"):WaitForChild("CurrencyUI"))
+local MainHUD = require(clientScript:WaitForChild("build"):WaitForChild("MainHUD"))
+local ShopUI = require(clientScript:WaitForChild("build"):WaitForChild("ShopUI"))
+local CollectionUI = require(clientScript:WaitForChild("build"):WaitForChild("CollectionUI"))
+local GiftUI = require(clientScript:WaitForChild("build"):WaitForChild("GiftUI"))
+local SettingsUI = require(clientScript:WaitForChild("build"):WaitForChild("SettingsUI"))
+local PetDetailUI = require(clientScript:WaitForChild("build"):WaitForChild("PetDetailUI"))
 
 local HighlightSystem = require(clientScript:WaitForChild("systems"):WaitForChild("HighlightSystem"))
 local CollisionDetector = require(clientScript:WaitForChild("systems"):WaitForChild("CollisionDetector"))
@@ -48,6 +56,11 @@ local getPetsFunc = remotes:WaitForChild("GetPets")
 local upgradeStateChangedEvent = remotes:WaitForChild("UpgradeStateChanged")
 local currencyUpdateEvent = remotes:WaitForChild("CurrencyUpdate")
 local getCurrencyFunc = remotes:WaitForChild("GetCurrency")
+local getShopFunc = remotes:WaitForChild("GetShop")
+local buyItemEvent = remotes:WaitForChild("BuyItem")
+local shopUpdateEvent = remotes:WaitForChild("ShopUpdate")
+local sendGiftEvent = remotes:WaitForChild("SendGift")
+local giftReceivedEvent = remotes:WaitForChild("GiftReceived")
 
 local itemsFolder = ReplicatedStorage:WaitForChild("Items")
 
@@ -522,9 +535,15 @@ end
 
 -- BuildUI: 빌드 모드 토글
 BuildUI.init(function()
+	-- 상점/도감 닫기
+	ShopUI.hide()
+	CollectionUI.hide()
+	GiftUI.hide()
 	if currentState == BuildState.Idle then
+		MainHUD.setActiveTab("build")
 		toBuildMode()
 	elseif currentState == BuildState.BuildMode then
+		MainHUD.setActiveTab(nil)
 		toIdle()
 	elseif currentState == BuildState.Selected or currentState == BuildState.Moving or currentState == BuildState.PlacingNew then
 		-- 빌드모드에서 나가기
@@ -930,4 +949,204 @@ PetVisuals.init()
 -- 날씨 VFX 초기화
 WeatherVFX.init()
 
-print("PlacementClient 로드됨 - 빌드 시스템 v3 (업그레이드 + 펫 + 날씨)")
+----------------------------------------------------------------
+-- 메인 HUD + 상점 + 도감 + 선물 시스템
+----------------------------------------------------------------
+
+-- 상점/도감 패널 닫기 헬퍼
+local function closeAllPanels()
+	ShopUI.hide()
+	CollectionUI.hide()
+end
+
+-- 상점 데이터 로드
+local function loadShopData()
+	task.spawn(function()
+		local shopData, restockTime = getShopFunc:InvokeServer()
+		if shopData then
+			ShopUI.updateShop(shopData, restockTime)
+		end
+	end)
+end
+
+-- 도감 초기화
+CollectionUI.init()
+
+-- 선물 UI 초기화
+GiftUI.init({
+	onSelectPlayer = function(itemName, targetPlayer)
+		sendGiftEvent:FireServer(itemName, targetPlayer.Name)
+		GiftUI.hide()
+		loadShopData() -- 재고 갱신
+	end,
+	onClose = function()
+		GiftUI.hide()
+	end,
+})
+
+-- 상점 UI 초기화
+ShopUI.init({
+	onBuy = function(itemName)
+		buyItemEvent:FireServer(itemName)
+	end,
+	onGift = function(itemName)
+		GiftUI.show(itemName)
+	end,
+})
+
+-- 메인 HUD 초기화 (탭 전환)
+MainHUD.init({
+	onTabChanged = function(tabId)
+		if tabId == "build" then
+			closeAllPanels()
+			if currentState == BuildState.Idle then
+				toBuildMode()
+			elseif currentState ~= BuildState.BuildMode then
+				-- 이미 빌드 관련 상태면 유지
+			end
+		elseif tabId == "shop" then
+			CollectionUI.hide()
+			if currentState ~= BuildState.Idle and currentState ~= BuildState.BuildMode then
+				-- 빌드 작업 중이면 탭 무시
+				MainHUD.setActiveTab(nil)
+				return
+			end
+			if currentState == BuildState.BuildMode then
+				toIdle()
+			end
+			ShopUI.show()
+			loadShopData()
+		elseif tabId == "collection" then
+			ShopUI.hide()
+			if currentState ~= BuildState.Idle and currentState ~= BuildState.BuildMode then
+				MainHUD.setActiveTab(nil)
+				return
+			end
+			if currentState == BuildState.BuildMode then
+				toIdle()
+			end
+			CollectionUI.show()
+		else
+			-- nil (탭 해제)
+			closeAllPanels()
+			if currentState == BuildState.BuildMode then
+				toIdle()
+			end
+		end
+	end,
+
+	onSettings = function()
+		if SettingsUI.isVisible() then
+			SettingsUI.hide()
+		else
+			SettingsUI.show()
+		end
+	end,
+})
+
+-- 상점 데이터 서버 동기화
+shopUpdateEvent.OnClientEvent:Connect(function(shopData, restockTime)
+	ShopUI.updateShop(shopData, restockTime)
+end)
+
+-- 선물 수신 알림
+giftReceivedEvent.OnClientEvent:Connect(function(senderName, itemDisplayName)
+	-- 간단한 알림 (2초 표시)
+	local notifGui = Instance.new("ScreenGui")
+	notifGui.Name = "GiftNotification"
+	notifGui.ResetOnSpawn = false
+	notifGui.DisplayOrder = 40
+	notifGui.Parent = playerGui
+
+	local notifFrame = Instance.new("Frame")
+	notifFrame.Size = UDim2.new(0, 280, 0, 50)
+	notifFrame.Position = UDim2.new(0.5, -140, 0, -60)
+	notifFrame.BackgroundColor3 = Color3.fromRGB(180, 80, 150)
+	notifFrame.BorderSizePixel = 0
+	notifFrame.Parent = notifGui
+
+	local nCorner = Instance.new("UICorner")
+	nCorner.CornerRadius = UDim.new(0, 12)
+	nCorner.Parent = notifFrame
+
+	local nLabel = Instance.new("TextLabel")
+	nLabel.Size = UDim2.new(1, -16, 1, 0)
+	nLabel.Position = UDim2.new(0, 8, 0, 0)
+	nLabel.BackgroundTransparency = 1
+	nLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	nLabel.TextSize = 13
+	nLabel.Font = Enum.Font.GothamBold
+	nLabel.Text = senderName .. "님이 " .. itemDisplayName .. "을(를) 선물했습니다!"
+	nLabel.TextWrapped = true
+	nLabel.Parent = notifFrame
+
+	-- 슬라이드 인
+	TweenService:Create(notifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
+		Position = UDim2.new(0.5, -140, 0, 20)
+	}):Play()
+
+	-- 2초 후 슬라이드 아웃 + 제거
+	task.delay(2.5, function()
+		local tween = TweenService:Create(notifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+			Position = UDim2.new(0.5, -140, 0, -60)
+		})
+		tween:Play()
+		tween.Completed:Connect(function()
+			notifGui:Destroy()
+		end)
+	end)
+end)
+
+-- 초기 상점 데이터 로드
+loadShopData()
+
+----------------------------------------------------------------
+-- 설정 UI + 펫 상세 UI
+----------------------------------------------------------------
+
+SettingsUI.init()
+PetDetailUI.init()
+
+-- PetListUI에 펫 상세 보기 연동 (PetUpdate 이벤트로 mutation 표시)
+petUpdateEvent.OnClientEvent:Connect(function(eventType, data)
+	if eventType == "mutation" then
+		-- 돌연변이 추가 시 알림
+		local mutName = Constants.MUTATION_NAMES[data.mutationType] or data.mutationType
+		local notifGui = Instance.new("ScreenGui")
+		notifGui.Name = "MutationNotif"
+		notifGui.ResetOnSpawn = false
+		notifGui.DisplayOrder = 40
+		notifGui.Parent = playerGui
+
+		local notifFrame = Instance.new("Frame")
+		notifFrame.Size = UDim2.new(0, 260, 0, 44)
+		notifFrame.Position = UDim2.new(0.5, -130, 0, -50)
+		notifFrame.BackgroundColor3 = Constants.MUTATION_COLORS[data.mutationType] or Color3.fromRGB(150, 150, 200)
+		notifFrame.BorderSizePixel = 0
+		notifFrame.Parent = notifGui
+
+		local nCorner = Instance.new("UICorner")
+		nCorner.CornerRadius = UDim.new(0, 10)
+		nCorner.Parent = notifFrame
+
+		local nLabel = Instance.new("TextLabel")
+		nLabel.Size = UDim2.new(1, -12, 1, 0)
+		nLabel.Position = UDim2.new(0, 6, 0, 0)
+		nLabel.BackgroundTransparency = 1
+		nLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+		nLabel.TextSize = 13
+		nLabel.Font = Enum.Font.GothamBold
+		nLabel.Text = "돌연변이 획득: " .. mutName .. "!"
+		nLabel.Parent = notifFrame
+
+		TweenService:Create(notifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
+			Position = UDim2.new(0.5, -130, 0, 20)
+		}):Play()
+
+		task.delay(3, function()
+			if notifGui.Parent then notifGui:Destroy() end
+		end)
+	end
+end)
+
+print("PlacementClient 로드됨 - 빌드 시스템 v5 (전체 시스템)")

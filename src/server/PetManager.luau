@@ -132,6 +132,15 @@ local function createPetModel(petData, position: Vector3): BasePart
 	pet:SetAttribute("PetSize", petData.size or "Small")
 	pet:SetAttribute("PetRace", petData.race or "인간")
 
+	-- 돌연변이 (쉼표 구분 문자열)
+	local mutList = {}
+	if petData.mutations then
+		for mutType, _ in petData.mutations do
+			table.insert(mutList, mutType)
+		end
+	end
+	pet:SetAttribute("Mutations", table.concat(mutList, ","))
+
 	return pet
 end
 

@@ -14,6 +14,7 @@ local PetManager = require(serverScript:WaitForChild("PetManager"))
 local UpgradeManager = require(serverScript:WaitForChild("UpgradeManager"))
 local CurrencyManager = require(serverScript:WaitForChild("CurrencyManager"))
 local DataStoreManager = require(serverScript:WaitForChild("DataStoreManager"))
+local ShopManager = require(serverScript:WaitForChild("ShopManager"))
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
 
@@ -283,6 +284,7 @@ local function resetPlayerData(player: Player)
 	InventoryManager.initPlayer(player, nil)
 	PetManager.initPlayer(player, nil)
 	CurrencyManager.initPlayer(player, nil)
+	ShopManager.initPlayer(player)
 
 	print(player.Name .. " - reset 완료! 기본 상태로 초기화됨")
 end
@@ -305,6 +307,7 @@ Players.PlayerAdded:Connect(function(player)
 	InventoryManager.initPlayer(player, savedData.inventory)
 	PetManager.initPlayer(player, savedData.pets)
 	CurrencyManager.initPlayer(player, savedData.coins)
+	ShopManager.initPlayer(player)
 
 	-- 3. 플롯 배정
 	local plot = findEmptyPlot()
@@ -367,6 +370,9 @@ Players.PlayerRemoving:Connect(function(player)
 
 	-- 펫 제거
 	PetManager.removePlayer(player)
+
+	-- 상점 제거
+	ShopManager.removePlayer(player)
 
 	-- 코인 제거
 	CurrencyManager.removePlayer(player)

@@ -62,6 +62,21 @@
         },
         "LightningStrike": {
           "$className": "RemoteEvent"
+        },
+        "GetShop": {
+          "$className": "RemoteFunction"
+        },
+        "BuyItem": {
+          "$className": "RemoteEvent"
+        },
+        "ShopUpdate": {
+          "$className": "RemoteEvent"
+        },
+        "SendGift": {
+          "$className": "RemoteEvent"
+        },
+        "GiftReceived": {
+          "$className": "RemoteEvent"
         }
       },
       "Weather": {
@@ -76,6 +91,12 @@
           "$className": "Folder"
         },
         "Sunny": {
+          "$className": "Folder"
+        }
+      },
+      "VFX": {
+        "$className": "Folder",
+        "Mutation": {
           "$className": "Folder"
         }
       },
@@ -214,6 +235,24 @@
             "Color": [0.15, 0.5, 0.2],
             "Size": [6, 14, 6],
             "Material": "Grass"
+          }
+        },
+        "Campfire": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [0.8, 0.4, 0.1],
+            "Size": [4, 3, 4],
+            "Material": "WoodPlanks"
+          }
+        },
+        "PotionCafe": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [0.5, 0.3, 0.7],
+            "Size": [6, 5, 6],
+            "Material": "SmoothPlastic"
           }
         }
       },

@@ -5,6 +5,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local petUpdateEvent = remotes:WaitForChild("PetUpdate")
 
+local clientScript = script.Parent.Parent
+local MutationVFX = require(clientScript:WaitForChild("systems"):WaitForChild("MutationVFX"))
+
 local PetVisuals = {}
 
 local _activeLabels = {} -- { [BasePart]: BillboardGui }
@@ -334,6 +337,23 @@ function PetVisuals.watchPet(pet: BasePart)
 	pet:GetAttributeChangedSignal("PetLevel"):Connect(function()
 		local level = pet:GetAttribute("PetLevel") or 1
 		updateLevel(billboard, level)
+	end)
+
+	-- 돌연변이 VFX 적용 (Mutations 속성에서)
+	local mutationsStr = pet:GetAttribute("Mutations") or ""
+	if mutationsStr ~= "" then
+		local mutations = string.split(mutationsStr, ",")
+		MutationVFX.applyAll(pet, mutations)
+	end
+
+	-- Mutations 변경 감지
+	pet:GetAttributeChangedSignal("Mutations"):Connect(function()
+		MutationVFX.removeAll(pet)
+		local newMutStr = pet:GetAttribute("Mutations") or ""
+		if newMutStr ~= "" then
+			local mutations = string.split(newMutStr, ",")
+			MutationVFX.applyAll(pet, mutations)
+		end
 	end)
 end
 
