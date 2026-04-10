@@ -77,6 +77,24 @@
         },
         "GiftReceived": {
           "$className": "RemoteEvent"
+        },
+        "BuyEgg": {
+          "$className": "RemoteEvent"
+        },
+        "PlaceEgg": {
+          "$className": "RemoteEvent"
+        },
+        "HatchEgg": {
+          "$className": "RemoteEvent"
+        },
+        "GetEggs": {
+          "$className": "RemoteFunction"
+        },
+        "GetPlacedEggs": {
+          "$className": "RemoteFunction"
+        },
+        "EggUpdate": {
+          "$className": "RemoteEvent"
         }
       },
       "Weather": {
@@ -93,6 +111,9 @@
         "Sunny": {
           "$className": "Folder"
         }
+      },
+      "Egg": {
+        "$className": "Folder"
       },
       "VFX": {
         "$className": "Folder",

@@ -629,4 +629,8 @@ function WeatherVFX.init()
 	print("[WeatherVFX] 초기화 완료")
 end
 
+function WeatherVFX.getCurrentWeather(): string
+	return currentWeather
+end
+
 return WeatherVFX

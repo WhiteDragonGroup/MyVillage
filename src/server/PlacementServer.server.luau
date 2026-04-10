@@ -128,7 +128,7 @@ end
 ----------------------------------------------------------------
 -- PlaceBuilding: 인벤토리에서 새 건물 배치
 ----------------------------------------------------------------
-placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, level)
+placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, level, pivotCFrame)
 	-- 1. 타입 검증
 	if typeof(itemName) ~= "string" or typeof(cframe) ~= "CFrame" then
 		warn(player.Name .. " - 잘못된 요청 형식")
@@ -137,6 +137,8 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 	-- 레벨 검증
 	if typeof(level) ~= "number" then level = 1 end
 	level = math.clamp(math.floor(level), 1, 5)
+	-- pivotCFrame 검증 (Model용, nil이면 BasePart)
+	if pivotCFrame ~= nil and typeof(pivotCFrame) ~= "CFrame" then pivotCFrame = nil end
 
 	-- 2. 아이템 템플릿 확인
 	local template = itemsFolder:FindFirstChild(itemName)
@@ -218,6 +220,7 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 	-- 8.1. 위치/부모 설정 (BasePart vs Model 분기)
 	local mainPart: BasePart
 	if item:IsA("BasePart") then
+		-- 클라이언트에서 보정된 CFrame을 그대로 사용
 		item.CFrame = cframe
 		item.Anchored = true
 		item.CanCollide = true
@@ -231,10 +234,13 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 			InventoryManager.addItem(player, itemName, 1, level) -- 인벤토리 복구
 			return
 		end
-		-- mainPart가 정확히 cframe에 오도록 모델 전체를 이동
-		-- (클라이언트에서 이미 바닥 보정된 CFrame을 전송)
-		local mainToPivot = mainPart.CFrame:ToObjectSpace(item:GetPivot())
-		item:PivotTo(cframe * mainToPivot)
+		-- pivotCFrame이 있으면 PivotTo로 정확히 배치, 없으면 mainPart 기준
+		if pivotCFrame then
+			item:PivotTo(pivotCFrame)
+		else
+			local mainToPivot = mainPart.CFrame:ToObjectSpace(item:GetPivot())
+			item:PivotTo(cframe * mainToPivot)
+		end
 		item.Parent = plot
 		mainPart.Anchored = true
 	end
@@ -318,8 +324,12 @@ moveBuildingEvent.OnServerEvent:Connect(function(player, buildingId, newCFrame)
 	end
 
 	-- 이동 적용 (Model이면 PivotTo로 전체 이동, 보정 포함)
+	-- 부모가 건물 Model인지 확인 (플롯 Model 제외)
 	local parentModel = building.Parent
-	if parentModel and parentModel:IsA("Model") then
+	local isBuildingModel = parentModel and parentModel:IsA("Model")
+		and parentModel:GetAttribute("Owner") == nil
+		and not (parentModel.Parent and parentModel.Parent.Name == "Plots")
+	if isBuildingModel then
 		local pivotCF = parentModel:GetPivot()
 		local mainToPivot = building.CFrame:ToObjectSpace(pivotCF)
 		parentModel:PivotTo(newCFrame * mainToPivot)
@@ -343,6 +353,7 @@ moveBuildingEvent.OnServerEvent:Connect(function(player, buildingId, newCFrame)
 			parentModel:PivotTo(parentModel:GetPivot() + Vector3.new(0, yAdjust, 0))
 		end
 	else
+		-- 클라이언트에서 보정된 CFrame을 그대로 사용
 		building.CFrame = newCFrame
 	end
 	syncCollisionBox(building)

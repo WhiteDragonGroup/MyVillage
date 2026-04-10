@@ -1,9 +1,11 @@
 -- SettingsUI.luau
--- 설정 UI: 사운드 볼륨, 그래픽 품질, 알림 토글
+-- 설정 UI (기획서 기준)
+-- Weather VFX 토글, Music 슬라이더, SFX 슬라이더, Low Detail Mode 토글, Codes 입력
 
 local Players = game:GetService("Players")
 local SoundService = game:GetService("SoundService")
-local UserSettings = UserSettings
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -15,18 +17,21 @@ local overlay = nil
 local mainFrame = nil
 local _visible = false
 
-local PANEL_WIDTH = 280
-local PANEL_HEIGHT = 300
+local PANEL_WIDTH = 300
+local PANEL_HEIGHT = 320
 
--- 설정 값 (로컬)
 local _settings = {
-	masterVolume = 1.0,
+	weatherVFX = true,
 	musicVolume = 0.5,
 	sfxVolume = 0.8,
-	notifications = true,
+	lowDetail = false,
 }
 
-function SettingsUI.init()
+local _onCodeSubmit = nil -- 외부 콜백
+
+function SettingsUI.init(callbacks: { onCodeSubmit: ((string) -> ())? }?)
+	_onCodeSubmit = callbacks and callbacks.onCodeSubmit or nil
+
 	screenGui = Instance.new("ScreenGui")
 	screenGui.Name = "SettingsUI"
 	screenGui.ResetOnSpawn = false
@@ -51,8 +56,7 @@ function SettingsUI.init()
 	mainFrame.Name = "SettingsPanel"
 	mainFrame.Size = UDim2.new(0, PANEL_WIDTH, 0, PANEL_HEIGHT)
 	mainFrame.Position = UDim2.new(0.5, -PANEL_WIDTH / 2, 0.5, -PANEL_HEIGHT / 2)
-	mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-	mainFrame.BackgroundTransparency = 0.05
+	mainFrame.BackgroundColor3 = Color3.fromRGB(180, 120, 60)
 	mainFrame.BorderSizePixel = 0
 	mainFrame.Visible = false
 	mainFrame.Parent = screenGui
@@ -62,226 +66,252 @@ function SettingsUI.init()
 	corner.Parent = mainFrame
 
 	local stroke = Instance.new("UIStroke")
-	stroke.Color = Color3.fromRGB(100, 100, 130)
-	stroke.Thickness = 1.5
+	stroke.Color = Color3.fromRGB(120, 70, 30)
+	stroke.Thickness = 3
 	stroke.Parent = mainFrame
 
 	-- 제목
 	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, -16, 0, 30)
-	title.Position = UDim2.new(0, 8, 0, 10)
+	title.Size = UDim2.new(1, 0, 0, 36)
 	title.BackgroundTransparency = 1
-	title.TextColor3 = Color3.fromRGB(255, 255, 255)
-	title.TextSize = 16
+	title.TextColor3 = Color3.fromRGB(60, 30, 10)
+	title.TextSize = 20
 	title.Font = Enum.Font.GothamBold
-	title.Text = "설정"
-	title.TextXAlignment = Enum.TextXAlignment.Center
+	title.Text = "Settings"
 	title.Parent = mainFrame
-
-	-- 설정 항목 컨테이너
-	local contentFrame = Instance.new("Frame")
-	contentFrame.Name = "Content"
-	contentFrame.Size = UDim2.new(1, -20, 1, -90)
-	contentFrame.Position = UDim2.new(0, 10, 0, 48)
-	contentFrame.BackgroundTransparency = 1
-	contentFrame.Parent = mainFrame
-
-	local layout = Instance.new("UIListLayout")
-	layout.Padding = UDim.new(0, 10)
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Parent = contentFrame
-
-	-- 마스터 볼륨
-	SettingsUI._createSlider(contentFrame, "마스터 볼륨", 1, _settings.masterVolume, function(val)
-		_settings.masterVolume = val
-		SoundService.Volume = val
-	end)
-
-	-- 음악 볼륨
-	SettingsUI._createSlider(contentFrame, "음악 볼륨", 2, _settings.musicVolume, function(val)
-		_settings.musicVolume = val
-	end)
-
-	-- 효과음 볼륨
-	SettingsUI._createSlider(contentFrame, "효과음 볼륨", 3, _settings.sfxVolume, function(val)
-		_settings.sfxVolume = val
-	end)
-
-	-- 알림 토글
-	SettingsUI._createToggle(contentFrame, "선물 알림", 4, _settings.notifications, function(val)
-		_settings.notifications = val
-	end)
 
 	-- 닫기 버튼
 	local closeBtn = Instance.new("TextButton")
-	closeBtn.Size = UDim2.new(1, -20, 0, 34)
-	closeBtn.Position = UDim2.new(0, 10, 1, -44)
-	closeBtn.BackgroundColor3 = Color3.fromRGB(100, 50, 50)
+	closeBtn.Size = UDim2.new(0, 30, 0, 30)
+	closeBtn.Position = UDim2.new(1, -36, 0, 3)
+	closeBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
 	closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-	closeBtn.Text = "닫기"
-	closeBtn.TextSize = 14
+	closeBtn.TextSize = 16
 	closeBtn.Font = Enum.Font.GothamBold
+	closeBtn.Text = "X"
 	closeBtn.AutoButtonColor = true
 	closeBtn.Parent = mainFrame
 
 	local closeCorner = Instance.new("UICorner")
-	closeCorner.CornerRadius = UDim.new(0, 8)
+	closeCorner.CornerRadius = UDim.new(1, 0)
 	closeCorner.Parent = closeBtn
 
 	closeBtn.MouseButton1Click:Connect(function()
 		SettingsUI.hide()
 	end)
+
+	-- 설정 항목 컨테이너
+	local content = Instance.new("Frame")
+	content.Name = "Content"
+	content.Size = UDim2.new(1, -20, 1, -46)
+	content.Position = UDim2.new(0, 10, 0, 40)
+	content.BackgroundTransparency = 1
+	content.Parent = mainFrame
+
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 6)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = content
+
+	-- 1. Weather VFX 토글
+	SettingsUI._createToggleRow(content, "Weather", 1, _settings.weatherVFX, function(val)
+		_settings.weatherVFX = val
+	end)
+
+	-- 2. Music 슬라이더
+	SettingsUI._createSliderRow(content, "Music", 2, _settings.musicVolume, function(val)
+		_settings.musicVolume = val
+	end)
+
+	-- 3. SFX 슬라이더
+	SettingsUI._createSliderRow(content, "SFX", 3, _settings.sfxVolume, function(val)
+		_settings.sfxVolume = val
+		SoundService.Volume = val
+	end)
+
+	-- 4. Low Detail Mode 토글
+	SettingsUI._createToggleRow(content, "Low Detail Mode", 4, _settings.lowDetail, function(val)
+		_settings.lowDetail = val
+		if val then
+			Lighting.GlobalShadows = false
+		else
+			Lighting.GlobalShadows = true
+		end
+	end)
+
+	-- 5. Codes 입력
+	SettingsUI._createCodeRow(content, 5)
 end
 
-function SettingsUI._createSlider(parent: Frame, label: string, order: number, defaultVal: number, onChange: (number) -> ())
+function SettingsUI._createRow(parent, order): Frame
 	local row = Instance.new("Frame")
-	row.Name = label
-	row.Size = UDim2.new(1, 0, 0, 40)
-	row.BackgroundTransparency = 1
+	row.Size = UDim2.new(1, 0, 0, 38)
+	row.BackgroundColor3 = Color3.fromRGB(200, 140, 80)
+	row.BorderSizePixel = 0
 	row.LayoutOrder = order
 	row.Parent = parent
 
+	local rowCorner = Instance.new("UICorner")
+	rowCorner.CornerRadius = UDim.new(0, 8)
+	rowCorner.Parent = row
+
+	return row
+end
+
+function SettingsUI._createToggleRow(parent, label, order, default, onChange)
+	local row = SettingsUI._createRow(parent, order)
+
 	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(0, 100, 0, 16)
-	nameLabel.Position = UDim2.new(0, 0, 0, 2)
+	nameLabel.Size = UDim2.new(1, -70, 1, 0)
+	nameLabel.Position = UDim2.new(0, 12, 0, 0)
 	nameLabel.BackgroundTransparency = 1
-	nameLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
-	nameLabel.TextSize = 11
+	nameLabel.TextColor3 = Color3.fromRGB(60, 30, 10)
+	nameLabel.TextSize = 13
 	nameLabel.Font = Enum.Font.GothamBold
 	nameLabel.Text = label
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.Parent = row
 
-	local valueLabel = Instance.new("TextLabel")
-	valueLabel.Name = "Value"
-	valueLabel.Size = UDim2.new(0, 40, 0, 16)
-	valueLabel.Position = UDim2.new(1, -40, 0, 2)
-	valueLabel.BackgroundTransparency = 1
-	valueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	valueLabel.TextSize = 11
-	valueLabel.Font = Enum.Font.GothamBold
-	valueLabel.Text = tostring(math.floor(defaultVal * 100)) .. "%"
-	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-	valueLabel.Parent = row
+	local isOn = default
+
+	local toggleBg = Instance.new("Frame")
+	toggleBg.Size = UDim2.new(0, 44, 0, 22)
+	toggleBg.Position = UDim2.new(1, -56, 0.5, -11)
+	toggleBg.BackgroundColor3 = if isOn then Color3.fromRGB(80, 180, 80) else Color3.fromRGB(120, 80, 60)
+	toggleBg.Parent = row
+
+	local bgCorner = Instance.new("UICorner")
+	bgCorner.CornerRadius = UDim.new(1, 0)
+	bgCorner.Parent = toggleBg
+
+	local knob = Instance.new("Frame")
+	knob.Size = UDim2.new(0, 18, 0, 18)
+	knob.Position = if isOn then UDim2.new(1, -20, 0.5, -9) else UDim2.new(0, 2, 0.5, -9)
+	knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	knob.Parent = toggleBg
+
+	local knobCorner = Instance.new("UICorner")
+	knobCorner.CornerRadius = UDim.new(1, 0)
+	knobCorner.Parent = knob
+
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1, 0, 1, 0)
+	btn.BackgroundTransparency = 1
+	btn.Text = ""
+	btn.Parent = toggleBg
+
+	btn.MouseButton1Click:Connect(function()
+		isOn = not isOn
+		toggleBg.BackgroundColor3 = if isOn then Color3.fromRGB(80, 180, 80) else Color3.fromRGB(120, 80, 60)
+		knob.Position = if isOn then UDim2.new(1, -20, 0.5, -9) else UDim2.new(0, 2, 0.5, -9)
+		onChange(isOn)
+	end)
+end
+
+function SettingsUI._createSliderRow(parent, label, order, default, onChange)
+	local row = SettingsUI._createRow(parent, order)
+
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Size = UDim2.new(0, 60, 1, 0)
+	nameLabel.Position = UDim2.new(0, 12, 0, 0)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.TextColor3 = Color3.fromRGB(60, 30, 10)
+	nameLabel.TextSize = 13
+	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.Text = label
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	nameLabel.Parent = row
 
 	-- 슬라이더 배경
 	local sliderBg = Instance.new("Frame")
-	sliderBg.Name = "SliderBG"
-	sliderBg.Size = UDim2.new(1, 0, 0, 8)
-	sliderBg.Position = UDim2.new(0, 0, 0, 24)
-	sliderBg.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+	sliderBg.Size = UDim2.new(1, -100, 0, 10)
+	sliderBg.Position = UDim2.new(0, 80, 0.5, -5)
+	sliderBg.BackgroundColor3 = Color3.fromRGB(120, 80, 50)
 	sliderBg.Parent = row
 
 	local bgCorner = Instance.new("UICorner")
-	bgCorner.CornerRadius = UDim.new(0, 4)
+	bgCorner.CornerRadius = UDim.new(1, 0)
 	bgCorner.Parent = sliderBg
 
-	-- 슬라이더 채움
 	local fill = Instance.new("Frame")
-	fill.Name = "Fill"
-	fill.Size = UDim2.new(defaultVal, 0, 1, 0)
-	fill.BackgroundColor3 = Color3.fromRGB(80, 160, 80)
+	fill.Size = UDim2.new(default, 0, 1, 0)
+	fill.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
 	fill.Parent = sliderBg
 
 	local fillCorner = Instance.new("UICorner")
-	fillCorner.CornerRadius = UDim.new(0, 4)
+	fillCorner.CornerRadius = UDim.new(1, 0)
 	fillCorner.Parent = fill
 
 	-- 클릭으로 값 변경
 	local sliderBtn = Instance.new("TextButton")
-	sliderBtn.Name = "SliderBtn"
-	sliderBtn.Size = UDim2.new(1, 0, 0, 16)
-	sliderBtn.Position = UDim2.new(0, 0, 0, 20)
+	sliderBtn.Size = UDim2.new(1, 0, 0, 24)
+	sliderBtn.Position = UDim2.new(0, 80, 0.5, -12)
 	sliderBtn.BackgroundTransparency = 1
 	sliderBtn.Text = ""
 	sliderBtn.Parent = row
 
-	local dragging = false
-
-	local function updateValue(inputX)
+	sliderBtn.MouseButton1Click:Connect(function()
+		local mouse = Players.LocalPlayer:GetMouse()
 		local absPos = sliderBg.AbsolutePosition.X
 		local absSize = sliderBg.AbsoluteSize.X
-		local ratio = math.clamp((inputX - absPos) / absSize, 0, 1)
+		local ratio = math.clamp((mouse.X - absPos) / absSize, 0, 1)
 		fill.Size = UDim2.new(ratio, 0, 1, 0)
-		valueLabel.Text = tostring(math.floor(ratio * 100)) .. "%"
 		onChange(ratio)
-	end
-
-	sliderBtn.MouseButton1Down:Connect(function()
-		dragging = true
-	end)
-
-	sliderBtn.InputChanged:Connect(function(input)
-		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-			updateValue(input.Position.X)
-		end
-	end)
-
-	sliderBtn.MouseButton1Click:Connect(function()
-		-- 클릭 위치로 즉시 이동
-		local mouse = Players.LocalPlayer:GetMouse()
-		updateValue(mouse.X)
-	end)
-
-	game:GetService("UserInputService").InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			dragging = false
-		end
 	end)
 end
 
-function SettingsUI._createToggle(parent: Frame, label: string, order: number, defaultVal: boolean, onChange: (boolean) -> ())
-	local row = Instance.new("Frame")
-	row.Name = label
-	row.Size = UDim2.new(1, 0, 0, 30)
-	row.BackgroundTransparency = 1
-	row.LayoutOrder = order
-	row.Parent = parent
+function SettingsUI._createCodeRow(parent, order)
+	local row = SettingsUI._createRow(parent, order)
 
 	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(1, -60, 1, 0)
-	nameLabel.Position = UDim2.new(0, 0, 0, 0)
+	nameLabel.Size = UDim2.new(0, 55, 1, 0)
+	nameLabel.Position = UDim2.new(0, 12, 0, 0)
 	nameLabel.BackgroundTransparency = 1
-	nameLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
-	nameLabel.TextSize = 11
+	nameLabel.TextColor3 = Color3.fromRGB(60, 30, 10)
+	nameLabel.TextSize = 13
 	nameLabel.Font = Enum.Font.GothamBold
-	nameLabel.Text = label
+	nameLabel.Text = "Codes"
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.Parent = row
 
-	local toggleBtn = Instance.new("TextButton")
-	toggleBtn.Name = "Toggle"
-	toggleBtn.Size = UDim2.new(0, 50, 0, 24)
-	toggleBtn.Position = UDim2.new(1, -50, 0.5, -12)
-	toggleBtn.TextSize = 11
-	toggleBtn.Font = Enum.Font.GothamBold
-	toggleBtn.AutoButtonColor = true
-	toggleBtn.Parent = row
+	local codeBox = Instance.new("TextBox")
+	codeBox.Size = UDim2.new(1, -110, 0, 26)
+	codeBox.Position = UDim2.new(0, 70, 0.5, -13)
+	codeBox.BackgroundColor3 = Color3.fromRGB(255, 240, 220)
+	codeBox.TextColor3 = Color3.fromRGB(40, 20, 10)
+	codeBox.PlaceholderText = "Enter Code..."
+	codeBox.PlaceholderColor3 = Color3.fromRGB(150, 130, 110)
+	codeBox.TextSize = 11
+	codeBox.Font = Enum.Font.Gotham
+	codeBox.ClearTextOnFocus = true
+	codeBox.Text = ""
+	codeBox.Parent = row
 
-	local toggleCorner = Instance.new("UICorner")
-	toggleCorner.CornerRadius = UDim.new(0, 6)
-	toggleCorner.Parent = toggleBtn
+	local codeCorner = Instance.new("UICorner")
+	codeCorner.CornerRadius = UDim.new(0, 6)
+	codeCorner.Parent = codeBox
 
-	local isOn = defaultVal
+	local submitBtn = Instance.new("TextButton")
+	submitBtn.Size = UDim2.new(0, 28, 0, 26)
+	submitBtn.Position = UDim2.new(1, -38, 0.5, -13)
+	submitBtn.BackgroundColor3 = Color3.fromRGB(80, 160, 80)
+	submitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	submitBtn.TextSize = 14
+	submitBtn.Font = Enum.Font.GothamBold
+	submitBtn.Text = ">"
+	submitBtn.AutoButtonColor = true
+	submitBtn.Parent = row
 
-	local function updateToggle()
-		if isOn then
-			toggleBtn.Text = "ON"
-			toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-			toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-		else
-			toggleBtn.Text = "OFF"
-			toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-			toggleBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+	local submitCorner = Instance.new("UICorner")
+	submitCorner.CornerRadius = UDim.new(0, 6)
+	submitCorner.Parent = submitBtn
+
+	submitBtn.MouseButton1Click:Connect(function()
+		local code = codeBox.Text
+		if code ~= "" and _onCodeSubmit then
+			_onCodeSubmit(code)
 		end
-	end
-
-	updateToggle()
-
-	toggleBtn.MouseButton1Click:Connect(function()
-		isOn = not isOn
-		updateToggle()
-		onChange(isOn)
+		codeBox.Text = ""
 	end)
 end
 

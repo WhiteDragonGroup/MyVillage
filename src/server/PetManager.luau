@@ -105,7 +105,7 @@ local function createPetModel(petData, position: Vector3): BasePart
 	pet.Name = "Pet_" .. petData.petId
 	pet.Anchored = true
 	pet.CanCollide = false
-	pet.CanQuery = false
+	pet.CanQuery = true
 	pet.CanTouch = false
 	pet.Position = position + Vector3.new(0, PetCfg.PET_HEIGHT, 0)
 
@@ -857,6 +857,31 @@ function PetManager.getPetData(player: Player, petId: string): { any }?
 	local pets = _playerPets[player]
 	if not pets then return nil end
 	return pets[petId]
+end
+
+-- 외부에서 펫 직접 추가 (알 부화 등)
+function PetManager.addPetDirect(player: Player, petData)
+	local pets = _playerPets[player]
+	if not pets then
+		_playerPets[player] = {}
+		pets = _playerPets[player]
+	end
+
+	pets[petData.petId] = petData
+
+	-- 모델 스폰
+	local plot = getPlayerPlot(player)
+	if plot then
+		local buildZone = plot:FindFirstChild("BuildZone", true)
+		if buildZone then
+			local pet = createPetModel(petData, buildZone.Position)
+			pet.Parent = plot
+			petData.model = pet
+
+			-- 행동 AI 시작
+			PetManager._startBehaviorLoop(player, petData, plot)
+		end
+	end
 end
 
 ----------------------------------------------------------------

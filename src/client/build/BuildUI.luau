@@ -1,105 +1,27 @@
 -- BuildUI.luau
--- 빌드모드 토글 버튼 (화면 우하단)
-
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+-- 빌드모드 토글 콜백 관리 (화면 버튼은 MainHUD 사이드바로 이동됨)
 
 local BuildUI = {}
 
-local screenGui = nil
-local buildButton = nil
-local shortcutLabel = nil
-local _onToggle = nil  -- 콜백
+local _onToggle = nil
 
 function BuildUI.init(onToggle: (boolean) -> ())
 	_onToggle = onToggle
-
-	screenGui = Instance.new("ScreenGui")
-	screenGui.Name = "BuildUI"
-	screenGui.ResetOnSpawn = false
-	screenGui.DisplayOrder = 10
-	screenGui.Parent = playerGui
-
-	-- 빌드 버튼 (인벤토리 위로 여유 확보)
-	buildButton = Instance.new("TextButton")
-	buildButton.Name = "BuildButton"
-	buildButton.Size = UDim2.new(0, 70, 0, 70)
-	buildButton.Position = UDim2.new(1, -90, 1, -115)
-	buildButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-	buildButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-	buildButton.Text = "빌드"
-	buildButton.TextSize = 18
-	buildButton.Font = Enum.Font.GothamBold
-	buildButton.AutoButtonColor = true
-	buildButton.Parent = screenGui
-
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 35)
-	corner.Parent = buildButton
-
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = Color3.fromRGB(255, 255, 255)
-	stroke.Thickness = 2
-	stroke.Transparency = 0.5
-	stroke.Parent = buildButton
-
-	-- B 단축키 배지
-	shortcutLabel = Instance.new("TextLabel")
-	shortcutLabel.Size = UDim2.new(0, 22, 0, 16)
-	shortcutLabel.Position = UDim2.new(1, -24, 0, -2)
-	shortcutLabel.AnchorPoint = Vector2.new(0, 0)
-	shortcutLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-	shortcutLabel.BackgroundTransparency = 0.3
-	shortcutLabel.TextColor3 = Color3.fromRGB(220, 220, 240)
-	shortcutLabel.TextSize = 11
-	shortcutLabel.Font = Enum.Font.GothamBold
-	shortcutLabel.Text = "B"
-	shortcutLabel.Parent = buildButton
-
-	local badgeCorner = Instance.new("UICorner")
-	badgeCorner.CornerRadius = UDim.new(0, 5)
-	badgeCorner.Parent = shortcutLabel
-
-	-- 클릭 이벤트
-	buildButton.MouseButton1Click:Connect(function()
-		if _onToggle then
-			_onToggle(true)
-		end
-	end)
 end
 
--- 빌드모드 상태에 따라 버튼 외관 변경
-function BuildUI.setBuildMode(active: boolean)
-	if not buildButton then return end
-
-	if active then
-		buildButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-		buildButton.Text = "닫기"
-	else
-		buildButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-		buildButton.Text = "빌드"
+-- 외부에서 토글 호출 (키보드 B키 등)
+function BuildUI.toggle()
+	if _onToggle then
+		_onToggle(true)
 	end
+end
 
-	-- 작은 스케일 애니메이션
-	local tween = TweenService:Create(buildButton, TweenInfo.new(0.1, Enum.EasingStyle.Back), {
-		Size = UDim2.new(0, 75, 0, 75)
-	})
-	tween:Play()
-	tween.Completed:Connect(function()
-		TweenService:Create(buildButton, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {
-			Size = UDim2.new(0, 70, 0, 70)
-		}):Play()
-	end)
+-- 빌드모드 상태 변경 (호환용, 이제 시각 효과 없음)
+function BuildUI.setBuildMode(active: boolean)
+	-- MainHUD 사이드바에서 시각 표시 담당
 end
 
 function BuildUI.destroy()
-	if screenGui then
-		screenGui:Destroy()
-		screenGui = nil
-	end
 end
 
 return BuildUI

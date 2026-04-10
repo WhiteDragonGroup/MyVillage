@@ -61,6 +61,12 @@ local buyItemEvent = remotes:WaitForChild("BuyItem")
 local shopUpdateEvent = remotes:WaitForChild("ShopUpdate")
 local sendGiftEvent = remotes:WaitForChild("SendGift")
 local giftReceivedEvent = remotes:WaitForChild("GiftReceived")
+local buyEggEvent = remotes:WaitForChild("BuyEgg")
+local placeEggEvent = remotes:WaitForChild("PlaceEgg")
+local hatchEggEvent = remotes:WaitForChild("HatchEgg")
+local getEggsFunc = remotes:WaitForChild("GetEggs")
+local getPlacedEggsFunc = remotes:WaitForChild("GetPlacedEggs")
+local eggUpdateEvent = remotes:WaitForChild("EggUpdate")
 
 local itemsFolder = ReplicatedStorage:WaitForChild("Items")
 
@@ -92,6 +98,30 @@ local function restoreCollisionBox(building: BasePart)
 		box.CanQuery = true
 		box.CFrame = building.CFrame
 	end
+end
+
+-- 건물의 부모가 건물 Model인지 판정 (플롯 Model 제외)
+local function getBuildingModel(building: BasePart): Model?
+	local parent = building.Parent
+	if not parent or not parent:IsA("Model") then return nil end
+	-- 플롯(Owner 속성 있음)이면 건물 Model 아님
+	if parent:GetAttribute("Owner") ~= nil then return nil end
+	-- Plots 직속 Model이면 플롯
+	if parent.Parent and parent.Parent.Name == "Plots" then return nil end
+	return parent
+end
+
+-- 건물의 부모 Model 찾기 (플롯 안의 건물 Model도 반환)
+-- 이동/복원 시 사용 — 플롯 자체만 제외
+local function getParentModel(building: BasePart): Model?
+	local parent = building.Parent
+	if not parent or not parent:IsA("Model") then return nil end
+	if parent == workspace then return nil end
+	-- 플롯(Plots 직속 + Owner 있음)만 제외
+	if parent:GetAttribute("Owner") ~= nil and parent.Parent and parent.Parent.Name == "Plots" then
+		return nil
+	end
+	return parent
 end
 
 ----------------------------------------------------------------
@@ -408,9 +438,9 @@ local function toMoving(building: BasePart)
 	previewItemName = building:GetAttribute("ItemName")
 
 	-- 건물을 투명하게 (이동 프리뷰로 전환)
-	local bModelParent = building.Parent
-	if bModelParent and bModelParent:IsA("Model") then
-		for _, d in bModelParent:GetDescendants() do
+	local bModel = getParentModel(building)
+	if bModel then
+		for _, d in bModel:GetDescendants() do
 			if d:IsA("BasePart") and not d:GetAttribute("IsCollisionBox") then d.Transparency = 0.5; d.CanCollide = false end
 		end
 	else
@@ -443,14 +473,18 @@ local function toMoving(building: BasePart)
 		DragHandler.init(GridSnap)
 		DragHandler.startDrag(currentBuildZone, previewPart, currentRotationY, function(newCFrame)
 			if previewPart then
-				-- Model이면 PivotTo 보정 (mainPart가 정확히 newCFrame에 오도록)
+				-- 부모 Model 찾기 (건물 Model 또는 플롯 내 Model)
 				local moveParent = previewPart.Parent
-				if moveParent and moveParent:IsA("Model") then
+				local isModel = moveParent and moveParent:IsA("Model") and moveParent ~= workspace
+				if isModel then
 					local mainToPivot = previewPart.CFrame:ToObjectSpace(moveParent:GetPivot())
 					moveParent:PivotTo(newCFrame * mainToPivot)
 					GridSnap.adjustModelY(moveParent, previewPart, currentBuildZone)
 				else
-					previewPart.CFrame = newCFrame
+					-- 단순 Part: Y를 BuildZone 상단 + Part 높이 절반으로 보정
+					local bzTop = currentBuildZone.Position.Y + currentBuildZone.Size.Y / 2
+					local correctedY = bzTop + previewPart.Size.Y / 2
+					previewPart.CFrame = CFrame.new(newCFrame.Position.X, correctedY, newCFrame.Position.Z) * (newCFrame - newCFrame.Position)
 				end
 				updateCollisionState()
 			end
@@ -522,7 +556,10 @@ local function toPlacingNew(itemName: string, level: number?)
 				parentModel:PivotTo(newCFrame * mainToPivot)
 				GridSnap.adjustModelY(parentModel, previewPart, currentBuildZone)
 			else
-				previewPart.CFrame = newCFrame
+				-- 단순 Part: Y를 BuildZone 상단 + Part 높이 절반으로 보정
+				local bzTop = currentBuildZone.Position.Y + currentBuildZone.Size.Y / 2
+				local correctedY = bzTop + previewPart.Size.Y / 2
+				previewPart.CFrame = CFrame.new(newCFrame.Position.X, correctedY, newCFrame.Position.Z) * (newCFrame - newCFrame.Position)
 			end
 			updateCollisionState()
 		end
@@ -549,10 +586,10 @@ BuildUI.init(function()
 		-- 빌드모드에서 나가기
 		if currentState == BuildState.Moving and selectedBuilding and originalCFrame then
 			-- 이동 취소: 원래 위치/투명도 복원 (Model 지원)
-			local rParent = selectedBuilding.Parent
-			if rParent and rParent:IsA("Model") then
-				rParent:PivotTo(originalCFrame)
-				for _, d in rParent:GetDescendants() do
+			local rModel = getParentModel(selectedBuilding)
+			if rModel then
+				rModel:PivotTo(originalCFrame)
+				for _, d in rModel:GetDescendants() do
 					if d:IsA("BasePart") and not d:GetAttribute("IsCollisionBox") then d.Transparency = 0; d.CanCollide = true end
 				end
 			else
@@ -571,11 +608,107 @@ BuildUI.init(function()
 	end
 end)
 
--- InventoryUI: 아이템 선택 (레벨 포함)
+-- InventoryUI: 아이템 선택 (레벨 포함) + Exit 콜백
 InventoryUI.init(function(itemName: string, level: number)
 	if currentState == BuildState.BuildMode then
-		toPlacingNew(itemName, level)
+		-- 알인지 확인
+		local EggCfg = BalanceConfig.Egg
+		if EggCfg and EggCfg.EGGS and EggCfg.EGGS[itemName] then
+			-- 알 배치: 건물과 동일한 배치 흐름, 하지만 확정 시 PlaceEgg 전송
+			previewItemName = itemName
+			previewLevel = 1
+
+			-- BuildZone 찾기
+			currentBuildZone = getMyBuildZone()
+			if not currentBuildZone then
+				print("BuildZone 없음!")
+				return
+			end
+
+			-- 알 프리뷰 생성
+			setState(BuildState.PlacingNew)
+			removePreview()
+
+			local eggFolder = ReplicatedStorage:FindFirstChild("Egg")
+			local eggTemplate = eggFolder and eggFolder:FindFirstChild(itemName)
+			if eggTemplate then
+				local preview = eggTemplate:Clone()
+				preview.Name = "PlacementPreview"
+				preview.Parent = workspace
+
+				if preview:IsA("Model") then
+					local mp = preview.PrimaryPart or preview:FindFirstChildWhichIsA("BasePart")
+					if mp then
+						for _, desc in preview:GetDescendants() do
+							if desc:IsA("BasePart") then
+								desc.Transparency = 0.5
+								desc.CanCollide = false
+								desc.Anchored = true
+								desc.CanQuery = false
+							end
+						end
+						mp:SetAttribute("ItemName", itemName)
+						mp:SetAttribute("IsEggPreview", true)
+						previewPart = mp
+
+						local character = player.Character
+						if character then
+							local hrp = character:FindFirstChild("HumanoidRootPart")
+							if hrp then
+								local frontPos = hrp.Position + hrp.CFrame.LookVector * 8
+								preview:PivotTo(CFrame.new(frontPos))
+								GridSnap.adjustModelY(preview, mp, currentBuildZone)
+							end
+						end
+					end
+				elseif preview:IsA("BasePart") then
+					preview.Transparency = 0.5
+					preview.CanCollide = false
+					preview.Anchored = true
+					preview.CanQuery = false
+					preview:SetAttribute("ItemName", itemName)
+					preview:SetAttribute("IsEggPreview", true)
+					previewPart = preview
+
+					local bzTop = currentBuildZone.Position.Y + currentBuildZone.Size.Y / 2
+					preview.CFrame = CFrame.new(0, bzTop + preview.Size.Y / 2, 0)
+				end
+			end
+
+			if not previewPart then
+				toBuildMode()
+				return
+			end
+
+			HighlightSystem.applyTo(previewPart, Constants.HIGHLIGHT_COLORS.Selected, 0.6)
+			InventoryUI.hide()
+			SelectionUI.hide()
+			MoveHandleUI.show()
+
+			currentRotationY = 0
+			DragHandler.init(GridSnap)
+			DragHandler.startDrag(currentBuildZone, previewPart, currentRotationY, function(newCFrame)
+				if previewPart then
+					local pModel = previewPart.Parent
+					if pModel and pModel:IsA("Model") and pModel.Name == "PlacementPreview" then
+						local mainToPivot = previewPart.CFrame:ToObjectSpace(pModel:GetPivot())
+						pModel:PivotTo(newCFrame * mainToPivot)
+						GridSnap.adjustModelY(pModel, previewPart, currentBuildZone)
+					else
+						local bzTop = currentBuildZone.Position.Y + currentBuildZone.Size.Y / 2
+						local correctedY = bzTop + previewPart.Size.Y / 2
+						previewPart.CFrame = CFrame.new(newCFrame.Position.X, correctedY, newCFrame.Position.Z) * (newCFrame - newCFrame.Position)
+					end
+				end
+			end)
+		else
+			toPlacingNew(itemName, level)
+		end
 	end
+end, function()
+	-- Exit Building 버튼 콜백
+	MainHUD.setActiveTab(nil)
+	toIdle()
 end)
 
 -- SelectionUI: 동적 버튼 콜백
@@ -686,10 +819,23 @@ local function confirmPlace()
 	if hasCollision then return end
 
 	if currentState == BuildState.PlacingNew and previewPart then
-		local finalCFrame = previewPart.CFrame
+		local isEggPreview = previewPart:GetAttribute("IsEggPreview") == true
+		local pModel = previewPart.Parent
+		local mainCFrame = previewPart.CFrame
+		local pivotCFrame = nil
+		if pModel and pModel:IsA("Model") and pModel.Name == "PlacementPreview" then
+			pivotCFrame = pModel:GetPivot()
+		end
 		DragHandler.stopDrag()
 		removePreview()
-		placeBuildingEvent:FireServer(previewItemName, finalCFrame, previewLevel)
+
+		if isEggPreview then
+			-- 알 배치
+			placeEggEvent:FireServer(previewItemName, mainCFrame.Position)
+		else
+			-- 건물 배치
+			placeBuildingEvent:FireServer(previewItemName, mainCFrame, previewLevel, pivotCFrame)
+		end
 		toBuildMode()
 
 	elseif currentState == BuildState.Moving and selectedBuilding then
@@ -698,9 +844,9 @@ local function confirmPlace()
 		DragHandler.stopDrag()
 
 		-- 투명도/충돌 복원 (Model 지원)
-		local cp = selectedBuilding.Parent
-		if cp and cp:IsA("Model") then
-			for _, d in cp:GetDescendants() do
+		local cpModel = getParentModel(selectedBuilding)
+		if cpModel then
+			for _, d in cpModel:GetDescendants() do
 				if d:IsA("BasePart") and not d:GetAttribute("IsCollisionBox") then d.Transparency = 0; d.CanCollide = true end
 			end
 		else
@@ -736,10 +882,10 @@ MoveHandleUI.init({
 
 	onCancel = function()
 		if currentState == BuildState.Moving and selectedBuilding and originalCFrame then
-			local rp = selectedBuilding.Parent
-			if rp and rp:IsA("Model") then
-				rp:PivotTo(originalCFrame)
-				for _, d in rp:GetDescendants() do
+			local rpModel = getParentModel(selectedBuilding)
+			if rpModel then
+				rpModel:PivotTo(originalCFrame)
+				for _, d in rpModel:GetDescendants() do
 					if d:IsA("BasePart") and not d:GetAttribute("IsCollisionBox") then d.Transparency = 0; d.CanCollide = true end
 				end
 			else
@@ -767,9 +913,9 @@ MoveHandleUI.init({
 -- 마우스/키보드 입력 (gameProcessed로 UI 클릭과 구분)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	-- 다이얼로그가 열려 있으면 입력 무시
-	if UpgradeUI.isVisible() or PetListUI.isVisible() then return end
+	if UpgradeUI.isVisible() or PetListUI.isVisible() or PetDetailUI.isVisible() then return end
 
-	-- 마우스 클릭: 배치 확정 / BuildMode에서 건물 선택
+	-- 마우스 클릭: 배치 확정 / BuildMode에서 건물 선택 / 펫 클릭
 	if input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessed then
 		if currentState == BuildState.PlacingNew or currentState == BuildState.Moving then
 			confirmPlace()
@@ -778,6 +924,33 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			local mainPart = findBuildingMainPart(target)
 			if mainPart and isMyBuilding(mainPart) then
 				toSelected(mainPart)
+			end
+		elseif currentState == BuildState.Idle then
+			-- Idle 상태에서 펫 클릭 → 상세 정보
+			local target = mouse.Target
+			if target and target:IsA("BasePart") then
+				if target:GetAttribute("PetId") then
+					-- 펫 클릭 → 상세 정보
+					task.spawn(function()
+						local pets = getPetsFunc:InvokeServer()
+						if pets then
+							local petId = target:GetAttribute("PetId")
+							for _, pet in pets do
+								if pet.petId == petId then
+									PetDetailUI.show(pet)
+									break
+								end
+							end
+						end
+					end)
+				elseif target:GetAttribute("IsEgg") then
+					-- 알 클릭 → 부화 시도
+					local eggId = target:GetAttribute("EggId")
+					local readyToHatch = target:GetAttribute("ReadyToHatch")
+					if eggId and readyToHatch then
+						hatchEggEvent:FireServer(eggId)
+					end
+				end
 			end
 		end
 	end
@@ -790,10 +963,10 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			removePreview()
 			toBuildMode()
 		elseif currentState == BuildState.Moving and selectedBuilding and originalCFrame then
-			local ep = selectedBuilding.Parent
-			if ep and ep:IsA("Model") then
-				ep:PivotTo(originalCFrame)
-				for _, d in ep:GetDescendants() do
+			local epModel = getParentModel(selectedBuilding)
+			if epModel then
+				epModel:PivotTo(originalCFrame)
+				for _, d in epModel:GetDescendants() do
 					if d:IsA("BasePart") and not d:GetAttribute("IsCollisionBox") then d.Transparency = 0; d.CanCollide = true end
 				end
 			else
@@ -820,10 +993,10 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			toIdle()
 		elseif currentState == BuildState.Selected or currentState == BuildState.Moving or currentState == BuildState.PlacingNew then
 			if currentState == BuildState.Moving and selectedBuilding and originalCFrame then
-				local bp = selectedBuilding.Parent
-				if bp and bp:IsA("Model") then
-					bp:PivotTo(originalCFrame)
-					for _, d in bp:GetDescendants() do
+				local bpModel = getParentModel(selectedBuilding)
+				if bpModel then
+					bpModel:PivotTo(originalCFrame)
+					for _, d in bpModel:GetDescendants() do
 						if d:IsA("BasePart") and not d:GetAttribute("IsCollisionBox") then d.Transparency = 0; d.CanCollide = true end
 					end
 				else
@@ -864,16 +1037,44 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 ----------------------------------------------------------------
--- 인벤토리 동기화
+-- 인벤토리 동기화 (건물 + 알 통합)
 ----------------------------------------------------------------
+
+local eggInventory = {} -- 알 인벤토리 캐시
+
+local function mergeInventory()
+	local merged = {}
+	-- 건물
+	for _, item in inventory do
+		table.insert(merged, item)
+	end
+	-- 알 (isEgg 플래그 추가)
+	for _, egg in eggInventory do
+		if egg.count > 0 then
+			table.insert(merged, {
+				itemName = egg.eggType,
+				count = egg.count,
+				level = 1,
+				isEgg = true,
+			})
+		end
+	end
+	InventoryUI.updateInventory(merged)
+end
 
 inventoryUpdateEvent.OnClientEvent:Connect(function(inv)
 	inventory = inv
-	InventoryUI.updateInventory(inv)
+	mergeInventory()
+end)
+
+eggUpdateEvent.OnClientEvent:Connect(function(eventType, data)
+	if eventType == "inventory" and data then
+		eggInventory = data
+		mergeInventory()
+	end
 end)
 
 task.spawn(function()
-	-- 서버 초기화 대기 후 인벤토리 로드 (최대 5회 재시도)
 	local inv
 	for _ = 1, 5 do
 		inv = getInventoryFunc:InvokeServer()
@@ -882,24 +1083,31 @@ task.spawn(function()
 	end
 	if inv then
 		inventory = inv
-		InventoryUI.updateInventory(inv)
 	end
+
+	-- 알 인벤토리도 로드
+	local eggs = getEggsFunc:InvokeServer()
+	if eggs then
+		eggInventory = eggs
+	end
+
+	mergeInventory()
 end)
 
 ----------------------------------------------------------------
--- 코인 동기화
+-- 코인 동기화 (CurrencyUI + MainHUD 재화 표시)
 ----------------------------------------------------------------
 
-CurrencyUI.init()
+-- CurrencyUI 제거됨 (MainHUD 하단에 통합)
 
 currencyUpdateEvent.OnClientEvent:Connect(function(coins)
-	CurrencyUI.updateCoins(coins)
+	MainHUD.updateCoins(coins)
 end)
 
 task.spawn(function()
 	local coins = getCurrencyFunc:InvokeServer()
 	if coins then
-		CurrencyUI.updateCoins(coins)
+		MainHUD.updateCoins(coins)
 	end
 end)
 
@@ -949,6 +1157,18 @@ PetVisuals.init()
 -- 날씨 VFX 초기화
 WeatherVFX.init()
 
+-- 날씨 상태를 MainHUD에 동기화
+local weatherChangedRemote = remotes:FindFirstChild("WeatherChanged")
+if weatherChangedRemote then
+	weatherChangedRemote.OnClientEvent:Connect(function(weatherType)
+		MainHUD.updateWeather(weatherType)
+	end)
+end
+task.spawn(function()
+	task.wait(2) -- WeatherVFX 초기화 대기
+	MainHUD.updateWeather(WeatherVFX.getCurrentWeather())
+end)
+
 ----------------------------------------------------------------
 -- 메인 HUD + 상점 + 도감 + 선물 시스템
 ----------------------------------------------------------------
@@ -989,8 +1209,15 @@ ShopUI.init({
 	onBuy = function(itemName)
 		buyItemEvent:FireServer(itemName)
 	end,
+	onBuyGem = function(itemName)
+		-- TODO: 보석 구매 (보석 시스템 구현 후 연결)
+		buyItemEvent:FireServer(itemName)
+	end,
 	onGift = function(itemName)
 		GiftUI.show(itemName)
+	end,
+	onBuyEgg = function(eggType)
+		buyEggEvent:FireServer(eggType)
 	end,
 })
 
@@ -1031,6 +1258,34 @@ MainHUD.init({
 			closeAllPanels()
 			if currentState == BuildState.BuildMode then
 				toIdle()
+			end
+		end
+	end,
+
+	onTeleport = function(destination)
+		-- 텔레포트: 각 목적지로 캐릭터 이동
+		local character = player.Character
+		if not character then return end
+		local hrp = character:FindFirstChild("HumanoidRootPart")
+		if not hrp then return end
+
+		if destination == "village" then
+			-- 내 마을(BuildZone)으로
+			local bz = getMyBuildZone()
+			if bz then
+				hrp.CFrame = bz.CFrame + Vector3.new(0, 5, 0)
+			end
+		elseif destination == "buildings" then
+			-- 건물 상점 앞 (로비 근처)
+			local lobby = workspace:FindFirstChild("Lobby")
+			if lobby then
+				hrp.CFrame = lobby.CFrame + Vector3.new(15, 5, 0)
+			end
+		elseif destination == "eggs" then
+			-- 알 상점 앞 (로비 반대편)
+			local lobby = workspace:FindFirstChild("Lobby")
+			if lobby then
+				hrp.CFrame = lobby.CFrame + Vector3.new(-15, 5, 0)
 			end
 		end
 	end,
@@ -1104,7 +1359,12 @@ loadShopData()
 -- 설정 UI + 펫 상세 UI
 ----------------------------------------------------------------
 
-SettingsUI.init()
+SettingsUI.init({
+	onCodeSubmit = function(code)
+		print("[Code] 입력됨: " .. code)
+		-- TODO: 서버에 코드 전송 후 보상 처리
+	end,
+})
 PetDetailUI.init()
 
 -- PetListUI에 펫 상세 보기 연동 (PetUpdate 이벤트로 mutation 표시)
@@ -1149,4 +1409,55 @@ petUpdateEvent.OnClientEvent:Connect(function(eventType, data)
 	end
 end)
 
-print("PlacementClient 로드됨 - 빌드 시스템 v5 (전체 시스템)")
+----------------------------------------------------------------
+-- 알(Egg) 시스템
+----------------------------------------------------------------
+
+-- 알 이벤트 수신
+eggUpdateEvent.OnClientEvent:Connect(function(eventType, data)
+	if eventType == "hatched" and data then
+		-- 부화 알림 토스트
+		local notifGui = Instance.new("ScreenGui")
+		notifGui.Name = "HatchNotif"
+		notifGui.ResetOnSpawn = false
+		notifGui.DisplayOrder = 40
+		notifGui.Parent = playerGui
+
+		local rarityColor = Constants.RARITY_COLORS[data.rarity] or Color3.fromRGB(255, 200, 100)
+
+		local notifFrame = Instance.new("Frame")
+		notifFrame.Size = UDim2.new(0, 280, 0, 56)
+		notifFrame.Position = UDim2.new(0.5, -140, 0, -60)
+		notifFrame.BackgroundColor3 = rarityColor
+		notifFrame.BorderSizePixel = 0
+		notifFrame.Parent = notifGui
+
+		local nCorner = Instance.new("UICorner")
+		nCorner.CornerRadius = UDim.new(0, 12)
+		nCorner.Parent = notifFrame
+
+		local nLabel = Instance.new("TextLabel")
+		nLabel.Size = UDim2.new(1, -12, 1, 0)
+		nLabel.Position = UDim2.new(0, 6, 0, 0)
+		nLabel.BackgroundTransparency = 1
+		nLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+		nLabel.TextSize = 14
+		nLabel.Font = Enum.Font.GothamBold
+		nLabel.Text = "부화 완료! " .. data.petName .. " (" .. data.rarity .. ")"
+		nLabel.TextWrapped = true
+		nLabel.Parent = notifFrame
+
+		TweenService:Create(notifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
+			Position = UDim2.new(0.5, -140, 0, 20)
+		}):Play()
+
+		task.delay(3, function()
+			if notifGui.Parent then notifGui:Destroy() end
+		end)
+	end
+end)
+
+-- Idle 상태에서 알 클릭 → 부화 시도
+-- (InputBegan에서 펫 클릭과 함께 처리)
+
+print("PlacementClient 로드됨 - 빌드 시스템 v6 (알 시스템 추가)")

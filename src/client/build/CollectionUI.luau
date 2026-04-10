@@ -1,8 +1,9 @@
 -- CollectionUI.luau
--- 도감 UI: 카테고리 선택 (건물/펫), 검색, 아이템 그리드, 상세 정보
+-- 도감 UI (기획서 기준)
+-- 좌: 카테고리 탭(Pets/Buildings/Mutations) + 검색 + 아이템 리스트(희귀도순)
+-- 우: 선택된 아이템 상세 설명
 
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
@@ -15,20 +16,27 @@ local CollectionUI = {}
 
 local screenGui = nil
 local mainFrame = nil
-local contentFrame = nil
-local detailFrame = nil
+local listFrame = nil   -- 좌측 리스트
+local detailFrame = nil -- 우측 상세
 local searchBox = nil
 local _visible = false
-local _activeCategory = "건물"
+local _activeCategory = "Pets"
 local _categoryButtons = {}
 
-local CATEGORIES = { "건물", "펫" }
+local PANEL_WIDTH = 500
+local PANEL_HEIGHT = 380
+local LIST_WIDTH = 200
+local ITEM_HEIGHT = 36
+local ITEM_PADDING = 4
 
-local PANEL_WIDTH = 340
-local PANEL_HEIGHT = 420
-local ITEM_SIZE = 70
-local ITEM_PADDING = 6
+-- 희귀도 정렬 순서
+local RARITY_ORDER = { ["일반"] = 1, ["희귀"] = 2, ["에픽"] = 3, ["전설"] = 4, ["신화"] = 5 }
 
+local CATEGORIES = { "Pets", "Buildings", "Mutations" }
+
+----------------------------------------------------------------
+-- 초기화
+----------------------------------------------------------------
 function CollectionUI.init()
 	screenGui = Instance.new("ScreenGui")
 	screenGui.Name = "CollectionUI"
@@ -36,13 +44,12 @@ function CollectionUI.init()
 	screenGui.DisplayOrder = 25
 	screenGui.Parent = playerGui
 
-	-- 메인 패널
+	-- 메인 패널 (책 모양)
 	mainFrame = Instance.new("Frame")
 	mainFrame.Name = "CollectionPanel"
 	mainFrame.Size = UDim2.new(0, PANEL_WIDTH, 0, PANEL_HEIGHT)
-	mainFrame.Position = UDim2.new(0, 10, 0, 104)
-	mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-	mainFrame.BackgroundTransparency = 0.05
+	mainFrame.Position = UDim2.new(0.5, -PANEL_WIDTH / 2, 0.5, -PANEL_HEIGHT / 2)
+	mainFrame.BackgroundColor3 = Color3.fromRGB(60, 35, 30)
 	mainFrame.BorderSizePixel = 0
 	mainFrame.Visible = false
 	mainFrame.Parent = screenGui
@@ -52,43 +59,74 @@ function CollectionUI.init()
 	corner.Parent = mainFrame
 
 	local stroke = Instance.new("UIStroke")
-	stroke.Color = Color3.fromRGB(80, 120, 200)
-	stroke.Thickness = 1.5
+	stroke.Color = Color3.fromRGB(100, 60, 40)
+	stroke.Thickness = 2
 	stroke.Parent = mainFrame
 
 	-- 제목
 	local title = Instance.new("TextLabel")
-	title.Name = "Title"
-	title.Size = UDim2.new(1, -16, 0, 28)
-	title.Position = UDim2.new(0, 8, 0, 8)
-	title.BackgroundTransparency = 1
-	title.TextColor3 = Color3.fromRGB(255, 255, 255)
+	title.Size = UDim2.new(1, 0, 0, 30)
+	title.Position = UDim2.new(0, 0, 0, 0)
+	title.BackgroundColor3 = Color3.fromRGB(80, 45, 35)
+	title.TextColor3 = Color3.fromRGB(255, 230, 200)
 	title.TextSize = 16
 	title.Font = Enum.Font.GothamBold
 	title.Text = "도감"
-	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.Parent = mainFrame
 
-	-- 카테고리 바
+	local titleCorner = Instance.new("UICorner")
+	titleCorner.CornerRadius = UDim.new(0, 12)
+	titleCorner.Parent = title
+
+	-- 닫기 버튼
+	local closeBtn = Instance.new("TextButton")
+	closeBtn.Size = UDim2.new(0, 26, 0, 26)
+	closeBtn.Position = UDim2.new(1, -30, 0, 2)
+	closeBtn.BackgroundColor3 = Color3.fromRGB(150, 60, 50)
+	closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	closeBtn.TextSize = 14
+	closeBtn.Font = Enum.Font.GothamBold
+	closeBtn.Text = "X"
+	closeBtn.AutoButtonColor = true
+	closeBtn.ZIndex = 3
+	closeBtn.Parent = mainFrame
+
+	local closeBtnCorner = Instance.new("UICorner")
+	closeBtnCorner.CornerRadius = UDim.new(0, 8)
+	closeBtnCorner.Parent = closeBtn
+
+	closeBtn.MouseButton1Click:Connect(function()
+		CollectionUI.hide()
+	end)
+
+	-- ======== 좌측: 카테고리 + 검색 + 리스트 ========
+	local leftPanel = Instance.new("Frame")
+	leftPanel.Name = "LeftPanel"
+	leftPanel.Size = UDim2.new(0, LIST_WIDTH + 60, 1, -36)
+	leftPanel.Position = UDim2.new(0, 4, 0, 34)
+	leftPanel.BackgroundTransparency = 1
+	leftPanel.Parent = mainFrame
+
+	-- 카테고리 탭 (세로)
 	local catFrame = Instance.new("Frame")
 	catFrame.Name = "Categories"
-	catFrame.Size = UDim2.new(1, -16, 0, 30)
-	catFrame.Position = UDim2.new(0, 8, 0, 40)
+	catFrame.Size = UDim2.new(0, 52, 1, 0)
+	catFrame.Position = UDim2.new(0, 0, 0, 0)
 	catFrame.BackgroundTransparency = 1
-	catFrame.Parent = mainFrame
+	catFrame.Parent = leftPanel
 
 	local catLayout = Instance.new("UIListLayout")
-	catLayout.FillDirection = Enum.FillDirection.Horizontal
-	catLayout.Padding = UDim.new(0, 6)
+	catLayout.FillDirection = Enum.FillDirection.Vertical
+	catLayout.Padding = UDim.new(0, 4)
 	catLayout.Parent = catFrame
 
 	for i, cat in CATEGORIES do
 		local catBtn = Instance.new("TextButton")
 		catBtn.Name = cat
-		catBtn.Size = UDim2.new(0, 60, 0, 28)
-		catBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-		catBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
-		catBtn.TextSize = 12
+		catBtn.Size = UDim2.new(1, 0, 0, 32)
+		catBtn.BackgroundColor3 = Color3.fromRGB(90, 55, 45)
+		catBtn.TextColor3 = Color3.fromRGB(200, 180, 160)
+		catBtn.TextSize = 10
 		catBtn.Font = Enum.Font.GothamBold
 		catBtn.Text = cat
 		catBtn.AutoButtonColor = true
@@ -108,343 +146,384 @@ function CollectionUI.init()
 		end)
 	end
 
+	-- 검색 바 + 리스트 (카테고리 오른쪽)
+	local listPanel = Instance.new("Frame")
+	listPanel.Name = "ListPanel"
+	listPanel.Size = UDim2.new(0, LIST_WIDTH, 1, 0)
+	listPanel.Position = UDim2.new(0, 56, 0, 0)
+	listPanel.BackgroundTransparency = 1
+	listPanel.Parent = leftPanel
+
 	-- 검색 바
 	searchBox = Instance.new("TextBox")
 	searchBox.Name = "SearchBox"
-	searchBox.Size = UDim2.new(1, -16, 0, 28)
-	searchBox.Position = UDim2.new(0, 8, 0, 76)
-	searchBox.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-	searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-	searchBox.PlaceholderText = "검색..."
-	searchBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 130)
-	searchBox.TextSize = 12
+	searchBox.Size = UDim2.new(1, 0, 0, 26)
+	searchBox.Position = UDim2.new(0, 0, 0, 0)
+	searchBox.BackgroundColor3 = Color3.fromRGB(80, 50, 40)
+	searchBox.TextColor3 = Color3.fromRGB(255, 230, 200)
+	searchBox.PlaceholderText = "Search..."
+	searchBox.PlaceholderColor3 = Color3.fromRGB(150, 130, 110)
+	searchBox.TextSize = 11
 	searchBox.Font = Enum.Font.Gotham
 	searchBox.ClearTextOnFocus = false
 	searchBox.Text = ""
-	searchBox.Parent = mainFrame
+	searchBox.Parent = listPanel
 
 	local searchCorner = Instance.new("UICorner")
 	searchCorner.CornerRadius = UDim.new(0, 6)
 	searchCorner.Parent = searchBox
 
-	local searchStroke = Instance.new("UIStroke")
-	searchStroke.Color = Color3.fromRGB(70, 70, 90)
-	searchStroke.Thickness = 1
-	searchStroke.Parent = searchBox
-
 	searchBox:GetPropertyChangedSignal("Text"):Connect(function()
 		CollectionUI._renderItems()
 	end)
 
-	-- 아이템 그리드 (스크롤)
-	contentFrame = Instance.new("ScrollingFrame")
-	contentFrame.Name = "Content"
-	contentFrame.Size = UDim2.new(1, -16, 1, -118)
-	contentFrame.Position = UDim2.new(0, 8, 0, 110)
-	contentFrame.BackgroundTransparency = 1
-	contentFrame.ScrollBarThickness = 4
-	contentFrame.ScrollingDirection = Enum.ScrollingDirection.Y
-	contentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-	contentFrame.Parent = mainFrame
+	-- 아이템 리스트 (스크롤)
+	listFrame = Instance.new("ScrollingFrame")
+	listFrame.Name = "ItemList"
+	listFrame.Size = UDim2.new(1, 0, 1, -32)
+	listFrame.Position = UDim2.new(0, 0, 0, 30)
+	listFrame.BackgroundColor3 = Color3.fromRGB(70, 40, 35)
+	listFrame.BackgroundTransparency = 0.3
+	listFrame.ScrollBarThickness = 4
+	listFrame.ScrollingDirection = Enum.ScrollingDirection.Y
+	listFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+	listFrame.Parent = listPanel
 
-	local gridLayout = Instance.new("UIGridLayout")
-	gridLayout.CellSize = UDim2.new(0, ITEM_SIZE, 0, ITEM_SIZE + 20)
-	gridLayout.CellPadding = UDim2.new(0, ITEM_PADDING, 0, ITEM_PADDING)
-	gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	gridLayout.Parent = contentFrame
+	local listCorner = Instance.new("UICorner")
+	listCorner.CornerRadius = UDim.new(0, 6)
+	listCorner.Parent = listFrame
 
-	-- 상세 정보 프레임 (아이템 클릭 시)
+	local listLayout = Instance.new("UIListLayout")
+	listLayout.Padding = UDim.new(0, ITEM_PADDING)
+	listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	listLayout.Parent = listFrame
+
+	-- ======== 우측: 상세 설명 패널 ========
 	detailFrame = Instance.new("Frame")
-	detailFrame.Name = "Detail"
-	detailFrame.Size = UDim2.new(0, PANEL_WIDTH - 20, 0, 130)
-	detailFrame.Position = UDim2.new(0, 10, 1, -140)
-	detailFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+	detailFrame.Name = "DetailPanel"
+	detailFrame.Size = UDim2.new(0, PANEL_WIDTH - LIST_WIDTH - 72, 1, -36)
+	detailFrame.Position = UDim2.new(0, LIST_WIDTH + 66, 0, 34)
+	detailFrame.BackgroundColor3 = Color3.fromRGB(75, 45, 38)
+	detailFrame.BackgroundTransparency = 0.2
 	detailFrame.BorderSizePixel = 0
-	detailFrame.Visible = false
-	detailFrame.ZIndex = 2
 	detailFrame.Parent = mainFrame
 
 	local detailCorner = Instance.new("UICorner")
-	detailCorner.CornerRadius = UDim.new(0, 10)
+	detailCorner.CornerRadius = UDim.new(0, 8)
 	detailCorner.Parent = detailFrame
 
-	local detailStroke = Instance.new("UIStroke")
-	detailStroke.Color = Color3.fromRGB(100, 100, 130)
-	detailStroke.Thickness = 1
-	detailStroke.Parent = detailFrame
-
-	-- 상세 이름
-	local detailName = Instance.new("TextLabel")
-	detailName.Name = "DetailName"
-	detailName.Size = UDim2.new(1, -16, 0, 22)
-	detailName.Position = UDim2.new(0, 8, 0, 8)
-	detailName.BackgroundTransparency = 1
-	detailName.TextColor3 = Color3.fromRGB(255, 255, 255)
-	detailName.TextSize = 14
-	detailName.Font = Enum.Font.GothamBold
-	detailName.TextXAlignment = Enum.TextXAlignment.Left
-	detailName.Parent = detailFrame
-
-	-- 상세 정보 텍스트
-	local detailInfo = Instance.new("TextLabel")
-	detailInfo.Name = "DetailInfo"
-	detailInfo.Size = UDim2.new(1, -16, 1, -36)
-	detailInfo.Position = UDim2.new(0, 8, 0, 32)
-	detailInfo.BackgroundTransparency = 1
-	detailInfo.TextColor3 = Color3.fromRGB(180, 180, 190)
-	detailInfo.TextSize = 11
-	detailInfo.Font = Enum.Font.Gotham
-	detailInfo.TextXAlignment = Enum.TextXAlignment.Left
-	detailInfo.TextYAlignment = Enum.TextYAlignment.Top
-	detailInfo.TextWrapped = true
-	detailInfo.Parent = detailFrame
-
-	-- 닫기 버튼 (상세)
-	local closeDetail = Instance.new("TextButton")
-	closeDetail.Name = "CloseDetail"
-	closeDetail.Size = UDim2.new(0, 22, 0, 22)
-	closeDetail.Position = UDim2.new(1, -28, 0, 6)
-	closeDetail.BackgroundColor3 = Color3.fromRGB(100, 50, 50)
-	closeDetail.TextColor3 = Color3.fromRGB(255, 255, 255)
-	closeDetail.TextSize = 12
-	closeDetail.Font = Enum.Font.GothamBold
-	closeDetail.Text = "X"
-	closeDetail.AutoButtonColor = true
-	closeDetail.ZIndex = 3
-	closeDetail.Parent = detailFrame
-
-	local closeCorner = Instance.new("UICorner")
-	closeCorner.CornerRadius = UDim.new(0, 6)
-	closeCorner.Parent = closeDetail
-
-	closeDetail.MouseButton1Click:Connect(function()
-		detailFrame.Visible = false
-	end)
+	-- 상세 기본 텍스트
+	local placeholder = Instance.new("TextLabel")
+	placeholder.Name = "Placeholder"
+	placeholder.Size = UDim2.new(1, -16, 1, 0)
+	placeholder.Position = UDim2.new(0, 8, 0, 0)
+	placeholder.BackgroundTransparency = 1
+	placeholder.TextColor3 = Color3.fromRGB(150, 130, 110)
+	placeholder.TextSize = 12
+	placeholder.Font = Enum.Font.Gotham
+	placeholder.Text = "항목을 선택하세요"
+	placeholder.Parent = detailFrame
 
 	CollectionUI._updateCategoryButtons()
 end
 
+----------------------------------------------------------------
+-- 카테고리 버튼 업데이트
+----------------------------------------------------------------
 function CollectionUI._updateCategoryButtons()
 	for cat, btn in _categoryButtons do
 		if cat == _activeCategory then
-			btn.BackgroundColor3 = Color3.fromRGB(80, 120, 200)
-			btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+			btn.BackgroundColor3 = Color3.fromRGB(140, 80, 50)
+			btn.TextColor3 = Color3.fromRGB(255, 240, 220)
 		else
-			btn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-			btn.TextColor3 = Color3.fromRGB(200, 200, 210)
+			btn.BackgroundColor3 = Color3.fromRGB(90, 55, 45)
+			btn.TextColor3 = Color3.fromRGB(200, 180, 160)
 		end
 	end
 end
 
+----------------------------------------------------------------
+-- 아이템 리스트 렌더링
+----------------------------------------------------------------
 function CollectionUI._renderItems()
-	if not contentFrame then return end
+	if not listFrame then return end
 
-	-- 기존 슬롯 제거
-	for _, child in contentFrame:GetChildren() do
+	for _, child in listFrame:GetChildren() do
 		if child:IsA("GuiObject") then
 			child:Destroy()
 		end
 	end
 
-	detailFrame.Visible = false
-
 	local query = searchBox and searchBox.Text:lower() or ""
-	local index = 0
+	local items = {}
 
-	if _activeCategory == "건물" then
+	if _activeCategory == "Pets" then
+		for key, pet in Constants.PETS do
+			if query == "" or key:lower():find(query, 1, true) then
+				table.insert(items, { key = key, name = key, rarity = pet.rarity, data = pet, type = "pet" })
+			end
+		end
+		-- 기본 펫도 추가
+		for _, dp in BalanceConfig.Pet.DEFAULT_PETS do
+			local exists = false
+			for _, item in items do
+				if item.name == dp.petName then exists = true; break end
+			end
+			if not exists and (query == "" or dp.petName:lower():find(query, 1, true)) then
+				table.insert(items, { key = dp.petName, name = dp.petName, rarity = dp.rarity, data = dp, type = "pet" })
+			end
+		end
+	elseif _activeCategory == "Buildings" then
 		for key, building in Constants.BUILDINGS do
 			local name = building.name
-			if query ~= "" and not name:lower():find(query, 1, true) and not key:lower():find(query, 1, true) then
-				continue
+			if query == "" or name:lower():find(query, 1, true) or key:lower():find(query, 1, true) then
+				table.insert(items, { key = key, name = name, rarity = building.rarity, data = building, type = "building" })
 			end
-			index = index + 1
-			CollectionUI._createBuildingSlot(key, building, index)
 		end
-	elseif _activeCategory == "펫" then
-		for key, pet in Constants.PETS do
-			if query ~= "" and not key:lower():find(query, 1, true) then
-				continue
+	elseif _activeCategory == "Mutations" then
+		for key, displayName in Constants.MUTATION_NAMES do
+			if query == "" or displayName:lower():find(query, 1, true) or key:lower():find(query, 1, true) then
+				table.insert(items, { key = key, name = displayName, rarity = nil, data = key, type = "mutation" })
 			end
-			index = index + 1
-			CollectionUI._createPetSlot(key, pet, index)
 		end
 	end
 
-	-- 캔버스 크기
-	local columns = math.floor((PANEL_WIDTH - 16) / (ITEM_SIZE + ITEM_PADDING))
-	if columns < 1 then columns = 1 end
-	local rows = math.ceil(index / columns)
-	contentFrame.CanvasSize = UDim2.new(0, 0, 0, rows * (ITEM_SIZE + 20 + ITEM_PADDING) + 10)
+	-- 희귀도순 정렬
+	table.sort(items, function(a, b)
+		local oa = RARITY_ORDER[a.rarity] or 0
+		local ob = RARITY_ORDER[b.rarity] or 0
+		if oa ~= ob then return oa < ob end
+		return a.name < b.name
+	end)
 
-	-- 빈 목록
-	if index == 0 then
-		local emptyLabel = Instance.new("TextLabel")
-		emptyLabel.Size = UDim2.new(0, PANEL_WIDTH - 32, 0, 40)
-		emptyLabel.BackgroundTransparency = 1
-		emptyLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-		emptyLabel.TextSize = 13
-		emptyLabel.Font = Enum.Font.Gotham
-		emptyLabel.Text = "항목이 없습니다"
-		emptyLabel.Parent = contentFrame
+	for i, item in items do
+		local rarityColor = Color3.fromRGB(180, 160, 140)
+		if item.rarity then
+			rarityColor = Constants.RARITY_COLORS[item.rarity] or rarityColor
+		elseif item.type == "mutation" then
+			rarityColor = Constants.MUTATION_COLORS[item.data] or Color3.fromRGB(200, 180, 255)
+		end
+
+		local slot = Instance.new("TextButton")
+		slot.Name = item.key
+		slot.Size = UDim2.new(1, -4, 0, ITEM_HEIGHT)
+		slot.BackgroundColor3 = Color3.fromRGB(90, 55, 45)
+		slot.AutoButtonColor = true
+		slot.LayoutOrder = i
+		slot.Text = ""
+		slot.Parent = listFrame
+
+		local slotCorner = Instance.new("UICorner")
+		slotCorner.CornerRadius = UDim.new(0, 6)
+		slotCorner.Parent = slot
+
+		-- 이름
+		local nameLabel = Instance.new("TextLabel")
+		nameLabel.Size = UDim2.new(1, -30, 1, 0)
+		nameLabel.Position = UDim2.new(0, 8, 0, 0)
+		nameLabel.BackgroundTransparency = 1
+		nameLabel.TextColor3 = Color3.fromRGB(255, 230, 200)
+		nameLabel.TextSize = 12
+		nameLabel.Font = Enum.Font.GothamBold
+		nameLabel.Text = item.name
+		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+		nameLabel.Parent = slot
+
+		-- 등급 점
+		local dot = Instance.new("Frame")
+		dot.Size = UDim2.new(0, 10, 0, 10)
+		dot.Position = UDim2.new(1, -18, 0.5, -5)
+		dot.BackgroundColor3 = rarityColor
+		dot.Parent = slot
+
+		local dotCorner = Instance.new("UICorner")
+		dotCorner.CornerRadius = UDim.new(1, 0)
+		dotCorner.Parent = dot
+
+		slot.MouseButton1Click:Connect(function()
+			CollectionUI._showDetail(item)
+		end)
+	end
+
+	local totalHeight = #items * (ITEM_HEIGHT + ITEM_PADDING)
+	listFrame.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
+end
+
+----------------------------------------------------------------
+-- 상세 패널 표시
+----------------------------------------------------------------
+function CollectionUI._showDetail(item)
+	if not detailFrame then return end
+
+	-- 기존 동적 콘텐츠 제거
+	for _, child in detailFrame:GetChildren() do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+
+	local y = 10
+	local contentWidth = detailFrame.AbsoluteSize.X - 16
+
+	-- 이름
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Size = UDim2.new(1, -16, 0, 22)
+	nameLabel.Position = UDim2.new(0, 8, 0, y)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.TextColor3 = Color3.fromRGB(255, 240, 210)
+	nameLabel.TextSize = 15
+	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.Text = item.name
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	nameLabel.Parent = detailFrame
+	y = y + 26
+
+	-- 희귀도
+	if item.rarity then
+		local rarityColor = Constants.RARITY_COLORS[item.rarity] or Color3.fromRGB(180, 180, 180)
+		local rarityLabel = Instance.new("TextLabel")
+		rarityLabel.Size = UDim2.new(1, -16, 0, 16)
+		rarityLabel.Position = UDim2.new(0, 8, 0, y)
+		rarityLabel.BackgroundTransparency = 1
+		rarityLabel.TextColor3 = rarityColor
+		rarityLabel.TextSize = 11
+		rarityLabel.Font = Enum.Font.GothamBold
+		rarityLabel.Text = item.rarity
+		rarityLabel.TextXAlignment = Enum.TextXAlignment.Left
+		rarityLabel.Parent = detailFrame
+		y = y + 20
+	end
+
+	-- 구분선
+	local sep = Instance.new("Frame")
+	sep.Size = UDim2.new(1, -16, 0, 1)
+	sep.Position = UDim2.new(0, 8, 0, y)
+	sep.BackgroundColor3 = Color3.fromRGB(120, 80, 60)
+	sep.BorderSizePixel = 0
+	sep.Parent = detailFrame
+	y = y + 8
+
+	if item.type == "pet" then
+		-- 펫 상세: 설명, 기본 무게, 하는 일
+		local petData = item.data
+		local petType = petData.petType or "?"
+		local petTypeKor = Constants.PetType[petType] or petType
+
+		local lines = {
+			{ "유형", petTypeKor },
+			{ "종족", petData.race or "?" },
+		}
+
+		-- 기본 무게
+		local size = petData.size or "Small"
+		local stdWeight = BalanceConfig.Pet.SIZE_STANDARD_WEIGHT[size] or 5
+		table.insert(lines, { "기본 무게", string.format("%.1fkg", stdWeight) })
+		table.insert(lines, { "사이즈", size })
+
+		for _, info in lines do
+			CollectionUI._infoRow(detailFrame, info[1], info[2], y)
+			y = y + 18
+		end
+
+		y = y + 6
+		local descLabel = Instance.new("TextLabel")
+		descLabel.Size = UDim2.new(1, -16, 0, 40)
+		descLabel.Position = UDim2.new(0, 8, 0, y)
+		descLabel.BackgroundTransparency = 1
+		descLabel.TextColor3 = Color3.fromRGB(200, 180, 160)
+		descLabel.TextSize = 10
+		descLabel.Font = Enum.Font.Gotham
+		descLabel.TextWrapped = true
+		descLabel.TextXAlignment = Enum.TextXAlignment.Left
+		descLabel.TextYAlignment = Enum.TextYAlignment.Top
+		descLabel.Text = "이 펫은 " .. petTypeKor .. " 작업을 수행합니다."
+		descLabel.Parent = detailFrame
+
+	elseif item.type == "building" then
+		-- 건물 상세: 유형, 크기, 설명
+		local building = item.data
+		local lines = {
+			{ "유형", table.concat(building.types, ", ") },
+		}
+		if building.workTypes then
+			table.insert(lines, { "작업", table.concat(building.workTypes, ", ") })
+		end
+		local cs = building.collisionSize
+		table.insert(lines, { "크기", cs.X .. " x " .. cs.Y .. " x " .. cs.Z })
+
+		for _, info in lines do
+			CollectionUI._infoRow(detailFrame, info[1], info[2], y)
+			y = y + 18
+		end
+
+		y = y + 6
+		local descLabel = Instance.new("TextLabel")
+		descLabel.Size = UDim2.new(1, -16, 0, 40)
+		descLabel.Position = UDim2.new(0, 8, 0, y)
+		descLabel.BackgroundTransparency = 1
+		descLabel.TextColor3 = Color3.fromRGB(200, 180, 160)
+		descLabel.TextSize = 10
+		descLabel.Font = Enum.Font.Gotham
+		descLabel.TextWrapped = true
+		descLabel.TextXAlignment = Enum.TextXAlignment.Left
+		descLabel.TextYAlignment = Enum.TextYAlignment.Top
+		descLabel.Text = building.name .. " 건물입니다."
+		descLabel.Parent = detailFrame
+
+	elseif item.type == "mutation" then
+		-- 돌연변이 상세
+		local mutKey = item.data
+		local mutColor = Constants.MUTATION_COLORS[mutKey] or Color3.fromRGB(200, 200, 200)
+		local speedBonus = BalanceConfig.Weather.MUTATION_SPEED_BONUS[mutKey]
+
+		if speedBonus then
+			CollectionUI._infoRow(detailFrame, "효과", "일 효율 +" .. math.floor(speedBonus * 100) .. "%", y)
+			y = y + 18
+		end
+
+		y = y + 6
+		local descLabel = Instance.new("TextLabel")
+		descLabel.Size = UDim2.new(1, -16, 0, 50)
+		descLabel.Position = UDim2.new(0, 8, 0, y)
+		descLabel.BackgroundTransparency = 1
+		descLabel.TextColor3 = mutColor
+		descLabel.TextSize = 10
+		descLabel.Font = Enum.Font.Gotham
+		descLabel.TextWrapped = true
+		descLabel.TextXAlignment = Enum.TextXAlignment.Left
+		descLabel.TextYAlignment = Enum.TextYAlignment.Top
+		descLabel.Text = item.name .. " 돌연변이입니다."
+		descLabel.Parent = detailFrame
 	end
 end
 
-function CollectionUI._createBuildingSlot(key: string, building, index: number)
-	local slot = Instance.new("TextButton")
-	slot.Name = key
-	slot.Size = UDim2.new(0, ITEM_SIZE, 0, ITEM_SIZE + 20)
-	slot.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-	slot.AutoButtonColor = true
-	slot.LayoutOrder = index
-	slot.Text = ""
-	slot.Parent = contentFrame
+function CollectionUI._infoRow(parent, key, value, y)
+	local keyLabel = Instance.new("TextLabel")
+	keyLabel.Size = UDim2.new(0, 70, 0, 14)
+	keyLabel.Position = UDim2.new(0, 8, 0, y)
+	keyLabel.BackgroundTransparency = 1
+	keyLabel.TextColor3 = Color3.fromRGB(170, 150, 130)
+	keyLabel.TextSize = 10
+	keyLabel.Font = Enum.Font.Gotham
+	keyLabel.Text = key
+	keyLabel.TextXAlignment = Enum.TextXAlignment.Left
+	keyLabel.Parent = parent
 
-	local slotCorner = Instance.new("UICorner")
-	slotCorner.CornerRadius = UDim.new(0, 8)
-	slotCorner.Parent = slot
-
-	local rarityColor = Constants.RARITY_COLORS[building.rarity] or Color3.fromRGB(180, 180, 180)
-	local slotStroke = Instance.new("UIStroke")
-	slotStroke.Color = rarityColor
-	slotStroke.Thickness = 1.5
-	slotStroke.Parent = slot
-
-	-- 건물 이름
-	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(1, -4, 0, 30)
-	nameLabel.Position = UDim2.new(0, 2, 0, 10)
-	nameLabel.BackgroundTransparency = 1
-	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	nameLabel.TextSize = 12
-	nameLabel.Font = Enum.Font.GothamBold
-	nameLabel.Text = building.name
-	nameLabel.TextWrapped = true
-	nameLabel.Parent = slot
-
-	-- 등급 표시
-	local rarityLabel = Instance.new("TextLabel")
-	rarityLabel.Size = UDim2.new(1, -4, 0, 14)
-	rarityLabel.Position = UDim2.new(0, 2, 0, 42)
-	rarityLabel.BackgroundTransparency = 1
-	rarityLabel.TextColor3 = rarityColor
-	rarityLabel.TextSize = 10
-	rarityLabel.Font = Enum.Font.Gotham
-	rarityLabel.Text = building.rarity
-	rarityLabel.Parent = slot
-
-	-- 유형 표시
-	local typeLabel = Instance.new("TextLabel")
-	typeLabel.Size = UDim2.new(1, -4, 0, 14)
-	typeLabel.Position = UDim2.new(0, 2, 1, -18)
-	typeLabel.BackgroundTransparency = 1
-	typeLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
-	typeLabel.TextSize = 9
-	typeLabel.Font = Enum.Font.Gotham
-	typeLabel.Text = table.concat(building.types, "/")
-	typeLabel.Parent = slot
-
-	-- 클릭 시 상세 정보
-	slot.MouseButton1Click:Connect(function()
-		CollectionUI._showDetail(key, building)
-	end)
+	local valLabel = Instance.new("TextLabel")
+	valLabel.Size = UDim2.new(1, -86, 0, 14)
+	valLabel.Position = UDim2.new(0, 78, 0, y)
+	valLabel.BackgroundTransparency = 1
+	valLabel.TextColor3 = Color3.fromRGB(255, 230, 200)
+	valLabel.TextSize = 10
+	valLabel.Font = Enum.Font.GothamBold
+	valLabel.Text = value
+	valLabel.TextXAlignment = Enum.TextXAlignment.Left
+	valLabel.Parent = parent
 end
 
-function CollectionUI._createPetSlot(key: string, pet, index: number)
-	local slot = Instance.new("TextButton")
-	slot.Name = key
-	slot.Size = UDim2.new(0, ITEM_SIZE, 0, ITEM_SIZE + 20)
-	slot.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-	slot.AutoButtonColor = true
-	slot.LayoutOrder = index
-	slot.Text = ""
-	slot.Parent = contentFrame
-
-	local slotCorner = Instance.new("UICorner")
-	slotCorner.CornerRadius = UDim.new(0, 8)
-	slotCorner.Parent = slot
-
-	local rarityColor = Constants.RARITY_COLORS[pet.rarity] or Color3.fromRGB(180, 180, 180)
-	local slotStroke = Instance.new("UIStroke")
-	slotStroke.Color = rarityColor
-	slotStroke.Thickness = 1.5
-	slotStroke.Parent = slot
-
-	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(1, -4, 0, 30)
-	nameLabel.Position = UDim2.new(0, 2, 0, 10)
-	nameLabel.BackgroundTransparency = 1
-	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	nameLabel.TextSize = 11
-	nameLabel.Font = Enum.Font.GothamBold
-	nameLabel.Text = key
-	nameLabel.TextWrapped = true
-	nameLabel.Parent = slot
-
-	local rarityLabel = Instance.new("TextLabel")
-	rarityLabel.Size = UDim2.new(1, -4, 0, 14)
-	rarityLabel.Position = UDim2.new(0, 2, 0, 42)
-	rarityLabel.BackgroundTransparency = 1
-	rarityLabel.TextColor3 = rarityColor
-	rarityLabel.TextSize = 10
-	rarityLabel.Font = Enum.Font.Gotham
-	rarityLabel.Text = pet.rarity
-	rarityLabel.Parent = slot
-
-	local typeLabel = Instance.new("TextLabel")
-	typeLabel.Size = UDim2.new(1, -4, 0, 14)
-	typeLabel.Position = UDim2.new(0, 2, 1, -18)
-	typeLabel.BackgroundTransparency = 1
-	typeLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
-	typeLabel.TextSize = 9
-	typeLabel.Font = Enum.Font.Gotham
-	typeLabel.Text = pet.petType
-	typeLabel.Parent = slot
-
-	slot.MouseButton1Click:Connect(function()
-		CollectionUI._showPetDetail(key, pet)
-	end)
-end
-
-function CollectionUI._showDetail(key: string, building)
-	if not detailFrame then return end
-
-	local detailName = detailFrame:FindFirstChild("DetailName")
-	local detailInfo = detailFrame:FindFirstChild("DetailInfo")
-	if not detailName or not detailInfo then return end
-
-	detailName.Text = building.name .. " (" .. key .. ")"
-
-	local lines = {}
-	table.insert(lines, "등급: " .. building.rarity)
-	table.insert(lines, "유형: " .. table.concat(building.types, ", "))
-	if building.workTypes then
-		table.insert(lines, "작업: " .. table.concat(building.workTypes, ", "))
-	end
-	local cs = building.collisionSize
-	table.insert(lines, "크기: " .. cs.X .. " x " .. cs.Y .. " x " .. cs.Z)
-	table.insert(lines, "최대 레벨: " .. BalanceConfig.Upgrade.MAX_LEVEL)
-
-	detailInfo.Text = table.concat(lines, "\n")
-	detailFrame.Visible = true
-end
-
-function CollectionUI._showPetDetail(key: string, pet)
-	if not detailFrame then return end
-
-	local detailName = detailFrame:FindFirstChild("DetailName")
-	local detailInfo = detailFrame:FindFirstChild("DetailInfo")
-	if not detailName or not detailInfo then return end
-
-	detailName.Text = key
-
-	local lines = {}
-	table.insert(lines, "등급: " .. pet.rarity)
-	table.insert(lines, "유형: " .. pet.petType)
-
-	detailInfo.Text = table.concat(lines, "\n")
-	detailFrame.Visible = true
-end
-
+----------------------------------------------------------------
+-- 공개 API
+----------------------------------------------------------------
 function CollectionUI.show()
 	if _visible or not mainFrame then return end
 	_visible = true
@@ -456,7 +535,6 @@ function CollectionUI.hide()
 	if not _visible or not mainFrame then return end
 	_visible = false
 	mainFrame.Visible = false
-	detailFrame.Visible = false
 end
 
 function CollectionUI.isVisible(): boolean

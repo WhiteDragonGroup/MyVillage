@@ -29,7 +29,7 @@ local PANEL_HEIGHT = 420
 local ITEM_HEIGHT = 70
 local ITEM_PADDING = 6
 
-function ShopUI.init(callbacks: { onBuy: (string) -> (), onGift: (string) -> () })
+function ShopUI.init(callbacks: { onBuy: (string) -> (), onBuyGem: ((string) -> ())?, onGift: (string) -> (), onBuyEgg: ((string) -> ())? })
 	_callbacks = callbacks
 
 	screenGui = Instance.new("ScreenGui")
@@ -42,7 +42,7 @@ function ShopUI.init(callbacks: { onBuy: (string) -> (), onGift: (string) -> () 
 	mainFrame = Instance.new("Frame")
 	mainFrame.Name = "ShopPanel"
 	mainFrame.Size = UDim2.new(0, PANEL_WIDTH, 0, PANEL_HEIGHT)
-	mainFrame.Position = UDim2.new(0, 10, 0, 104)
+	mainFrame.Position = UDim2.new(0.5, -PANEL_WIDTH / 2, 0.5, -PANEL_HEIGHT / 2)
 	mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 	mainFrame.BackgroundTransparency = 0.05
 	mainFrame.BorderSizePixel = 0
@@ -127,6 +127,9 @@ function ShopUI._renderItems()
 		local building = Constants.BUILDINGS[item.itemName]
 		if not building then continue end
 
+		local rarityColor = Constants.RARITY_COLORS[building.rarity] or Color3.fromRGB(180, 180, 180)
+		local soldOut = item.stock <= 0
+
 		local slot = Instance.new("Frame")
 		slot.Name = item.itemName
 		slot.Size = UDim2.new(1, 0, 0, ITEM_HEIGHT)
@@ -139,7 +142,6 @@ function ShopUI._renderItems()
 		slotCorner.CornerRadius = UDim.new(0, 8)
 		slotCorner.Parent = slot
 
-		local rarityColor = Constants.RARITY_COLORS[building.rarity] or Color3.fromRGB(180, 180, 180)
 		local slotStroke = Instance.new("UIStroke")
 		slotStroke.Color = rarityColor
 		slotStroke.Thickness = 1
@@ -147,8 +149,8 @@ function ShopUI._renderItems()
 
 		-- 건물 이름
 		local nameLabel = Instance.new("TextLabel")
-		nameLabel.Size = UDim2.new(0, 120, 0, 20)
-		nameLabel.Position = UDim2.new(0, 10, 0, 8)
+		nameLabel.Size = UDim2.new(0, 130, 0, 18)
+		nameLabel.Position = UDim2.new(0, 10, 0, 4)
 		nameLabel.BackgroundTransparency = 1
 		nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 		nameLabel.TextSize = 13
@@ -157,78 +159,92 @@ function ShopUI._renderItems()
 		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 		nameLabel.Parent = slot
 
-		-- 등급 + 유형
-		local infoLabel = Instance.new("TextLabel")
-		infoLabel.Size = UDim2.new(0, 120, 0, 16)
-		infoLabel.Position = UDim2.new(0, 10, 0, 28)
-		infoLabel.BackgroundTransparency = 1
-		infoLabel.TextColor3 = rarityColor
-		infoLabel.TextSize = 10
-		infoLabel.Font = Enum.Font.Gotham
-		infoLabel.Text = building.rarity .. " | " .. table.concat(building.types, "/")
-		infoLabel.TextXAlignment = Enum.TextXAlignment.Left
-		infoLabel.Parent = slot
+		-- 재고 + 희귀도 (이름 오른쪽)
+		local stockText = "X" .. item.stock .. " Stock"
+		if soldOut then stockText = "NO STOCK" end
 
-		-- 재고
 		local stockLabel = Instance.new("TextLabel")
-		stockLabel.Size = UDim2.new(0, 120, 0, 14)
-		stockLabel.Position = UDim2.new(0, 10, 0, 48)
+		stockLabel.Size = UDim2.new(0, 80, 0, 14)
+		stockLabel.Position = UDim2.new(0, 10, 0, 22)
 		stockLabel.BackgroundTransparency = 1
-		stockLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
-		stockLabel.TextSize = 10
+		stockLabel.TextColor3 = if soldOut then Color3.fromRGB(200, 80, 80) else Color3.fromRGB(160, 160, 170)
+		stockLabel.TextSize = 9
 		stockLabel.Font = Enum.Font.Gotham
-		stockLabel.Text = "남은 재고: " .. item.stock .. " / " .. item.maxStock
+		stockLabel.Text = stockText
 		stockLabel.TextXAlignment = Enum.TextXAlignment.Left
 		stockLabel.Parent = slot
 
-		-- 가격 표시
+		-- 희귀도 뱃지
+		local rarityBadge = Instance.new("TextLabel")
+		rarityBadge.Size = UDim2.new(0, 50, 0, 16)
+		rarityBadge.Position = UDim2.new(0, 90, 0, 21)
+		rarityBadge.BackgroundColor3 = rarityColor
+		rarityBadge.BackgroundTransparency = 0.3
+		rarityBadge.TextColor3 = Color3.fromRGB(255, 255, 255)
+		rarityBadge.TextSize = 8
+		rarityBadge.Font = Enum.Font.GothamBold
+		rarityBadge.Text = building.rarity
+		rarityBadge.Parent = slot
+
+		local badgeCorner = Instance.new("UICorner")
+		badgeCorner.CornerRadius = UDim.new(0, 4)
+		badgeCorner.Parent = rarityBadge
+
+		-- 가격
 		local priceLabel = Instance.new("TextLabel")
-		priceLabel.Size = UDim2.new(0, 60, 0, 18)
-		priceLabel.Position = UDim2.new(1, -145, 0, 8)
+		priceLabel.Size = UDim2.new(0, 50, 0, 16)
+		priceLabel.Position = UDim2.new(0, 10, 0, 40)
 		priceLabel.BackgroundTransparency = 1
 		priceLabel.TextColor3 = Color3.fromRGB(255, 200, 60)
 		priceLabel.TextSize = 12
 		priceLabel.Font = Enum.Font.GothamBold
 		priceLabel.Text = "$" .. item.price
-		priceLabel.TextXAlignment = Enum.TextXAlignment.Right
+		priceLabel.TextXAlignment = Enum.TextXAlignment.Left
 		priceLabel.Parent = slot
 
-		-- 구매 버튼
-		local buyBtn = Instance.new("TextButton")
-		buyBtn.Size = UDim2.new(0, 50, 0, 28)
-		buyBtn.Position = UDim2.new(1, -125, 0, 30)
-		buyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-		buyBtn.TextSize = 11
-		buyBtn.Font = Enum.Font.GothamBold
-		buyBtn.AutoButtonColor = true
-		buyBtn.Parent = slot
-
-		local buyCorner = Instance.new("UICorner")
-		buyCorner.CornerRadius = UDim.new(0, 6)
-		buyCorner.Parent = buyBtn
-
-		if item.stock > 0 then
-			buyBtn.Text = "구매"
-			buyBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-			buyBtn.MouseButton1Click:Connect(function()
-				if _callbacks.onBuy then
-					_callbacks.onBuy(item.itemName)
-				end
-			end)
-		else
-			buyBtn.Text = "품절"
-			buyBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-			buyBtn.Active = false
-			buyBtn.TextTransparency = 0.5
+		-- 구매 버튼 (돈)
+		local function makeBtn(text, color, xPos, callback)
+			local btn = Instance.new("TextButton")
+			btn.Size = UDim2.new(0, 42, 0, 22)
+			btn.Position = UDim2.new(1, xPos, 0, 38)
+			btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+			btn.TextSize = 9
+			btn.Font = Enum.Font.GothamBold
+			btn.Text = text
+			btn.AutoButtonColor = true
+			btn.Parent = slot
+			local c = Instance.new("UICorner")
+			c.CornerRadius = UDim.new(0, 5)
+			c.Parent = btn
+			if soldOut then
+				btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+				btn.Active = false
+				btn.TextTransparency = 0.5
+			else
+				btn.BackgroundColor3 = color
+				btn.MouseButton1Click:Connect(callback)
+			end
+			return btn
 		end
+
+		-- $ 구매
+		makeBtn("$" .. item.price, Color3.fromRGB(50, 140, 50), -180, function()
+			if _callbacks.onBuy then _callbacks.onBuy(item.itemName) end
+		end)
+
+		-- 보석 구매 (가격 x2)
+		makeBtn("💎" .. math.floor(item.price * 0.5), Color3.fromRGB(100, 70, 200), -134, function()
+			if _callbacks.onBuyGem then _callbacks.onBuyGem(item.itemName) end
+		end)
 
 		-- 선물 버튼
 		local giftBtn = Instance.new("TextButton")
-		giftBtn.Size = UDim2.new(0, 50, 0, 28)
-		giftBtn.Position = UDim2.new(1, -68, 0, 30)
+		giftBtn.Size = UDim2.new(0, 42, 0, 22)
+		giftBtn.Position = UDim2.new(1, -88, 0, 38)
 		giftBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-		giftBtn.TextSize = 11
+		giftBtn.TextSize = 9
 		giftBtn.Font = Enum.Font.GothamBold
+		giftBtn.Text = "선물"
 		giftBtn.AutoButtonColor = true
 		giftBtn.Parent = slot
 
@@ -252,8 +268,112 @@ function ShopUI._renderItems()
 		end
 	end
 
+	-- === 알 섹션 ===
+	local EggCfg = BalanceConfig.Egg
+	if EggCfg and EggCfg.EGGS then
+		-- 구분선
+		local sepFrame = Instance.new("Frame")
+		sepFrame.Size = UDim2.new(1, -8, 0, 24)
+		sepFrame.BackgroundTransparency = 1
+		sepFrame.LayoutOrder = #_shopData + 1
+		sepFrame.Parent = contentFrame
+
+		local sepLabel = Instance.new("TextLabel")
+		sepLabel.Size = UDim2.new(1, 0, 1, 0)
+		sepLabel.BackgroundTransparency = 1
+		sepLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+		sepLabel.TextSize = 13
+		sepLabel.Font = Enum.Font.GothamBold
+		sepLabel.Text = "── 알 (Eggs) ──"
+		sepLabel.Parent = sepFrame
+
+		local eggIndex = 0
+		for eggType, eggInfo in EggCfg.EGGS do
+			eggIndex = eggIndex + 1
+			local rarityColor = Constants.RARITY_COLORS[eggInfo.rarity] or Color3.fromRGB(180, 180, 180)
+
+			local eggSlot = Instance.new("Frame")
+			eggSlot.Name = eggType
+			eggSlot.Size = UDim2.new(1, 0, 0, 56)
+			eggSlot.BackgroundColor3 = Color3.fromRGB(45, 40, 55)
+			eggSlot.BorderSizePixel = 0
+			eggSlot.LayoutOrder = #_shopData + 1 + eggIndex
+			eggSlot.Parent = contentFrame
+
+			local eggCorner = Instance.new("UICorner")
+			eggCorner.CornerRadius = UDim.new(0, 8)
+			eggCorner.Parent = eggSlot
+
+			local eggStroke = Instance.new("UIStroke")
+			eggStroke.Color = rarityColor
+			eggStroke.Thickness = 1
+			eggStroke.Parent = eggSlot
+
+			-- 이름
+			local eName = Instance.new("TextLabel")
+			eName.Size = UDim2.new(0, 130, 0, 18)
+			eName.Position = UDim2.new(0, 10, 0, 4)
+			eName.BackgroundTransparency = 1
+			eName.TextColor3 = Color3.fromRGB(255, 255, 255)
+			eName.TextSize = 12
+			eName.Font = Enum.Font.GothamBold
+			eName.Text = eggInfo.name
+			eName.TextXAlignment = Enum.TextXAlignment.Left
+			eName.Parent = eggSlot
+
+			-- 부화 시간 + 희귀도
+			local eInfo = Instance.new("TextLabel")
+			eInfo.Size = UDim2.new(0, 150, 0, 14)
+			eInfo.Position = UDim2.new(0, 10, 0, 22)
+			eInfo.BackgroundTransparency = 1
+			eInfo.TextColor3 = rarityColor
+			eInfo.TextSize = 9
+			eInfo.Font = Enum.Font.Gotham
+			eInfo.Text = eggInfo.rarity .. " | 부화: " .. eggInfo.hatchTime .. "초"
+			eInfo.TextXAlignment = Enum.TextXAlignment.Left
+			eInfo.Parent = eggSlot
+
+			-- 가격 + 구매 버튼
+			local ePrice = Instance.new("TextLabel")
+			ePrice.Size = UDim2.new(0, 50, 0, 16)
+			ePrice.Position = UDim2.new(0, 10, 0, 38)
+			ePrice.BackgroundTransparency = 1
+			ePrice.TextColor3 = Color3.fromRGB(255, 200, 60)
+			ePrice.TextSize = 11
+			ePrice.Font = Enum.Font.GothamBold
+			ePrice.Text = "$" .. eggInfo.price
+			ePrice.TextXAlignment = Enum.TextXAlignment.Left
+			ePrice.Parent = eggSlot
+
+			local eBuyBtn = Instance.new("TextButton")
+			eBuyBtn.Size = UDim2.new(0, 50, 0, 24)
+			eBuyBtn.Position = UDim2.new(1, -62, 0, 16)
+			eBuyBtn.BackgroundColor3 = Color3.fromRGB(50, 140, 50)
+			eBuyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+			eBuyBtn.TextSize = 10
+			eBuyBtn.Font = Enum.Font.GothamBold
+			eBuyBtn.Text = "구매"
+			eBuyBtn.AutoButtonColor = true
+			eBuyBtn.Parent = eggSlot
+
+			local eBuyCorner = Instance.new("UICorner")
+			eBuyCorner.CornerRadius = UDim.new(0, 6)
+			eBuyCorner.Parent = eBuyBtn
+
+			eBuyBtn.MouseButton1Click:Connect(function()
+				if _callbacks.onBuyEgg then
+					_callbacks.onBuyEgg(eggType)
+				end
+			end)
+		end
+	end
+
 	-- 캔버스 크기
-	local totalHeight = #_shopData * (ITEM_HEIGHT + ITEM_PADDING)
+	local totalChildren = 0
+	for _, child in contentFrame:GetChildren() do
+		if child:IsA("GuiObject") then totalChildren = totalChildren + 1 end
+	end
+	local totalHeight = totalChildren * (ITEM_HEIGHT + ITEM_PADDING)
 	contentFrame.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
 end
 
