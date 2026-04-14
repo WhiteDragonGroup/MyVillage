@@ -1263,7 +1263,6 @@ MainHUD.init({
 	end,
 
 	onTeleport = function(destination)
-		-- 텔레포트: 각 목적지로 캐릭터 이동
 		local character = player.Character
 		if not character then return end
 		local hrp = character:FindFirstChild("HumanoidRootPart")
