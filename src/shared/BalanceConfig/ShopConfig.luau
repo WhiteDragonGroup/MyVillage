@@ -25,6 +25,11 @@ ShopConfig.SHOP_ITEMS = {
 	{ itemName = "WorldTree",  price = 2000, maxStock = 1 },
 	{ itemName = "Campfire",   price = 30,   maxStock = 5 },
 	{ itemName = "PotionCafe", price = 220,  maxStock = 1 },
+	{ itemName = "AltarOfBlessing", price = 1000, maxStock = 1 },
+	{ itemName = "Farm",       price = 60,   maxStock = 3 },
+	{ itemName = "SpellLaboratory", price = 600, maxStock = 1 },
+	{ itemName = "GiantFurnace", price = 700, maxStock = 1 },
+	{ itemName = "TreeOfGrowth", price = 900, maxStock = 1 },
 }
 
 return ShopConfig

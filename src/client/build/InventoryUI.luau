@@ -153,39 +153,55 @@ function InventoryUI._renderSlots()
 		slot.Visible = true
 		slot.LayoutOrder = filteredIndex
 		slot:SetAttribute("_dynamic", true)
+
+		-- 2열 그리드: 패딩 + 간격 균등 배치
+		local PADDING = 6
+		local GAP = 6
+		local frameW = scrollingFrame.AbsoluteSize.X
+		if frameW < 50 then frameW = 160 end
+		local slotW = math.floor((frameW - PADDING * 2 - GAP) / 2)
+		slot.Size = UDim2.new(0, slotW, 0, slotW)
 		slot.Parent = scrollingFrame
 
-		-- 이름 텍스트 업데이트
-		local nameLabel = slot:FindFirstChild("TextLabel") or slot:FindFirstChildWhichIsA("TextLabel")
-		if nameLabel then
-			nameLabel.Text = displayName
+		local col = (filteredIndex - 1) % 2
+		local row = math.floor((filteredIndex - 1) / 2)
+		slot.Position = UDim2.new(0, PADDING + col * (slotW + GAP), 0, PADDING + row * (slotW + GAP))
+
+		-- NameText 업데이트
+		local nameText = slot:FindFirstChild("NameText")
+		if nameText then
+			nameText.Text = displayName
 		end
 
-		-- 수량 표시 (있으면)
-		local countLabel = slot:FindFirstChild("Count") or slot:FindFirstChild("CountLabel")
-		if countLabel then
-			countLabel.Text = "x" .. item.count
+		-- LevelText 업데이트
+		local levelText = slot:FindFirstChild("LevelText")
+		if levelText then
+			levelText.Text = "Lv." .. (item.level or 1)
 		end
 
-		-- 클릭 이벤트
-		if slot:IsA("GuiButton") then
-			slot.MouseButton1Click:Connect(function()
-				if _onItemSelected then
-					_onItemSelected(item.itemName, item.level or 1)
-				end
-			end)
-		else
-			-- Frame이면 내부 버튼 찾기
-			local btn = slot:FindFirstChildWhichIsA("TextButton") or slot:FindFirstChildWhichIsA("ImageButton")
-			if btn then
-				btn.MouseButton1Click:Connect(function()
-					if _onItemSelected then
-						_onItemSelected(item.itemName, item.level or 1)
-					end
-				end)
+		-- 클릭 이벤트 (투명 버튼 추가)
+		local clickBtn = Instance.new("TextButton")
+		clickBtn.Name = "ClickArea"
+		clickBtn.Size = UDim2.new(1, 0, 1, 0)
+		clickBtn.BackgroundTransparency = 1
+		clickBtn.Text = ""
+		clickBtn.ZIndex = 10
+		clickBtn.Parent = slot
+		clickBtn.MouseButton1Click:Connect(function()
+			if _onItemSelected then
+				_onItemSelected(item.itemName, item.level or 1)
 			end
-		end
+		end)
 	end
+
+	-- CanvasSize 업데이트 (2열 그리드 기준)
+	local PADDING = 6
+	local GAP = 6
+	local frameW = scrollingFrame.AbsoluteSize.X
+	if frameW < 50 then frameW = 160 end
+	local slotW = math.floor((frameW - PADDING * 2 - GAP) / 2)
+	local rows = math.ceil(filteredIndex / 2)
+	scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, PADDING * 2 + rows * (slotW + GAP))
 
 	-- PlacedNumber 업데이트
 	local placedNum = ownedFrame and ownedFrame:FindFirstChild("PlacedNumber")

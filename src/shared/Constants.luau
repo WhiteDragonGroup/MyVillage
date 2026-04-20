@@ -56,6 +56,11 @@ Constants.BUILDINGS = {
 	WorldTree   = { name = "세계수",    types = {"쉼터"}, rarity = "신화", collisionSize = Vector3.new(6, 14, 6) },
 	Campfire    = { name = "캠프파이어", types = {"쉼터"}, rarity = "일반", collisionSize = Vector3.new(4, 3, 4) },
 	PotionCafe  = { name = "포션카페",  types = {"지원"}, rarity = "희귀", collisionSize = Vector3.new(6, 5, 6) },
+	AltarOfBlessing = { name = "축복의 제단", types = {"지원"}, rarity = "전설", collisionSize = Vector3.new(8, 6, 8) },
+	Farm        = { name = "농장",      types = {"일터"}, rarity = "일반", collisionSize = Vector3.new(8, 3, 8), workTypes = {"농사"} },
+	SpellLaboratory = { name = "마법 연구소", types = {"지원"}, rarity = "에픽", collisionSize = Vector3.new(8, 8, 8) },
+	GiantFurnace = { name = "거대 용광로", types = {"일터"}, rarity = "에픽", collisionSize = Vector3.new(8, 8, 8), workTypes = {"채굴"} },
+	TreeOfGrowth = { name = "성장의 나무", types = {"쉼터"}, rarity = "전설", collisionSize = Vector3.new(6, 12, 6) },
 }
 
 -- 펫 유형

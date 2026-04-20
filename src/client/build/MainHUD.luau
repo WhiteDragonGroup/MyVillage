@@ -4,6 +4,7 @@
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -46,12 +47,42 @@ function MainHUD.init(callbacks: {
 
 	if bookBtn then
 		_sideButtons["collection"] = bookBtn
+		-- 베타: 도감 비활성화 (회색 처리 + "제작중" 메시지)
+		if bookBtn:IsA("GuiObject") then
+			bookBtn.ImageTransparency = 0.5
+		end
 		bookBtn.MouseButton1Click:Connect(function()
-			if _activeTab == "collection" then
-				MainHUD.setActiveTab(nil)
-			else
-				MainHUD.setActiveTab("collection")
-			end
+			-- 제작중 알림 토스트
+			local notifGui = Instance.new("ScreenGui")
+			notifGui.Name = "BookNotif"
+			notifGui.ResetOnSpawn = false
+			notifGui.DisplayOrder = 40
+			notifGui.Parent = playerGui
+
+			local notifFrame = Instance.new("Frame")
+			notifFrame.Size = UDim2.new(0, 240, 0, 40)
+			notifFrame.Position = UDim2.new(0.5, -120, 0.5, -20)
+			notifFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+			notifFrame.BorderSizePixel = 0
+			notifFrame.Parent = notifGui
+
+			local nCorner = Instance.new("UICorner")
+			nCorner.CornerRadius = UDim.new(0, 10)
+			nCorner.Parent = notifFrame
+
+			local nLabel = Instance.new("TextLabel")
+			nLabel.Size = UDim2.new(1, -12, 1, 0)
+			nLabel.Position = UDim2.new(0, 6, 0, 0)
+			nLabel.BackgroundTransparency = 1
+			nLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+			nLabel.TextSize = 14
+			nLabel.Font = Enum.Font.GothamBold
+			nLabel.Text = "도감은 현재 제작중입니다."
+			nLabel.Parent = notifFrame
+
+			task.delay(2, function()
+				if notifGui.Parent then notifGui:Destroy() end
+			end)
 		end)
 	end
 
@@ -152,6 +183,34 @@ function MainHUD.getActiveTab(): string?
 	return _activeTab
 end
 
+-- 재화 펄스 애니메이션 (프레임 전체 커졌다 줄어듦)
+local _prevCoins = nil
+local _prevGems = nil
+
+local function pulseFrame(frame: GuiObject)
+	local origSize = frame:GetAttribute("_origSize")
+	if not origSize then
+		origSize = frame.Size
+		frame:SetAttribute("_origSize", string.format("%.4f,%d,%.4f,%d", origSize.X.Scale, origSize.X.Offset, origSize.Y.Scale, origSize.Y.Offset))
+	else
+		local p = string.split(origSize, ",")
+		origSize = UDim2.new(tonumber(p[1]), tonumber(p[2]), tonumber(p[3]), tonumber(p[4]))
+	end
+
+	-- 커지기
+	local expandSize = UDim2.new(origSize.X.Scale, origSize.X.Offset + 8, origSize.Y.Scale, origSize.Y.Offset + 8)
+	TweenService:Create(frame, TweenInfo.new(0.1, Enum.EasingStyle.Back), {
+		Size = expandSize
+	}):Play()
+
+	-- 줄어들기
+	task.delay(0.1, function()
+		TweenService:Create(frame, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
+			Size = origSize
+		}):Play()
+	end)
+end
+
 -- 재화 업데이트
 function MainHUD.updateCoins(coins: number)
 	if not normalGui then return end
@@ -161,6 +220,11 @@ function MainHUD.updateCoins(coins: number)
 		if textLabel then
 			textLabel.Text = tostring(coins)
 		end
+		-- 값 변경 시 Shadow 펄스
+		if _prevCoins ~= nil and _prevCoins ~= coins then
+			pulseFrame(moneyFrame)
+		end
+		_prevCoins = coins
 	end
 end
 
@@ -172,6 +236,11 @@ function MainHUD.updateGems(gems: number)
 		if textLabel then
 			textLabel.Text = tostring(gems)
 		end
+		-- 값 변경 시 Shadow 펄스
+		if _prevGems ~= nil and _prevGems ~= gems then
+			pulseFrame(diamondFrame)
+		end
+		_prevGems = gems
 	end
 end
 
