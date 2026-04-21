@@ -40,19 +40,42 @@ function MainHUD.init(callbacks: {
 		warn("[MainHUD] Normal ScreenGui를 찾을 수 없음")
 		return
 	end
-	-- 좌측 사이드 버튼 연결 (Book=도감, BulildMode=빌드, Shop=상점)
-	local bookBtn = normalGui:FindFirstChild("Book")
-	local buildBtn = normalGui:FindFirstChild("BulildMode")
-	local shopBtn = normalGui:FindFirstChild("Shop")
+	-- 좌측 사이드 버튼들은 Normal > Frame 안에 있음
+	local sideFrame = normalGui:FindFirstChild("Frame")
+
+	-- 클릭 연결 헬퍼 (ImageButton/TextButton이면 직접, 아니면 투명 버튼 추가)
+	local function connectButton(element, callback)
+		if not element then return end
+		if element:IsA("GuiButton") then
+			element.MouseButton1Click:Connect(callback)
+		else
+			-- ImageLabel/Frame 등이면 투명 버튼 추가
+			local existing = element:FindFirstChild("_ClickArea")
+			if not existing then
+				local clickBtn = Instance.new("TextButton")
+				clickBtn.Name = "_ClickArea"
+				clickBtn.Size = UDim2.new(1, 0, 1, 0)
+				clickBtn.BackgroundTransparency = 1
+				clickBtn.Text = ""
+				clickBtn.ZIndex = 10
+				clickBtn.Parent = element
+				clickBtn.MouseButton1Click:Connect(callback)
+			end
+		end
+	end
+
+	-- 좌측 사이드 버튼 연결 (Normal > Frame 안에 있음)
+	local bookBtn = sideFrame and sideFrame:FindFirstChild("Pets")  -- Pets = 도감(베타)
+	local buildBtn = sideFrame and sideFrame:FindFirstChild("BulildMode")
+	local shopBtn = sideFrame and sideFrame:FindFirstChild("Shop")
 
 	if bookBtn then
 		_sideButtons["collection"] = bookBtn
 		-- 베타: 도감 비활성화 (회색 처리 + "제작중" 메시지)
-		if bookBtn:IsA("GuiObject") then
+		if bookBtn:IsA("ImageLabel") or bookBtn:IsA("ImageButton") then
 			bookBtn.ImageTransparency = 0.5
 		end
-		bookBtn.MouseButton1Click:Connect(function()
-			-- 제작중 알림 토스트
+		connectButton(bookBtn, function()
 			local notifGui = Instance.new("ScreenGui")
 			notifGui.Name = "BookNotif"
 			notifGui.ResetOnSpawn = false
@@ -88,7 +111,7 @@ function MainHUD.init(callbacks: {
 
 	if buildBtn then
 		_sideButtons["build"] = buildBtn
-		buildBtn.MouseButton1Click:Connect(function()
+		connectButton(buildBtn, function()
 			if _activeTab == "build" then
 				MainHUD.setActiveTab(nil)
 			else
@@ -99,7 +122,7 @@ function MainHUD.init(callbacks: {
 
 	if shopBtn then
 		_sideButtons["shop"] = shopBtn
-		shopBtn.MouseButton1Click:Connect(function()
+		connectButton(shopBtn, function()
 			if _activeTab == "shop" then
 				MainHUD.setActiveTab(nil)
 			else
@@ -211,6 +234,20 @@ local function pulseFrame(frame: GuiObject)
 	end)
 end
 
+-- Shadow 크기를 텍스트에 맞게 동기화
+local function syncShadow(frame: GuiObject)
+	local shadow = frame:FindFirstChild("Shadow")
+	local textLabel = frame:FindFirstChild("TextLabel")
+	if not shadow or not textLabel then return end
+
+	-- TextLabel의 TextBounds로 Shadow 크기 계산
+	task.defer(function()
+		local textWidth = textLabel.TextBounds.X
+		local padding = 20
+		shadow.Size = UDim2.new(0, textWidth + padding, shadow.Size.Y.Scale, shadow.Size.Y.Offset)
+	end)
+end
+
 -- 재화 업데이트
 function MainHUD.updateCoins(coins: number)
 	if not normalGui then return end
@@ -220,7 +257,7 @@ function MainHUD.updateCoins(coins: number)
 		if textLabel then
 			textLabel.Text = tostring(coins)
 		end
-		-- 값 변경 시 Shadow 펄스
+		syncShadow(moneyFrame)
 		if _prevCoins ~= nil and _prevCoins ~= coins then
 			pulseFrame(moneyFrame)
 		end
@@ -236,7 +273,7 @@ function MainHUD.updateGems(gems: number)
 		if textLabel then
 			textLabel.Text = tostring(gems)
 		end
-		-- 값 변경 시 Shadow 펄스
+		syncShadow(diamondFrame)
 		if _prevGems ~= nil and _prevGems ~= gems then
 			pulseFrame(diamondFrame)
 		end

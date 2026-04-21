@@ -1276,17 +1276,11 @@ MainHUD.init({
 				hrp.CFrame = bz.CFrame + Vector3.new(0, 5, 0)
 			end
 		elseif destination == "buildings" then
-			-- 건물 상점 앞 (로비 근처)
-			local lobby = workspace:FindFirstChild("Lobby")
-			if lobby then
-				hrp.CFrame = lobby.CFrame + Vector3.new(15, 5, 0)
-			end
+			-- 건물 상점 앞
+			hrp.CFrame = CFrame.new(113.7, 10.8, 10.3)
 		elseif destination == "eggs" then
-			-- 알 상점 앞 (로비 반대편)
-			local lobby = workspace:FindFirstChild("Lobby")
-			if lobby then
-				hrp.CFrame = lobby.CFrame + Vector3.new(-15, 5, 0)
-			end
+			-- 알 상점 앞
+			hrp.CFrame = CFrame.new(97.3, 11.0, 24.0)
 		end
 	end,
 
@@ -1459,5 +1453,19 @@ end)
 
 -- Idle 상태에서 알 클릭 → 부화 시도
 -- (InputBegan에서 펫 클릭과 함께 처리)
+
+-- /pos 명령어: 현재 위치 출력
+player.Chatted:Connect(function(msg)
+	if msg == "/pos" then
+		local character = player.Character
+		if character then
+			local hrp = character:FindFirstChild("HumanoidRootPart")
+			if hrp then
+				local pos = hrp.Position
+				print(string.format("[POS] X=%.1f, Y=%.1f, Z=%.1f", pos.X, pos.Y, pos.Z))
+			end
+		end
+	end
+end)
 
 print("PlacementClient 로드됨 - 빌드 시스템 v6 (알 시스템 추가)")

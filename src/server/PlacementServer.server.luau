@@ -258,6 +258,19 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 	-- 10. CollisionBox 생성 (고정 사이즈 충돌 판정용)
 	createCollisionBox(mainPart, itemName)
 
+	-- 10.5. 건물 CollisionGroup 적용
+	local function applyBuildingCollisionGroup(part)
+		if part:IsA("BasePart") then
+			part.CollisionGroup = "Buildings"
+		end
+	end
+	applyBuildingCollisionGroup(mainPart)
+	if item:IsA("Model") then
+		for _, desc in item:GetDescendants() do
+			applyBuildingCollisionGroup(desc)
+		end
+	end
+
 	-- 11. 레벨별 외형 적용 (모델 스왑 없는 경우)
 	if not useModel and level > 1 then
 		UpgradeManager.applyVisualUpgrade(mainPart, level)

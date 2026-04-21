@@ -3,6 +3,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local PhysicsService = game:GetService("PhysicsService")
 local HttpService = game:GetService("HttpService")
 
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
@@ -107,6 +108,7 @@ local function createPetModel(petData, position: Vector3): BasePart
 	pet.CanCollide = false
 	pet.CanQuery = true
 	pet.CanTouch = false
+	pet.CollisionGroup = "Pets"
 	pet.Position = position + Vector3.new(0, PetCfg.PET_HEIGHT, 0)
 
 	-- 무게 배율에 따른 크기 조정

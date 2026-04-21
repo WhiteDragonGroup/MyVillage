@@ -3,6 +3,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PhysicsService = game:GetService("PhysicsService")
 local HttpService = game:GetService("HttpService")
 
 local plotsFolder = workspace:WaitForChild("Plots")
@@ -22,6 +23,12 @@ local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForCh
 
 -- 표지판 초기화
 VillageSignManager.init()
+
+-- CollisionGroup 설정: 펫은 건물과 충돌 안 함
+PhysicsService:RegisterCollisionGroup("Pets")
+PhysicsService:RegisterCollisionGroup("Buildings")
+PhysicsService:CollisionGroupSetCollidable("Pets", "Buildings", false)
+PhysicsService:CollisionGroupSetCollidable("Pets", "Pets", false)
 
 -- 업그레이드 완료 시 펫 자동 해제 연결
 UpgradeManager.setOnCompleteCallback(function(player, petId)
@@ -221,7 +228,18 @@ local function restoreBuildings(player, plot, savedBuildings: { any })
 		box.CanTouch = false
 		box.CFrame = mainPart.CFrame
 		box:SetAttribute("IsCollisionBox", true)
+		box.CollisionGroup = "Buildings"
 		box.Parent = mainPart
+
+		-- 건물 파트에 CollisionGroup 적용
+		mainPart.CollisionGroup = "Buildings"
+		if item:IsA("Model") then
+			for _, desc in item:GetDescendants() do
+				if desc:IsA("BasePart") then
+					desc.CollisionGroup = "Buildings"
+				end
+			end
+		end
 
 		-- 레벨별 외형 적용 (모델 스왑이 아닌 경우만)
 		if not useModel and level > 1 then
