@@ -56,7 +56,7 @@ PetConfig.LEVEL_EFFICIENCY = {
 
 -- 기본 지급 펫 (플레이어 최초 접속 시)
 PetConfig.DEFAULT_PETS = {
-	{ petName = "초보 건설 슬라임", petType = "Construction", rarity = "일반",
+	{ petName = "FarmerNewbie", petType = "Farming", rarity = "일반",
 	  size = "Small", race = "인간", traits = {} },
 }
 

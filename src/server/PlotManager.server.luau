@@ -16,8 +16,12 @@ local CurrencyManager = require(serverScript:WaitForChild("CurrencyManager"))
 local DataStoreManager = require(serverScript:WaitForChild("DataStoreManager"))
 local ShopManager = require(serverScript:WaitForChild("ShopManager"))
 local EggManager = require(serverScript:WaitForChild("EggManager"))
+local VillageSignManager = require(serverScript:WaitForChild("VillageSignManager"))
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
+
+-- 표지판 초기화
+VillageSignManager.init()
 
 -- 업그레이드 완료 시 펫 자동 해제 연결
 UpgradeManager.setOnCompleteCallback(function(player, petId)
@@ -323,6 +327,9 @@ Players.PlayerAdded:Connect(function(player)
 		plot:SetAttribute("Owner", player.Name)
 		print(player.Name .. " → " .. plot.Name .. " 배정됨")
 
+		-- 표지판 업데이트
+		VillageSignManager.assignSign(plot.Name, player)
+
 		-- 4. 저장된 건물 복원
 		restoreBuildings(player, plot, savedData.buildings)
 
@@ -371,6 +378,7 @@ Players.PlayerRemoving:Connect(function(player)
 			obj:Destroy()
 		end
 
+		VillageSignManager.releaseSign(plot.Name)
 		plot:SetAttribute("Owner", "")
 		print(player.Name .. " 퇴장 → " .. plot.Name .. " 비움")
 	end

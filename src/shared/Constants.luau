@@ -58,9 +58,10 @@ Constants.BUILDINGS = {
 	PotionCafe  = { name = "포션카페",  types = {"지원"}, rarity = "희귀", collisionSize = Vector3.new(6, 5, 6) },
 	AltarOfBlessing = { name = "축복의 제단", types = {"지원"}, rarity = "전설", collisionSize = Vector3.new(8, 6, 8) },
 	Farm        = { name = "농장",      types = {"일터"}, rarity = "일반", collisionSize = Vector3.new(8, 3, 8), workTypes = {"농사"} },
-	SpellLaboratory = { name = "마법 연구소", types = {"지원"}, rarity = "에픽", collisionSize = Vector3.new(8, 8, 8) },
+	Laboratory  = { name = "연구소",    types = {"지원"}, rarity = "에픽", collisionSize = Vector3.new(8, 8, 8) },
 	GiantFurnace = { name = "거대 용광로", types = {"일터"}, rarity = "에픽", collisionSize = Vector3.new(8, 8, 8), workTypes = {"채굴"} },
 	TreeOfGrowth = { name = "성장의 나무", types = {"쉼터"}, rarity = "전설", collisionSize = Vector3.new(6, 12, 6) },
+	ClockTower  = { name = "시계탑",    types = {"장식"}, rarity = "희귀", collisionSize = Vector3.new(6, 10, 6) },
 }
 
 -- 펫 유형
@@ -106,7 +107,25 @@ Constants.UpgradeState = {
 
 -- 펫 카탈로그
 Constants.PETS = {
-	["초보 건설 슬라임"] = { petType = "Construction", rarity = "일반" },
+	-- 일반
+	["FarmerNewbie"]  = { name = "농부 뉴비",      petTypes = {"Farming", "Construction"},  rarity = "일반", size = "Small" },
+	["Skeleton"]      = { name = "스켈레톤",        petTypes = {"Mining", "Construction"},   rarity = "일반", size = "Small" },
+	["Ghost"]         = { name = "유령",            petTypes = {"Farming", "Buff"},          rarity = "일반", size = "Small" },
+	["SnowMole"]      = { name = "눈 두더지",       petTypes = {"Mining"},                   rarity = "일반", size = "Small" },
+	["Firewood"]      = { name = "장작 필요",       petTypes = {"Buff"},                     rarity = "일반" },
+	-- 레어
+	["Imp"]           = { name = "임프",            petTypes = {"Mining", "Construction", "Buff"}, rarity = "희귀", size = "Medium" },
+	["Sunflowie"]     = { name = "썬플라워",        petTypes = {"Farming", "Buff"},          rarity = "희귀", size = "Medium" },
+	["ZombieNewbie"]  = { name = "좀비 뉴비",       petTypes = {"Farming", "Construction"},  rarity = "희귀", size = "Small" },
+	["Yeti"]          = { name = "예티",            petTypes = {"Farming", "Construction"},  rarity = "희귀", size = "Big" },
+	-- 에픽
+	["Zipbit"]        = { name = "집비트",          petTypes = {"Construction", "Buff"},     rarity = "에픽", size = "Small" },
+	["CrystalGolem"]  = { name = "크리스탈 골렘",   petTypes = {"Mining", "Construction"},   rarity = "에픽", size = "Medium" },
+	["IceGolem"]      = { name = "아이스 골렘",     petTypes = {"Mining", "Construction"},   rarity = "에픽", size = "Medium" },
+	-- 전설
+	["BabyDragon"]    = { name = "베이비 드래곤",   petTypes = {"Mining", "Construction", "Buff"}, rarity = "전설", size = "Medium" },
+	["Witch"]         = { name = "마녀",            petTypes = {"Farming"},                  rarity = "전설", size = "Medium" },
+	["Lumini"]        = { name = "루미니",          petTypes = {"Farming", "Buff"},          rarity = "전설", size = "Small" },
 }
 
 -- 돌연변이 타입

@@ -294,7 +294,7 @@
             "Material": "Grass"
           }
         },
-        "SpellLaboratory": {
+        "Laboratory": {
           "$className": "Part",
           "$properties": {
             "Anchored": true,
@@ -319,6 +319,15 @@
             "Color": [0.2, 0.6, 0.3],
             "Size": [6, 12, 6],
             "Material": "Grass"
+          }
+        },
+        "ClockTower": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [0.6, 0.5, 0.4],
+            "Size": [6, 10, 6],
+            "Material": "Brick"
           }
         }
       },
