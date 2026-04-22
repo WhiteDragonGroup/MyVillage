@@ -193,29 +193,29 @@ local function isMyBuilding(part: BasePart): boolean
 	return mainPart:GetAttribute("OwnerId") == player.UserId
 end
 
--- 프리뷰 파트 생성 (레벨별 모델 우선 사용)
+-- 프리뷰 파트 생성 (Buildings 우선 → Items 폴백)
 local function createPreview(itemName: string, level: number?): BasePart?
 	local lvl = level or 1
-	local useModel = nil
+	local template = nil
 
-	-- Buildings 폴더에서 레벨별 모델 탐색 (매번 동적 탐색 — 서버와 동일)
+	-- Buildings 폴더에서 레벨별 모델 탐색
 	local buildingsFolder = ReplicatedStorage:FindFirstChild("Buildings")
 	if buildingsFolder then
 		local itemFolder = buildingsFolder:FindFirstChild(itemName)
 		if itemFolder then
-			useModel = itemFolder:FindFirstChild("Level" .. lvl)
-				or itemFolder:FindFirstChild(itemName .. "_" .. lvl)
+			template = itemFolder:FindFirstChild(itemName .. "_" .. lvl)
+				or itemFolder:FindFirstChild("Level" .. lvl)
+				or itemFolder:FindFirstChildWhichIsA("Model")
 		end
 	end
 
-	local item
-	if useModel then
-		item = useModel:Clone()
-	else
-		local template = itemsFolder:FindFirstChild(itemName)
-		if not template then return nil end
-		item = template:Clone()
+	-- Items 폴백
+	if not template and itemsFolder then
+		template = itemsFolder:FindFirstChild(itemName)
 	end
+
+	if not template then return nil end
+	local item = template:Clone()
 
 	-- BasePart vs Model 분기
 	local mainPart: BasePart

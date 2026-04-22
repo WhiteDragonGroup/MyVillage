@@ -212,7 +212,7 @@ function InventoryUI._renderSlots()
 	-- PlacedNumber 업데이트 (인벤토리 수 / 최대)
 	local placedNum = ownedFrame and ownedFrame:FindFirstChild("PlacedNumber")
 	if placedNum then
-		placedNum.Text = filteredIndex .. "/25"
+		placedNum.Text = "Placed Buildings : " .. filteredIndex .. "/25"
 	end
 end
 

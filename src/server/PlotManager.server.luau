@@ -114,10 +114,25 @@ local function restoreBuildings(player, plot, savedBuildings: { any })
 		local itemName = bData.itemName
 		if not itemName or itemName == "" then continue end
 
-		-- 템플릿 확인
-		local template = itemsFolder:FindFirstChild(itemName)
+		-- 템플릿 확인 (Buildings 우선 → Items 폴백)
+		local level = bData.level or 1
+		local template = nil
+		local buildingsFolder = ReplicatedStorage:FindFirstChild("Buildings")
+
+		if buildingsFolder then
+			local itemFolder = buildingsFolder:FindFirstChild(itemName)
+			if itemFolder then
+				template = itemFolder:FindFirstChild(itemName .. "_" .. level)
+					or itemFolder:FindFirstChild("Level" .. level)
+					or itemFolder:FindFirstChildWhichIsA("Model")
+			end
+		end
+		if not template then
+			template = itemsFolder:FindFirstChild(itemName)
+		end
 		if not template then
 			warn("건물 복원 실패 - 템플릿 없음: " .. itemName)
+			InventoryManager.addItem(player, itemName, 1, level)
 			continue
 		end
 
@@ -150,27 +165,8 @@ local function restoreBuildings(player, plot, savedBuildings: { any })
 			end
 		end
 
-		local level = bData.level or 1
-
-		-- 레벨별 모델이 있으면 사용, 없으면 기본 템플릿
-		local buildingsFolder = ReplicatedStorage:FindFirstChild("Buildings")
-		local useModel = nil
-
-		if buildingsFolder then
-			local itemFolder = buildingsFolder:FindFirstChild(itemName)
-			if itemFolder then
-				-- "Level1" 또는 "Mine_1" 형식 모두 지원
-				useModel = itemFolder:FindFirstChild("Level" .. level)
-					or itemFolder:FindFirstChild(itemName .. "_" .. level)
-			end
-		end
-
-		local item
-		if useModel then
-			item = useModel:Clone()
-		else
-			item = template:Clone()
-		end
+		-- template은 이미 Buildings에서 레벨별 모델을 찾았음
+		local item = template:Clone()
 
 		-- 위치/부모 설정 (BasePart vs Model 분기)
 		local mainPart: BasePart

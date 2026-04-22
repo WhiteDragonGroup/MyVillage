@@ -11,7 +11,8 @@ local moveBuildingEvent = remotes:WaitForChild("MoveBuilding")
 local storeBuildingEvent = remotes:WaitForChild("StoreBuilding")
 local getInventoryFunc = remotes:WaitForChild("GetInventory")
 
-local itemsFolder = ReplicatedStorage:WaitForChild("Items")
+local itemsFolder = ReplicatedStorage:FindFirstChild("Items") -- 폴백용 (없어도 됨)
+local buildingsFolder = ReplicatedStorage:FindFirstChild("Buildings")
 local plotsFolder = workspace:WaitForChild("Plots")
 
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
@@ -140,8 +141,24 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 	-- pivotCFrame 검증 (Model용, nil이면 BasePart)
 	if pivotCFrame ~= nil and typeof(pivotCFrame) ~= "CFrame" then pivotCFrame = nil end
 
-	-- 2. 아이템 템플릿 확인
-	local template = itemsFolder:FindFirstChild(itemName)
+	-- 2. 아이템 템플릿 확인 (Buildings 우선 → Items 폴백)
+	local template = nil
+
+	-- Buildings 폴더에서 레벨별 모델 탐색
+	if buildingsFolder then
+		local itemFolder = buildingsFolder:FindFirstChild(itemName)
+		if itemFolder then
+			template = itemFolder:FindFirstChild(itemName .. "_" .. level)
+				or itemFolder:FindFirstChild("Level" .. level)
+				or itemFolder:FindFirstChildWhichIsA("Model")
+		end
+	end
+
+	-- Buildings에 없으면 Items 폴백
+	if not template and itemsFolder then
+		template = itemsFolder:FindFirstChild(itemName)
+	end
+
 	if not template then
 		warn("아이템 없음:", itemName)
 		return
@@ -182,40 +199,8 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 	-- 7. 인벤토리 차감
 	InventoryManager.removeItem(player, itemName, 1, level)
 
-	-- 8. 건물 생성 (레벨별 모델 확인)
-	local buildingsFolder = ReplicatedStorage:FindFirstChild("Buildings")
-	local useModel = nil
-
-	if buildingsFolder then
-		local itemFolder = buildingsFolder:FindFirstChild(itemName)
-		if itemFolder then
-			-- "Level1" 또는 "Mine_1" 형식 모두 지원
-			useModel = itemFolder:FindFirstChild("Level" .. level)
-				or itemFolder:FindFirstChild(itemName .. "_" .. level)
-			-- 디버그: 모델 탐색 결과
-			print("[PlaceBuilding] " .. itemName .. " Lv" .. level
-				.. " | Buildings폴더=" .. tostring(buildingsFolder ~= nil)
-				.. " | 아이템폴더=" .. tostring(itemFolder ~= nil)
-				.. " | 모델=" .. tostring(useModel))
-			if itemFolder then
-				print("[PlaceBuilding] " .. itemName .. " 폴더 자식:")
-				for _, c in itemFolder:GetChildren() do
-					print("  → " .. c.Name .. " (" .. c.ClassName .. ")")
-				end
-			end
-		else
-			print("[PlaceBuilding] Buildings/" .. itemName .. " 폴더 없음")
-		end
-	else
-		print("[PlaceBuilding] Buildings 폴더 없음!")
-	end
-
-	local item
-	if useModel then
-		item = useModel:Clone()
-	else
-		item = template:Clone()
-	end
+	-- 8. 건물 생성 (template은 이미 Buildings 또는 Items에서 찾음)
+	local item = template:Clone()
 
 	-- 8.1. 위치/부모 설정 (BasePart vs Model 분기)
 	local mainPart: BasePart
