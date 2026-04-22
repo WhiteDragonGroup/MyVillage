@@ -274,13 +274,17 @@ end
 local function removePreview()
 	if previewPart then
 		HighlightSystem.removeFrom(previewPart)
-		-- Model 자식인 경우 부모 Model도 함께 제거
-		local parent = previewPart.Parent
-		if parent and parent:IsA("Model") and parent.Name == "PlacementPreview" then
-			parent:Destroy()
-		else
-			previewPart:Destroy()
+		-- 최상위 PlacementPreview Model 찾기 (중첩 구조 대응)
+		local toDestroy = previewPart
+		local current = previewPart
+		while current and current ~= workspace do
+			if current.Name == "PlacementPreview" then
+				toDestroy = current
+				break
+			end
+			current = current.Parent
 		end
+		toDestroy:Destroy()
 		previewPart = nil
 	end
 end
@@ -520,7 +524,7 @@ local function toPlacingNew(itemName: string, level: number?)
 	-- BuildZone 찾기
 	currentBuildZone = getMyBuildZone()
 	if not currentBuildZone then
-		print("BuildZone 없음!")
+		print("No BuildZone!")
 		toBuildMode()
 		return
 	end
@@ -529,7 +533,7 @@ local function toPlacingNew(itemName: string, level: number?)
 	removePreview()
 	previewPart = createPreview(itemName, previewLevel)
 	if not previewPart then
-		print("아이템 템플릿 없음:", itemName)
+		print("Item template not found:", itemName)
 		toBuildMode()
 		return
 	end
@@ -639,7 +643,7 @@ InventoryUI.init(function(itemName: string, level: number)
 			-- BuildZone 찾기
 			currentBuildZone = getMyBuildZone()
 			if not currentBuildZone then
-				print("BuildZone 없음!")
+				print("No BuildZone!")
 				return
 			end
 
@@ -1396,7 +1400,7 @@ giftReceivedEvent.OnClientEvent:Connect(function(senderName, itemDisplayName)
 	nLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	nLabel.TextSize = 13
 	nLabel.Font = Enum.Font.GothamBold
-	nLabel.Text = senderName .. "님이 " .. itemDisplayName .. "을(를) 선물했습니다!"
+	nLabel.Text = senderName .. " sent you " .. itemDisplayName .. "!"
 	nLabel.TextWrapped = true
 	nLabel.Parent = notifFrame
 
@@ -1426,7 +1430,7 @@ loadShopData()
 
 SettingsUI.init({
 	onCodeSubmit = function(code)
-		print("[Code] 입력됨: " .. code)
+		print("[Code] Entered: " .. code)
 		-- TODO: 서버에 코드 전송 후 보상 처리
 	end,
 })
@@ -1461,7 +1465,7 @@ petUpdateEvent.OnClientEvent:Connect(function(eventType, data)
 		nLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 		nLabel.TextSize = 13
 		nLabel.Font = Enum.Font.GothamBold
-		nLabel.Text = "돌연변이 획득: " .. mutName .. "!"
+		nLabel.Text = "Mutation acquired: " .. mutName .. "!"
 		nLabel.Parent = notifFrame
 
 		TweenService:Create(notifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
@@ -1508,7 +1512,7 @@ eggUpdateEvent.OnClientEvent:Connect(function(eventType, data)
 		nLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 		nLabel.TextSize = 14
 		nLabel.Font = Enum.Font.GothamBold
-		nLabel.Text = "부화 완료! " .. data.petName .. " (" .. data.rarity .. ")"
+		nLabel.Text = "Hatched! " .. data.petName .. " (" .. data.rarity .. ")"
 		nLabel.TextWrapped = true
 		nLabel.Parent = notifFrame
 
@@ -1539,4 +1543,4 @@ player.Chatted:Connect(function(msg)
 	end
 end)
 
-print("PlacementClient 로드됨 - 빌드 시스템 v6 (알 시스템 추가)")
+print("PlacementClient loaded - Build System v6")

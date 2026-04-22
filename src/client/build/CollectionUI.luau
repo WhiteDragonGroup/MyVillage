@@ -71,7 +71,7 @@ function CollectionUI.init()
 	title.TextColor3 = Color3.fromRGB(255, 230, 200)
 	title.TextSize = 16
 	title.Font = Enum.Font.GothamBold
-	title.Text = "도감"
+	title.Text = "Collection"
 	title.Parent = mainFrame
 
 	local titleCorner = Instance.new("UICorner")
@@ -221,7 +221,7 @@ function CollectionUI.init()
 	placeholder.TextColor3 = Color3.fromRGB(150, 130, 110)
 	placeholder.TextSize = 12
 	placeholder.Font = Enum.Font.Gotham
-	placeholder.Text = "항목을 선택하세요"
+	placeholder.Text = "Select an item"
 	placeholder.Parent = detailFrame
 
 	CollectionUI._updateCategoryButtons()
@@ -410,15 +410,15 @@ function CollectionUI._showDetail(item)
 		local petTypeKor = Constants.PetType[petType] or petType
 
 		local lines = {
-			{ "유형", petTypeKor },
-			{ "종족", petData.race or "?" },
+			{ "Type", petTypeKor },
+			{ "Race", petData.race or "?" },
 		}
 
 		-- 기본 무게
 		local size = petData.size or "Small"
 		local stdWeight = BalanceConfig.Pet.SIZE_STANDARD_WEIGHT[size] or 5
-		table.insert(lines, { "기본 무게", string.format("%.1fkg", stdWeight) })
-		table.insert(lines, { "사이즈", size })
+		table.insert(lines, { "Base Weight", string.format("%.1fkg", stdWeight) })
+		table.insert(lines, { "Size", size })
 
 		for _, info in lines do
 			CollectionUI._infoRow(detailFrame, info[1], info[2], y)
@@ -436,20 +436,20 @@ function CollectionUI._showDetail(item)
 		descLabel.TextWrapped = true
 		descLabel.TextXAlignment = Enum.TextXAlignment.Left
 		descLabel.TextYAlignment = Enum.TextYAlignment.Top
-		descLabel.Text = "이 펫은 " .. petTypeKor .. " 작업을 수행합니다."
+		descLabel.Text = "This pet specializes in " .. petTypeKor .. "."
 		descLabel.Parent = detailFrame
 
 	elseif item.type == "building" then
 		-- 건물 상세: 유형, 크기, 설명
 		local building = item.data
 		local lines = {
-			{ "유형", table.concat(building.types, ", ") },
+			{ "Type", table.concat(building.types, ", ") },
 		}
 		if building.workTypes then
-			table.insert(lines, { "작업", table.concat(building.workTypes, ", ") })
+			table.insert(lines, { "Work", table.concat(building.workTypes, ", ") })
 		end
 		local cs = building.collisionSize
-		table.insert(lines, { "크기", cs.X .. " x " .. cs.Y .. " x " .. cs.Z })
+		table.insert(lines, { "Size", cs.X .. " x " .. cs.Y .. " x " .. cs.Z })
 
 		for _, info in lines do
 			CollectionUI._infoRow(detailFrame, info[1], info[2], y)
@@ -467,7 +467,7 @@ function CollectionUI._showDetail(item)
 		descLabel.TextWrapped = true
 		descLabel.TextXAlignment = Enum.TextXAlignment.Left
 		descLabel.TextYAlignment = Enum.TextYAlignment.Top
-		descLabel.Text = building.name .. " 건물입니다."
+		descLabel.Text = building.name .. " building."
 		descLabel.Parent = detailFrame
 
 	elseif item.type == "mutation" then
@@ -477,7 +477,7 @@ function CollectionUI._showDetail(item)
 		local speedBonus = BalanceConfig.Weather.MUTATION_SPEED_BONUS[mutKey]
 
 		if speedBonus then
-			CollectionUI._infoRow(detailFrame, "효과", "일 효율 +" .. math.floor(speedBonus * 100) .. "%", y)
+			CollectionUI._infoRow(detailFrame, "Effect", "Work efficiency +" .. math.floor(speedBonus * 100) .. "%", y)
 			y = y + 18
 		end
 
@@ -492,7 +492,7 @@ function CollectionUI._showDetail(item)
 		descLabel.TextWrapped = true
 		descLabel.TextXAlignment = Enum.TextXAlignment.Left
 		descLabel.TextYAlignment = Enum.TextYAlignment.Top
-		descLabel.Text = item.name .. " 돌연변이입니다."
+		descLabel.Text = item.name .. " mutation."
 		descLabel.Parent = detailFrame
 	end
 end

@@ -70,14 +70,14 @@ function UpgradeUI.show(level: number, itemName: string)
 	if level >= UpgradeCfg.MAX_LEVEL then
 		-- 최대 레벨
 		if textLabels[1] then textLabels[1].Text = itemName end
-		if textLabels[2] then textLabels[2].Text = "이미 최대 레벨입니다! (Lv." .. UpgradeCfg.MAX_LEVEL .. ")" end
+		if textLabels[2] then textLabels[2].Text = "Already max level! (Lv." .. UpgradeCfg.MAX_LEVEL .. ")" end
 	else
 		local cost = UpgradeCfg.COST[level] or 0
 		local work = UpgradeCfg.REQUIRED_WORK[level] or 0
 
 		if textLabels[1] then textLabels[1].Text = itemName end
 		if textLabels[2] then
-			textLabels[2].Text = "Lv." .. level .. " → Lv." .. (level + 1) .. "\n비용: " .. cost .. " 코인 | 작업량: " .. work
+			textLabels[2].Text = "Lv." .. level .. " → Lv." .. (level + 1) .. "\nCost: " .. cost .. " coins | Work: " .. work
 		end
 	end
 

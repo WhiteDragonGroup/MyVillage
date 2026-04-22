@@ -52,16 +52,16 @@ local function onPlayerChatted(player: Player, message: string)
 	if cmd == "/addcoins" then
 		local amount = tonumber(args[2]) or 1000
 		CurrencyManager.addCoins(player, amount)
-		notify(player, amount .. " 코인 추가됨")
+		notify(player, amount .. " coins added")
 
 	elseif cmd == "/addgems" then
 		-- TODO: 보석 시스템 구현 후 연결
-		notify(player, "보석 시스템 미구현")
+		notify(player, "Gem system not implemented")
 
 	elseif cmd == "/setcoins" then
 		local amount = tonumber(args[2]) or 200
 		CurrencyManager.setCoins(player, amount)
-		notify(player, "코인 설정: " .. amount)
+		notify(player, "Coins set to: " .. amount)
 
 	elseif cmd == "/addegg" then
 		local eggType = args[2] or "Egg_Common"
@@ -69,16 +69,16 @@ local function onPlayerChatted(player: Player, message: string)
 		for _ = 1, count do
 			EggManager.addEgg(player, eggType, 1)
 		end
-		notify(player, eggType .. " x" .. count .. " 추가됨")
+		notify(player, eggType .. " x" .. count .. " added")
 
 	elseif cmd == "/addbuilding" then
 		local itemName = args[2]
 		local count = tonumber(args[3]) or 1
 		if itemName and Constants.BUILDINGS[itemName] then
 			InventoryManager.addItem(player, itemName, count, 1)
-			notify(player, itemName .. " x" .. count .. " 추가됨")
+			notify(player, itemName .. " x" .. count .. " added")
 		else
-			notify(player, "존재하지 않는 건물: " .. tostring(itemName))
+			notify(player, "Building not found: " .. tostring(itemName))
 		end
 
 	elseif cmd == "/addpet" then
@@ -94,13 +94,13 @@ local function onPlayerChatted(player: Player, message: string)
 				petId = petId,
 				petName = petName,
 				petType = petInfo.petTypes and petInfo.petTypes[1] or "Construction",
-				rarity = petInfo.rarity or "일반",
+				rarity = petInfo.rarity or "Common",
 				ownerId = player.UserId,
 				assignedBuildingId = "",
 				model = nil,
 				mutations = {},
 				size = size,
-				race = "인간",
+				race = "Human",
 				traits = {},
 				weight = stdWeight * weightMult,
 				weightMult = weightMult,
@@ -111,19 +111,19 @@ local function onPlayerChatted(player: Player, message: string)
 				previousWorkId = "",
 			}
 			PetManager.addPetDirect(player, petData)
-			notify(player, petName .. " 펫 추가됨")
+			notify(player, petName .. " pet added")
 		else
-			notify(player, "존재하지 않는 펫: " .. tostring(petName))
+			notify(player, "Pet not found: " .. tostring(petName))
 		end
 
 	elseif cmd == "/settime" then
 		local hour = tonumber(args[2]) or 12
 		Lighting.ClockTime = math.clamp(hour, 0, 24)
-		notify(player, "시간 설정: " .. hour .. "시")
+		notify(player, "Time set to: " .. hour)
 
 	elseif cmd == "/restock" then
 		ShopManager.initPlayer(player)
-		notify(player, "상점 재고 리필됨")
+		notify(player, "Shop restocked")
 
 	elseif cmd == "/reset" then
 		-- 기존 /reset과 동일
@@ -134,7 +134,7 @@ local function onPlayerChatted(player: Player, message: string)
 				resetEvent:FireServer() -- 서버에서 직접 호출 불가, 클라이언트가 해야 함
 			end
 		end
-		notify(player, "/reset은 클라이언트에서 실행하세요")
+		notify(player, "Use /reset from client")
 
 	elseif cmd == "/adminhelp" then
 		notify(player, "/addcoins [n] /addegg [type] [n] /addbuilding [name] [n] /addpet [name] /settime [h] /restock")
@@ -155,4 +155,4 @@ for _, player in Players:GetPlayers() do
 	end)
 end
 
-print("AdminPanel 로드됨 - /adminhelp 로 명령어 확인")
+print("AdminPanel loaded - /adminhelp for commands")

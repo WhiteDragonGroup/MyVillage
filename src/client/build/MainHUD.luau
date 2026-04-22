@@ -21,10 +21,10 @@ local _activeTab = nil
 local _sideButtons = {}
 
 local WEATHER_INFO = {
-	Sunny        = { icon = "☀️", name = "맑음",  desc = "화창한 날씨입니다." },
-	Rain         = { icon = "🌧️", name = "비",    desc = "비가 내리고 있습니다." },
-	Frost        = { icon = "❄️", name = "서리",  desc = "차가운 서리가 내렸습니다." },
-	ThunderStorm = { icon = "⛈️", name = "뇌우", desc = "번개를 조심하세요!" },
+	Sunny        = { icon = "☀️", name = "Sunny",  desc = "It's a sunny day." },
+	Rain         = { icon = "🌧️", name = "Rain",    desc = "It's raining." },
+	Frost        = { icon = "❄️", name = "Frost",  desc = "A cold frost has settled." },
+	ThunderStorm = { icon = "⛈️", name = "Thunderstorm", desc = "Watch out for lightning!" },
 }
 
 function MainHUD.init(callbacks: {
@@ -100,7 +100,7 @@ function MainHUD.init(callbacks: {
 			nLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 			nLabel.TextSize = 14
 			nLabel.Font = Enum.Font.GothamBold
-			nLabel.Text = "도감은 현재 제작중입니다."
+			nLabel.Text = "Collection is under construction."
 			nLabel.Parent = notifFrame
 
 			task.delay(2, function()

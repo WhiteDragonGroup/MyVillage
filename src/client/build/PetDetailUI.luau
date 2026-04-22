@@ -63,7 +63,7 @@ function PetDetailUI.show(petData: { [string]: any })
 		if rarityFrame then
 			local rarityText = rarityFrame:FindFirstChild("TextLabel") or rarityFrame:FindFirstChildWhichIsA("TextLabel")
 			if rarityText then
-				rarityText.Text = petData.rarity or "일반"
+				rarityText.Text = petData.rarity or "Common"
 			end
 		end
 	end
@@ -78,7 +78,7 @@ function PetDetailUI.show(petData: { [string]: any })
 			if textLabel then
 				local petType = petData.petType or "Construction"
 				local petTypeKor = Constants.PetType[petType] or petType
-				textLabel.Text = petData.petName .. " - " .. petTypeKor .. " 전문 펫"
+				textLabel.Text = petData.petName .. " - " .. petTypeKor .. " specialist"
 			end
 		end
 
