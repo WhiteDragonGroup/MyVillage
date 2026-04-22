@@ -179,6 +179,12 @@ function InventoryUI._renderSlots()
 			levelText.Text = "Lv." .. (item.level or 1)
 		end
 
+		-- Icon 이미지 업데이트 (icon 필드가 있고 비어있지 않으면 적용)
+		local iconLabel = slot:FindFirstChild("Icon")
+		if iconLabel and building and building.icon and building.icon ~= "" then
+			iconLabel.Image = building.icon
+		end
+
 		-- 클릭 이벤트 (투명 버튼 추가)
 		local clickBtn = Instance.new("TextButton")
 		clickBtn.Name = "ClickArea"
@@ -203,10 +209,10 @@ function InventoryUI._renderSlots()
 	local rows = math.ceil(filteredIndex / 2)
 	scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, PADDING * 2 + rows * (slotW + GAP))
 
-	-- PlacedNumber 업데이트
+	-- PlacedNumber 업데이트 (인벤토리 수 / 최대)
 	local placedNum = ownedFrame and ownedFrame:FindFirstChild("PlacedNumber")
 	if placedNum then
-		placedNum.Text = tostring(filteredIndex)
+		placedNum.Text = filteredIndex .. "/25"
 	end
 end
 
