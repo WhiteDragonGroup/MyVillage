@@ -1150,6 +1150,60 @@ task.spawn(function()
 	UpgradeDisplay.scanPlot(myPlot)
 	PetVisuals.scanPlot(myPlot)
 	LevelBadge.scanPlot(myPlot)
+
+	-- 마을 표지판 업데이트 (StarterGui/VillageSigns)
+	local villageSigns = playerGui:FindFirstChild("VillageSigns")
+	if villageSigns then
+		-- 모든 플롯 표지판 업데이트
+		for _, plot in plotsFolder:GetChildren() do
+			local owner = plot:GetAttribute("Owner") or ""
+			local plotSign = villageSigns:FindFirstChild(plot.Name)
+			if plotSign then
+				local nameGui = plotSign:FindFirstChild("Name")
+				if nameGui then
+					local textLabel = nameGui:FindFirstChild("TextLabel") or nameGui:FindFirstChildWhichIsA("TextLabel")
+					if textLabel then
+						textLabel.Text = if owner ~= "" then owner else ""
+					end
+				end
+				-- 프로필 아이콘
+				local profileIcon = plotSign:FindFirstChild("ProfileIcon")
+				if profileIcon and owner ~= "" then
+					local imageLabel = profileIcon:FindFirstChildWhichIsA("ImageLabel")
+					if imageLabel then
+						local Players = game:GetService("Players")
+						local success, result = pcall(function()
+							return Players:GetUserThumbnailAsync(
+								Players:GetUserIdFromNameAsync(owner),
+								Enum.ThumbnailType.HeadShot,
+								Enum.ThumbnailSize.Size100x100
+							)
+						end)
+						if success and result then
+							imageLabel.Image = result
+						end
+					end
+				end
+			end
+		end
+
+		-- Owner 변경 감지 (다른 플레이어 접속/퇴장)
+		for _, plot in plotsFolder:GetChildren() do
+			plot:GetAttributeChangedSignal("Owner"):Connect(function()
+				local owner = plot:GetAttribute("Owner") or ""
+				local plotSign = villageSigns:FindFirstChild(plot.Name)
+				if plotSign then
+					local nameGui = plotSign:FindFirstChild("Name")
+					if nameGui then
+						local textLabel = nameGui:FindFirstChild("TextLabel") or nameGui:FindFirstChildWhichIsA("TextLabel")
+						if textLabel then
+							textLabel.Text = if owner ~= "" then owner else ""
+						end
+					end
+				end
+			end)
+		end
+	end
 end)
 
 -- 펫 VFX 이벤트 수신 초기화

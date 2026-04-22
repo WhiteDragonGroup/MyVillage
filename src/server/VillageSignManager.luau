@@ -33,14 +33,14 @@ function VillageSignManager.assignSign(plotName: string, player: Player)
 		if nameLabel:IsA("SurfaceGui") then
 			local textLabel = nameLabel:FindFirstChildWhichIsA("TextLabel")
 			if textLabel then
-				textLabel.Text = player.DisplayName
+				textLabel.Text = player.Name
 			end
 		elseif nameLabel:IsA("BasePart") then
 			local surfaceGui = nameLabel:FindFirstChildWhichIsA("SurfaceGui")
 			if surfaceGui then
 				local textLabel = surfaceGui:FindFirstChildWhichIsA("TextLabel")
 				if textLabel then
-					textLabel.Text = player.DisplayName
+					textLabel.Text = player.Name
 				end
 			end
 		end
@@ -71,7 +71,7 @@ function VillageSignManager.assignSign(plotName: string, player: Player)
 	-- 표지판 활성화 (Transparency 복원)
 	VillageSignManager._setSignActive(plotSign, true)
 
-	print("[VillageSign] " .. plotName .. " → " .. player.DisplayName)
+	print("[VillageSign] " .. plotName .. " → " .. player.Name)
 end
 
 -- 플롯 해제 시 표지판 비활성화
