@@ -212,7 +212,15 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 		item.Parent = plot
 		mainPart = item
 	elseif item:IsA("Model") then
-		mainPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+		mainPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart", true)
+		if not mainPart then
+			for _, desc in item:GetDescendants() do
+				if desc:IsA("BasePart") then
+					mainPart = desc
+					break
+				end
+			end
+		end
 		if not mainPart then
 			warn(player.Name .. " - 모델에 BasePart 없음: " .. itemName)
 			item:Destroy()

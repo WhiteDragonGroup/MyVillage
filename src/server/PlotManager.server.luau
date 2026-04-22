@@ -176,7 +176,15 @@ local function restoreBuildings(player, plot, savedBuildings: { any })
 			item.Parent = plot
 			mainPart = item
 		elseif item:IsA("Model") then
-			mainPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+			mainPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart", true)
+			if not mainPart then
+				for _, desc in item:GetDescendants() do
+					if desc:IsA("BasePart") then
+						mainPart = desc
+						break
+					end
+				end
+			end
 			if not mainPart then
 				warn("건물 복원 실패 - BasePart 없음: " .. itemName)
 				item:Destroy()

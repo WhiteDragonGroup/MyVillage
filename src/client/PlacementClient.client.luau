@@ -205,7 +205,15 @@ local function createPreview(itemName: string, level: number?): BasePart?
 		if itemFolder then
 			template = itemFolder:FindFirstChild(itemName .. "_" .. lvl)
 				or itemFolder:FindFirstChild("Level" .. lvl)
-				or itemFolder:FindFirstChildWhichIsA("Model")
+			-- 못 찾으면 첫 번째 자식 사용
+			if not template then
+				for _, child in itemFolder:GetChildren() do
+					if child:IsA("Model") or child:IsA("BasePart") then
+						template = child
+						break
+					end
+				end
+			end
 		end
 	end
 
@@ -232,7 +240,16 @@ local function createPreview(itemName: string, level: number?): BasePart?
 	elseif item:IsA("Model") then
 		item.Name = "PlacementPreview"
 		item.Parent = workspace
-		mainPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+		mainPart = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart", true)
+		if not mainPart then
+			-- 자손에서 찾기
+			for _, desc in item:GetDescendants() do
+				if desc:IsA("BasePart") then
+					mainPart = desc
+					break
+				end
+			end
+		end
 		if not mainPart then
 			item:Destroy()
 			return nil
