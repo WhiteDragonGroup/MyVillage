@@ -302,7 +302,13 @@ local function resetPlayerData(player: Player)
 		local toDestroy = {}
 		for _, child in resetPlot:GetDescendants() do
 			if child:IsA("BasePart") and child:GetAttribute("BuildingId") ~= nil then
-				local root = if child.Parent and child.Parent:IsA("Model") then child.Parent else child
+				-- 최상위 건물 Model 찾기
+				local root = child
+				local cur = child.Parent
+				while cur and cur ~= resetPlot and cur ~= workspace do
+					if cur:IsA("Model") then root = cur end
+					cur = cur.Parent
+				end
 				toDestroy[root] = true
 			end
 		end
@@ -392,7 +398,13 @@ Players.PlayerRemoving:Connect(function(player)
 		local toDestroy = {}
 		for _, child in plot:GetDescendants() do
 			if child:IsA("BasePart") and child:GetAttribute("BuildingId") ~= nil then
-				local root = if child.Parent and child.Parent:IsA("Model") then child.Parent else child
+				-- 최상위 건물 Model 찾기
+				local root = child
+				local cur = child.Parent
+				while cur and cur ~= resetPlot and cur ~= workspace do
+					if cur:IsA("Model") then root = cur end
+					cur = cur.Parent
+				end
 				toDestroy[root] = true
 			end
 		end

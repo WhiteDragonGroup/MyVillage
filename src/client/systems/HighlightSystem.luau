@@ -13,20 +13,20 @@ local _currentTarget = nil      -- 현재 하이라이트 대상
 -- 플롯(Owner 속성 있음)은 제외하고 건물 Model만 반환
 -- PlacementPreview Model도 포함
 local function getHighlightTarget(part: BasePart): Instance
-	local parent = part.Parent
-	if parent and parent:IsA("Model") then
-		-- 플롯이거나 workspace면 건물 파트만 반환
-		if parent:GetAttribute("Owner") ~= nil then
-			return part
+	-- 최상위 건물/프리뷰 Model 찾기
+	local target = part
+	local current = part.Parent
+	while current and current ~= workspace do
+		-- 플롯(Owner 있음)에 도달하면 중단
+		if current:GetAttribute("Owner") ~= nil then break end
+		-- Plots 폴더면 중단
+		if current.Name == "Plots" then break end
+		if current:IsA("Model") then
+			target = current
 		end
-		-- Plots 폴더 직속 Model이면 플롯이므로 제외
-		if parent.Parent and parent.Parent.Name == "Plots" then
-			return part
-		end
-		-- 건물 Model이면 Model 전체 하이라이트
-		return parent
+		current = current.Parent
 	end
-	return part
+	return target
 end
 
 -- Highlight 인스턴스 생성/업데이트

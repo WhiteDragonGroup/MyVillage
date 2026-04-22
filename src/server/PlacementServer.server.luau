@@ -54,12 +54,20 @@ end
 
 -- 건물 전체 제거 (Model이면 Model 통째로, BasePart이면 그것만)
 local function destroyBuilding(mainPart: BasePart)
-	local parent = mainPart.Parent
-	if parent and parent:IsA("Model") then
-		parent:Destroy()
-	else
-		mainPart:Destroy()
+	-- 최상위 건물 Model까지 올라가서 통째로 제거
+	local toDestroy = mainPart
+	local current = mainPart.Parent
+	while current and current ~= workspace do
+		-- 플롯(Owner 속성 있음)에 도달하면 중단
+		if current:GetAttribute("Owner") ~= nil then break end
+		-- Plots 폴더면 중단
+		if current.Name == "Plots" then break end
+		if current:IsA("Model") then
+			toDestroy = current
+		end
+		current = current.Parent
 	end
+	toDestroy:Destroy()
 end
 
 -- CollisionBox 생성 (건물의 자식으로 추가, 투명 충돌 판정용)
