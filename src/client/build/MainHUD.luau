@@ -240,11 +240,16 @@ local function syncShadow(frame: GuiObject)
 	local textLabel = frame:FindFirstChild("TextLabel")
 	if not shadow or not textLabel then return end
 
-	-- TextLabel의 TextBounds로 Shadow 크기 계산
-	task.defer(function()
+	-- TextLabel의 TextBounds로 Shadow 너비 계산 (프레임은 건드리지 않음)
+	task.delay(0.1, function()
+		if not textLabel.Parent then return end
 		local textWidth = textLabel.TextBounds.X
-		local padding = 20
-		shadow.Size = UDim2.new(0, textWidth + padding, shadow.Size.Y.Scale, shadow.Size.Y.Offset)
+		if textWidth <= 0 then return end
+		local iconSpace = 30 -- 아이콘(💎/$) 공간
+		local padding = 15
+		local newWidth = textWidth + iconSpace + padding
+		-- Shadow 높이는 유지, 너비만 변경
+		shadow.Size = UDim2.new(0, newWidth, shadow.Size.Y.Scale, shadow.Size.Y.Offset)
 	end)
 end
 
