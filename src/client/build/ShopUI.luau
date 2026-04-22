@@ -74,13 +74,104 @@ function ShopUI.updateShop(shopData: { any }, restockTime: number)
 	end
 end
 
+local _shopSlotTemplate = nil
+
 function ShopUI._renderItems()
 	if not buildingsShopFrame then return end
 
 	local scrollFrame = buildingsShopFrame:FindFirstChild("ScrollingFrame")
 	if not scrollFrame then return end
 
-	-- 기존 동적 슬롯 제거
+	-- 슬롯 템플릿 저장 (최초 1회)
+	if not _shopSlotTemplate then
+		for _, child in scrollFrame:GetChildren() do
+			if child.Name == "Frame" and child:IsA("GuiObject") then
+				_shopSlotTemplate = child:Clone()
+				break
+			end
+		end
+	end
+
+	-- 기존 슬롯 모두 제거
+	for _, child in scrollFrame:GetChildren() do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+
+	if not _shopSlotTemplate then return end
+
+	for i, item in _shopData do
+		local building = Constants.BUILDINGS[item.itemName]
+		if not building then continue end
+
+		local slot = _shopSlotTemplate:Clone()
+		slot.Name = "Slot_" .. item.itemName
+		slot.Visible = true
+		slot.LayoutOrder = i
+		slot.Parent = scrollFrame
+
+		-- NameText
+		local nameText = slot:FindFirstChild("NameText")
+		if nameText then nameText.Text = building.name end
+		local nameShadow = slot:FindFirstChild("NameTextShadow")
+		if nameShadow then nameShadow.Text = building.name end
+
+		-- PriceText
+		local priceText = slot:FindFirstChild("PriceText")
+		if priceText then priceText.Text = "$" .. item.price end
+
+		-- StockText
+		local stockText = slot:FindFirstChild("StockText")
+		if stockText then
+			stockText.Text = if item.stock > 0 then item.stock .. "x stock" else "NO STOCK"
+		end
+
+		-- Rarity
+		local rarityFrame = slot:FindFirstChild("Rarity")
+		if rarityFrame then
+			local rarityLabel = rarityFrame:FindFirstChild("TextLabel") or rarityFrame:FindFirstChildWhichIsA("TextLabel")
+			if rarityLabel then rarityLabel.Text = building.rarity end
+		end
+
+		-- BuyDollar
+		local buyDollar = slot:FindFirstChild("BuyDollar")
+		if buyDollar and buyDollar:IsA("GuiButton") then
+			local btnText = buyDollar:FindFirstChild("TextLabel") or buyDollar:FindFirstChildWhichIsA("TextLabel")
+			if btnText then btnText.Text = "$" .. item.price end
+			if item.stock > 0 then
+				buyDollar.MouseButton1Click:Connect(function()
+					if _callbacks.onBuy then _callbacks.onBuy(item.itemName) end
+				end)
+			else
+				buyDollar.Active = false
+				buyDollar.BackgroundTransparency = 0.5
+			end
+		end
+
+		-- BuyRobux
+		local buyRobux = slot:FindFirstChild("BuyRobux")
+		if buyRobux and buyRobux:IsA("GuiButton") then
+			local btnText = buyRobux:FindFirstChild("TextLabel") or buyRobux:FindFirstChildWhichIsA("TextLabel")
+			if btnText then btnText.Text = math.floor(item.price * 0.2) end
+			if item.stock > 0 then
+				buyRobux.MouseButton1Click:Connect(function()
+					if _callbacks.onBuyGem then _callbacks.onBuyGem(item.itemName) end
+				end)
+			else
+				buyRobux.Active = false
+				buyRobux.BackgroundTransparency = 0.5
+			end
+		end
+	end
+end
+
+function ShopUI._renderItems_disabled()
+	if not buildingsShopFrame then return end
+
+	local scrollFrame = buildingsShopFrame:FindFirstChild("ScrollingFrame")
+	if not scrollFrame then return end
+
 	for _, child in scrollFrame:GetChildren() do
 		if child:IsA("GuiObject") and child:GetAttribute("_dynamic") then
 			child:Destroy()

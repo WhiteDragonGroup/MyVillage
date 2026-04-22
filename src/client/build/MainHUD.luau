@@ -255,7 +255,7 @@ function MainHUD.updateCoins(coins: number)
 	if moneyFrame then
 		local textLabel = moneyFrame:FindFirstChild("TextLabel")
 		if textLabel then
-			textLabel.Text = tostring(coins)
+			textLabel.Text = "$   " .. tostring(coins)
 		end
 		syncShadow(moneyFrame)
 		if _prevCoins ~= nil and _prevCoins ~= coins then

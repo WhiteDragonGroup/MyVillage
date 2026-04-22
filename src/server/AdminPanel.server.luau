@@ -58,6 +58,11 @@ local function onPlayerChatted(player: Player, message: string)
 		-- TODO: 보석 시스템 구현 후 연결
 		notify(player, "보석 시스템 미구현")
 
+	elseif cmd == "/setcoins" then
+		local amount = tonumber(args[2]) or 200
+		CurrencyManager.setCoins(player, amount)
+		notify(player, "코인 설정: " .. amount)
+
 	elseif cmd == "/addegg" then
 		local eggType = args[2] or "Egg_Common"
 		local count = tonumber(args[3]) or 1

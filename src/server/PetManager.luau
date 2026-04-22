@@ -15,7 +15,8 @@ local WeatherCfg = BalanceConfig.Weather
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local petUpdateEvent = remotes:WaitForChild("PetUpdate")
-local petsFolder = ReplicatedStorage:WaitForChild("Pets")
+local petsFolder = ReplicatedStorage:FindFirstChild("Pets")
+local serverPetsFolder = game:GetService("ServerStorage"):FindFirstChild("Pets")
 
 local PetManager = {}
 
@@ -92,47 +93,104 @@ end
 -- 펫 모델 생성
 ----------------------------------------------------------------
 local function createPetModel(petData, position: Vector3): BasePart
-	local template = petsFolder:FindFirstChild("ConstructionPet")
+	-- 펫 이름으로 모델 탐색: ServerStorage/Pets > 펫이름 > Model
+	local petName = petData.petName
+	local template = nil
+
+	-- 1. ServerStorage/Pets에서 찾기
+	if serverPetsFolder then
+		local petFolder = serverPetsFolder:FindFirstChild(petName)
+		if petFolder then
+			template = petFolder:FindFirstChild("Model") or petFolder:FindFirstChildWhichIsA("Model")
+			if not template then
+				template = petFolder:FindFirstChildWhichIsA("BasePart")
+			end
+		end
+	end
+
+	-- 2. ReplicatedStorage/Pets에서 찾기 (폴백)
+	if not template and petsFolder then
+		local petFolder = petsFolder:FindFirstChild(petName)
+		if petFolder then
+			template = petFolder:FindFirstChild("Model") or petFolder:FindFirstChildWhichIsA("Model")
+		end
+		-- 기존 ConstructionPet 폴백
+		if not template then
+			template = petsFolder:FindFirstChild("ConstructionPet")
+		end
+	end
+
 	local pet
 	if template then
 		pet = template:Clone()
 	else
+		-- 최종 폴백: 기본 Ball
 		pet = Instance.new("Part")
 		pet.Size = PetCfg.PET_SIZE
 		pet.Material = PetCfg.PET_MATERIAL
 		pet.Shape = Enum.PartType.Ball
 	end
 
-	pet.Name = "Pet_" .. petData.petId
-	pet.Anchored = true
-	pet.CanCollide = false
-	pet.CanQuery = true
-	pet.CanTouch = false
-	pet.CollisionGroup = "Pets"
-	pet.Position = position + Vector3.new(0, PetCfg.PET_HEIGHT, 0)
-
-	-- 무게 배율에 따른 크기 조정
-	local scale = math.clamp(petData.weightMult or 1.0, 0.7, 2.0)
-	pet.Size = PetCfg.PET_SIZE * scale
-
-	-- 등급별 색상
-	local rarityColor = PetCfg.RARITY_COLORS[petData.rarity]
-	if rarityColor then
-		pet.Color = rarityColor
+	-- Model이면 mainPart 찾기
+	local mainPart
+	if pet:IsA("Model") then
+		mainPart = pet.PrimaryPart or pet:FindFirstChild("HumanoidRootPart") or pet:FindFirstChildWhichIsA("BasePart")
+		if mainPart then
+			pet:PivotTo(CFrame.new(position + Vector3.new(0, PetCfg.PET_HEIGHT, 0)))
+			-- 모든 파트에 속성 설정
+			for _, desc in pet:GetDescendants() do
+				if desc:IsA("BasePart") then
+					desc.Anchored = true
+					desc.CanCollide = false
+					desc.CanQuery = true
+					desc.CanTouch = false
+					desc.CollisionGroup = "Pets"
+				end
+			end
+			mainPart:SetAttribute("PetId", petData.petId)
+			pet.Name = "Pet_" .. petData.petId
+			pet.Parent = nil -- 나중에 plot에 배치
+			-- mainPart를 반환 (기존 코드 호환)
+			-- 하지만 Model 전체를 배치해야 하므로 petData에 저장
+			petData._petModel = pet
+		end
 	end
 
-	-- 속성 설정
-	pet:SetAttribute("PetId", petData.petId)
-	pet:SetAttribute("PetName", petData.petName)
-	pet:SetAttribute("PetType", petData.petType)
-	pet:SetAttribute("PetRarity", petData.rarity)
-	pet:SetAttribute("OwnerId", petData.ownerId)
-	pet:SetAttribute("AssignedBuildingId", petData.assignedBuildingId or "")
-	pet:SetAttribute("PetState", petData.state or "Idle")
-	pet:SetAttribute("PetLevel", petData.level or 1)
-	pet:SetAttribute("PetWeight", petData.weight or 5)
-	pet:SetAttribute("PetSize", petData.size or "Small")
-	pet:SetAttribute("PetRace", petData.race or "인간")
+	if pet:IsA("BasePart") then
+		mainPart = pet
+		pet.Name = "Pet_" .. petData.petId
+		pet.Anchored = true
+		pet.CanCollide = false
+		pet.CanQuery = true
+		pet.CanTouch = false
+		pet.CollisionGroup = "Pets"
+		pet.Position = position + Vector3.new(0, PetCfg.PET_HEIGHT, 0)
+
+		-- 무게 배율에 따른 크기 조정
+		local scale = math.clamp(petData.weightMult or 1.0, 0.7, 2.0)
+		pet.Size = PetCfg.PET_SIZE * scale
+
+		-- 등급별 색상
+		local rarityColor = PetCfg.RARITY_COLORS[petData.rarity]
+		if rarityColor then
+			pet.Color = rarityColor
+		end
+	end
+
+	local target = mainPart or pet
+
+	-- 속성 설정 (mainPart에 부여)
+	target:SetAttribute("PetId", petData.petId)
+	target:SetAttribute("PetName", petData.petName)
+	target:SetAttribute("PetType", petData.petType)
+	target:SetAttribute("PetRarity", petData.rarity)
+	target:SetAttribute("OwnerId", petData.ownerId)
+	target:SetAttribute("AssignedBuildingId", petData.assignedBuildingId or "")
+	target:SetAttribute("PetState", petData.state or "Idle")
+	target:SetAttribute("PetLevel", petData.level or 1)
+	target:SetAttribute("PetWeight", petData.weight or 5)
+	target:SetAttribute("PetSize", petData.size or "Small")
+	target:SetAttribute("PetRace", petData.race or "인간")
 
 	-- 돌연변이 (쉼표 구분 문자열)
 	local mutList = {}
@@ -141,9 +199,9 @@ local function createPetModel(petData, position: Vector3): BasePart
 			table.insert(mutList, mutType)
 		end
 	end
-	pet:SetAttribute("Mutations", table.concat(mutList, ","))
+	target:SetAttribute("Mutations", table.concat(mutList, ","))
 
-	return pet
+	return target
 end
 
 ----------------------------------------------------------------
@@ -665,8 +723,14 @@ function PetManager._spawnAllPets(player: Player)
 	for petId, petData in pets do
 		if not petData.model or not petData.model.Parent then
 			local pet = createPetModel(petData, buildZone.Position)
-			pet.Parent = plot
-			petData.model = pet
+			-- Model이면 _petModel을 plot에 배치
+			if petData._petModel then
+				petData._petModel.Parent = plot
+				petData.model = pet -- mainPart
+			else
+				pet.Parent = plot
+				petData.model = pet
+			end
 
 			-- 건물에 배치되지 않은 펫은 행동 AI 시작
 			if petData.assignedBuildingId == "" then
