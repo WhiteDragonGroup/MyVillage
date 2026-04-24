@@ -10,7 +10,7 @@ local AUTO_SAVE_INTERVAL = 120 -- 자동 저장 간격 (초)
 
 local DataStoreManager = {}
 
--- DataStore 인스턴스 (Studio에서는 실패할 수 있으므로 pcall)
+-- DataStore 인스턴스 (Studio에서는 failed할 수 있으므로 pcall)
 local _dataStore = nil
 do
 	local ok, store = pcall(function()
@@ -19,7 +19,7 @@ do
 	if ok then
 		_dataStore = store
 	else
-		warn("DataStore 접근 실패 (Studio 모드?): " .. tostring(store))
+		warn("DataStore access failed (Studio mode?): " .. tostring(store))
 	end
 end
 
@@ -62,13 +62,13 @@ function DataStoreManager.loadPlayer(player: Player): { [string]: any }
 	end)
 
 	if success and data and typeof(data) == "table" then
-		print("DataStore 로드 성공: " .. player.Name)
+		print("DataStore load success: " .. player.Name)
 		_loadedData[player] = data
 		return data
 	end
 
 	if not success then
-		warn("DataStore 로드 실패: " .. player.Name .. " - " .. tostring(data))
+		warn("DataStore load failed: " .. player.Name .. " - " .. tostring(data))
 	end
 
 	_loadedData[player] = {}
@@ -86,7 +86,7 @@ function DataStoreManager.gatherData(player: Player): { [string]: any }
 		if ok then
 			data[key] = result
 		else
-			warn("데이터 수집 실패 [" .. key .. "]: " .. tostring(result))
+			warn("data gather failed [" .. key .. "]: " .. tostring(result))
 		end
 	end
 
@@ -109,9 +109,9 @@ function DataStoreManager.savePlayer(player: Player): boolean
 	end)
 
 	if success then
-		print("DataStore 저장 성공: " .. player.Name)
+		print("DataStore save success: " .. player.Name)
 	else
-		warn("DataStore 저장 실패: " .. player.Name .. " - " .. tostring(err))
+		warn("DataStore save failed: " .. player.Name .. " - " .. tostring(err))
 	end
 
 	return success
@@ -133,9 +133,9 @@ function DataStoreManager.saveOverride(player: Player, data: { [string]: any }):
 
 	if success then
 		_loadedData[player] = data
-		print("DataStore 강제 저장 완료: " .. player.Name)
+		print("DataStore force save complete: " .. player.Name)
 	else
-		warn("DataStore 강제 저장 실패: " .. player.Name .. " - " .. tostring(err))
+		warn("DataStore 강제 save failed: " .. player.Name .. " - " .. tostring(err))
 	end
 
 	return success

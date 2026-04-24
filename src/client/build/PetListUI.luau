@@ -74,7 +74,7 @@ function PetListUI.init(callbacks: { onAssign: (string, string) -> (), onUnassig
 	title.TextColor3 = Color3.fromRGB(255, 255, 255)
 	title.TextSize = 16
 	title.Font = Enum.Font.GothamBold
-	title.Text = "펫 배치"
+	title.Text = "Assign Pet"
 	title.TextXAlignment = Enum.TextXAlignment.Center
 	title.Parent = listFrame
 
@@ -101,7 +101,7 @@ function PetListUI.init(callbacks: { onAssign: (string, string) -> (), onUnassig
 	closeBtn.Position = UDim2.new(0, 10, 1, -44)
 	closeBtn.BackgroundColor3 = Color3.fromRGB(100, 50, 50)
 	closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-	closeBtn.Text = "닫기"
+	closeBtn.Text = "Close"
 	closeBtn.TextSize = 14
 	closeBtn.Font = Enum.Font.GothamBold
 	closeBtn.AutoButtonColor = true
@@ -170,9 +170,9 @@ function PetListUI.show(pets: { any }, buildingId: string)
 		local weightStr = string.format("%.1fkg", pet.weight or 0)
 		local statusText = ""
 		if pet.assignedBuildingId ~= "" then
-			statusText = levelStr .. " | " .. weightStr .. " | 건설 중"
+			statusText = levelStr .. " | " .. weightStr .. " | Working"
 		else
-			statusText = levelStr .. " | " .. weightStr .. " | 대기 중"
+			statusText = levelStr .. " | " .. weightStr .. " | Idle"
 		end
 		local statusLabel = Instance.new("TextLabel")
 		statusLabel.Size = UDim2.new(1, -90, 0, 16)
@@ -201,7 +201,7 @@ function PetListUI.show(pets: { any }, buildingId: string)
 
 		if pet.assignedBuildingId == "" then
 			-- 배치 가능
-			actionBtn.Text = "배치"
+			actionBtn.Text = "Assign"
 			actionBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
 			actionBtn.MouseButton1Click:Connect(function()
 				if _callbacks.onAssign and _targetBuildingId then
@@ -210,7 +210,7 @@ function PetListUI.show(pets: { any }, buildingId: string)
 			end)
 		elseif pet.assignedBuildingId == buildingId then
 			-- 이 건물에 배치된 펫 → 회수 가능
-			actionBtn.Text = "회수"
+			actionBtn.Text = "Withdraw"
 			actionBtn.BackgroundColor3 = Color3.fromRGB(200, 120, 50)
 			actionBtn.MouseButton1Click:Connect(function()
 				if _callbacks.onUnassign then

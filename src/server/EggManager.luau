@@ -124,14 +124,14 @@ end
 ----------------------------------------------------------------
 function EggManager.buyEgg(player: Player, eggType: string): (boolean, string)
 	local eggInfo = EggCfg.EGGS[eggType]
-	if not eggInfo then return false, "존재하지 않는 알" end
+	if not eggInfo then return false, "Egg not found" end
 
-	if not _hasCoins or not _spendCoins then return false, "코인 시스템 미연결" end
-	if not _hasCoins(player, eggInfo.price) then return false, "코인 부족" end
-	if not _spendCoins(player, eggInfo.price) then return false, "코인 차감 실패" end
+	if not _hasCoins or not _spendCoins then return false, "Coin system not connected" end
+	if not _hasCoins(player, eggInfo.price) then return false, "Not enough coins" end
+	if not _spendCoins(player, eggInfo.price) then return false, "Coin deduction failed" end
 
 	EggManager.addEgg(player, eggType, 1)
-	return true, "구매 완료"
+	return true, "Purchase complete"
 end
 
 ----------------------------------------------------------------
@@ -139,7 +139,7 @@ end
 ----------------------------------------------------------------
 function EggManager.placeEgg(player: Player, eggType: string, position: Vector3): (boolean, string)
 	local eggInfo = EggCfg.EGGS[eggType]
-	if not eggInfo then return false, "존재하지 않는 알" end
+	if not eggInfo then return false, "Egg not found" end
 
 	-- 인벤토리 확인
 	local hasEgg = false
@@ -152,7 +152,7 @@ function EggManager.placeEgg(player: Player, eggType: string, position: Vector3)
 			end
 		end
 	end
-	if not hasEgg then return false, "알이 없음" end
+	if not hasEgg then return false, "No egg" end
 
 	-- 동시 배치 제한
 	local placed = _placedEggs[player]
@@ -161,7 +161,7 @@ function EggManager.placeEgg(player: Player, eggType: string, position: Vector3)
 	local placedCount = 0
 	for _ in placed do placedCount = placedCount + 1 end
 	if placedCount >= EggCfg.MAX_PLACED_EGGS then
-		return false, "최대 " .. EggCfg.MAX_PLACED_EGGS .. "개까지 설치 가능"
+		return false, "Max " .. EggCfg.MAX_PLACED_EGGS .. "" max placeable""
 	end
 
 	-- 인벤토리에서 차감
@@ -232,7 +232,7 @@ function EggManager.placeEgg(player: Player, eggType: string, position: Vector3)
 	-- 부화 타이머 시작
 	EggManager._startHatchTimer(player, eggId)
 
-	print(player.Name .. " - 알 설치: " .. eggType .. " (ID: " .. eggId .. ")")
+	print(player.Name .. " - egg placed: " .. eggType .. " (ID: " .. eggId .. ")")
 	return true, eggId
 end
 
@@ -261,11 +261,11 @@ function EggManager._startHatchTimer(player: Player, eggId: string)
 			data.model:SetAttribute("HatchProgress", elapsed / eggInfo.hatchTime)
 		end
 
-		-- 부화 완료
+		-- hatched
 		if data.model and data.model.Parent then
 			data.model:SetAttribute("HatchProgress", 1)
 			data.model:SetAttribute("ReadyToHatch", true)
-			print(player.Name .. " - 알 부화 준비 완료: " .. data.eggType)
+			print(player.Name .. " - egg ready to hatch: " .. data.eggType)
 		end
 	end)
 end
@@ -275,17 +275,17 @@ end
 ----------------------------------------------------------------
 function EggManager.hatchEgg(player: Player, eggId: string): (boolean, string, { any }?)
 	local placed = _placedEggs[player]
-	if not placed or not placed[eggId] then return false, "알을 찾을 수 없음", nil end
+	if not placed or not placed[eggId] then return false, "Egg not found", nil end
 
 	local data = placed[eggId]
 	local model = data.model
 
-	-- 부화 완료 확인
-	if not model or not model.Parent then return false, "알이 없음", nil end
-	if not model:GetAttribute("ReadyToHatch") then return false, "아직 부화 중", nil end
+	-- hatched 확인
+	if not model or not model.Parent then return false, "No egg", nil end
+	if not model:GetAttribute("ReadyToHatch") then return false, "Still hatching", nil end
 
 	local eggInfo = EggCfg.EGGS[data.eggType]
-	if not eggInfo then return false, "알 정보 없음", nil end
+	if not eggInfo then return false, "Egg info not found", nil end
 
 	-- 등급별 가중치로 펫 선택
 	local selectedRarity = EggManager._rollRarity(eggInfo.rarityWeights)
@@ -343,8 +343,8 @@ function EggManager.hatchEgg(player: Player, eggId: string): (boolean, string, {
 		mutations = mutations,
 	}
 
-	print(player.Name .. " - 부화 완료! " .. selectedPet.petName .. " (" .. selectedPet.rarity .. ")")
-	return true, "부화 완료", result
+	print(player.Name .. " - hatched! " .. selectedPet.petName .. " (" .. selectedPet.rarity .. ")")
+	return true, "hatched", result
 end
 
 -- 등급 가중치 뽑기

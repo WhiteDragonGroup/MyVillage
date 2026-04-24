@@ -86,7 +86,7 @@ function ShopManager.buyItem(player: Player, itemName: string): (boolean, string
 	ShopManager._checkRestock(player)
 
 	local shop = _shops[player]
-	if not shop then return false, "상점 없음" end
+	if not shop then return false, "No shop" end
 
 	-- 상품 찾기
 	local shopItem = nil
@@ -96,16 +96,16 @@ function ShopManager.buyItem(player: Player, itemName: string): (boolean, string
 			break
 		end
 	end
-	if not shopItem then return false, "존재하지 않는 상품" end
+	if not shopItem then return false, "Item not found" end
 
 	-- 재고 확인
 	local stock = shop.stocks[itemName] or 0
-	if stock <= 0 then return false, "품절" end
+	if stock <= 0 then return false, "Out of stock" end
 
 	-- 코인 확인 + 차감
-	if not _hasCoins or not _spendCoins then return false, "코인 시스템 미연결" end
-	if not _hasCoins(player, shopItem.price) then return false, "코인 부족" end
-	if not _spendCoins(player, shopItem.price) then return false, "코인 차감 실패" end
+	if not _hasCoins or not _spendCoins then return false, "Coin system not connected" end
+	if not _hasCoins(player, shopItem.price) then return false, "Not enough coins" end
+	if not _spendCoins(player, shopItem.price) then return false, "Coin deduction failed" end
 
 	-- 재고 차감
 	shop.stocks[itemName] = stock - 1
@@ -115,7 +115,7 @@ function ShopManager.buyItem(player: Player, itemName: string): (boolean, string
 		_addItem(player, itemName, 1, 1)
 	end
 
-	return true, "구매 완료"
+	return true, "Purchase complete"
 end
 
 -- 선물 구매 (구매자가 결제, 수신자에게 아이템 추가)
@@ -123,7 +123,7 @@ function ShopManager.buyGift(buyer: Player, itemName: string, receiver: Player):
 	ShopManager._checkRestock(buyer)
 
 	local shop = _shops[buyer]
-	if not shop then return false, "상점 없음" end
+	if not shop then return false, "No shop" end
 
 	local shopItem = nil
 	for _, item in ShopCfg.SHOP_ITEMS do
@@ -132,14 +132,14 @@ function ShopManager.buyGift(buyer: Player, itemName: string, receiver: Player):
 			break
 		end
 	end
-	if not shopItem then return false, "존재하지 않는 상품" end
+	if not shopItem then return false, "Item not found" end
 
 	local stock = shop.stocks[itemName] or 0
-	if stock <= 0 then return false, "품절" end
+	if stock <= 0 then return false, "Out of stock" end
 
-	if not _hasCoins or not _spendCoins then return false, "코인 시스템 미연결" end
-	if not _hasCoins(buyer, shopItem.price) then return false, "코인 부족" end
-	if not _spendCoins(buyer, shopItem.price) then return false, "코인 차감 실패" end
+	if not _hasCoins or not _spendCoins then return false, "Coin system not connected" end
+	if not _hasCoins(buyer, shopItem.price) then return false, "Not enough coins" end
+	if not _spendCoins(buyer, shopItem.price) then return false, "Coin deduction failed" end
 
 	shop.stocks[itemName] = stock - 1
 
@@ -148,7 +148,7 @@ function ShopManager.buyGift(buyer: Player, itemName: string, receiver: Player):
 		_addItem(receiver, itemName, 1, 1)
 	end
 
-	return true, "선물 완료"
+	return true, "Gift complete"
 end
 
 return ShopManager

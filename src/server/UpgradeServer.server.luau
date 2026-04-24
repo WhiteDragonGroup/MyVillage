@@ -36,21 +36,21 @@ end
 
 local function validateRequest(player, buildingId)
 	if typeof(buildingId) ~= "string" then
-		return nil, nil, "잘못된 요청 형식"
+		return nil, nil, "Invalid request"
 	end
 
 	local plot = getPlayerPlot(player)
 	if not plot then
-		return nil, nil, "배정된 플롯 없음"
+		return nil, nil, "No plot assigned"
 	end
 
 	local building = findBuildingById(plot, buildingId)
 	if not building then
-		return nil, nil, "건물 찾을 수 없음"
+		return nil, nil, "Building not found"
 	end
 
 	if building:GetAttribute("OwnerId") ~= player.UserId then
-		return nil, nil, "소유하지 않은 건물"
+		return nil, nil, "Not your building"
 	end
 
 	return plot, building
@@ -62,13 +62,13 @@ end
 startUpgradeEvent.OnServerEvent:Connect(function(player, buildingId)
 	local plot, building, err = validateRequest(player, buildingId)
 	if not building then
-		warn(player.Name .. " - StartUpgrade 실패: " .. (err or ""))
+		warn(player.Name .. " - StartUpgrade failed: " .. (err or ""))
 		return
 	end
 
 	local ok, reason = UpgradeManager.startUpgrade(player, building)
 	if not ok then
-		warn(player.Name .. " - 업그레이드 시작 실패: " .. (reason or ""))
+		warn(player.Name .. " - upgrade start failed: " .. (reason or ""))
 	end
 end)
 
@@ -78,14 +78,14 @@ end)
 cancelUpgradeEvent.OnServerEvent:Connect(function(player, buildingId)
 	local plot, building, err = validateRequest(player, buildingId)
 	if not building then
-		warn(player.Name .. " - CancelUpgrade 실패: " .. (err or ""))
+		warn(player.Name .. " - CancelUpgrade failed: " .. (err or ""))
 		return
 	end
 
 	local ok, reason = UpgradeManager.cancelUpgrade(player, building)
 	if not ok then
-		warn(player.Name .. " - 업그레이드 취소 실패: " .. (reason or ""))
+		warn(player.Name .. " - upgrade cancel failed: " .. (reason or ""))
 	end
 end)
 
-print("UpgradeServer 로드됨")
+print("UpgradeServer loaded")

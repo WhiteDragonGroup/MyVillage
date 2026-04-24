@@ -300,7 +300,7 @@ local function findRestPlace(plot): BasePart?
 		-- 쉼터 유형 체크
 		local isRest = false
 		for _, t in buildingInfo.types do
-			if t == "쉼터" then
+			if t == "Rest" then
 				isRest = true
 				break
 			end
@@ -433,7 +433,7 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 			local hasSleepless = false
 			if petData.traits then
 				for _, trait in petData.traits do
-					if trait == "불면" then
+					if trait == "Insomnia" then
 						hasSleepless = true
 						break
 					end
@@ -781,33 +781,33 @@ end
 function PetManager.assignPet(player: Player, petId: string, buildingId: string): (boolean, string?)
 	local pets = _playerPets[player]
 	if not pets or not pets[petId] then
-		return false, "펫을 찾을 수 없음"
+		return false, "Pet not found"
 	end
 
 	local petData = pets[petId]
 
 	-- 이미 다른 건물에 배치된 경우
 	if petData.assignedBuildingId ~= "" then
-		return false, "이미 배치된 펫"
+		return false, "Pet already assigned"
 	end
 
 	-- 건물 확인
 	local plot = getPlayerPlot(player)
-	if not plot then return false, "플롯 없음" end
+	if not plot then return false, "No plot" end
 
 	local building = findBuildingById(plot, buildingId)
-	if not building then return false, "건물 찾을 수 없음" end
+	if not building then return false, "Building not found" end
 
 	-- 건물이 수리중인지 확인
 	local state = building:GetAttribute("UpgradeState") or ""
 	if state ~= Constants.UpgradeState.Upgrading then
-		return false, "수리중이 아닌 건물"
+		return false, "Not upgrading"
 	end
 
 	-- 이미 다른 펫이 배치된 경우
 	local existingPetId = building:GetAttribute("AssignedPetId") or ""
 	if existingPetId ~= "" then
-		return false, "이미 펫이 배치된 건물"
+		return false, "Pet already assigned to building"
 	end
 
 	-- 행동 루프 중단
@@ -845,12 +845,12 @@ end
 function PetManager.unassignPet(player: Player, petId: string): (boolean, string?)
 	local pets = _playerPets[player]
 	if not pets or not pets[petId] then
-		return false, "펫을 찾을 수 없음"
+		return false, "Pet not found"
 	end
 
 	local petData = pets[petId]
 	if petData.assignedBuildingId == "" then
-		return false, "배치되지 않은 펫"
+		return false, "Pet not assigned"
 	end
 
 	local buildingId = petData.assignedBuildingId

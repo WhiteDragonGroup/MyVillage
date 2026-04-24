@@ -77,7 +77,7 @@ function SelectionUI.init(callbacks: {
 		_upgradeBtn.MouseButton1Click:Connect(function()
 			local textLabel = _upgradeBtn:FindFirstChild("TextLabel")
 			local btnText = textLabel and textLabel.Text or ""
-			if btnText == "펫배치" then
+			if btnText == "Assign Pet" then
 				if _callbacks.onAssignPet then _callbacks.onAssignPet() end
 			else
 				if _callbacks.onUpgrade then _callbacks.onUpgrade() end
@@ -94,7 +94,7 @@ function SelectionUI.showNormal(level: number, maxLevel: number)
 	if _upgradeBtn then
 		_upgradeBtn.Visible = (level < maxLevel)
 		local textLabel = _upgradeBtn:FindFirstChild("TextLabel")
-		if textLabel then textLabel.Text = "업그레이드" end
+		if textLabel then textLabel.Text = "Upgrade" end
 	end
 end
 
@@ -106,7 +106,7 @@ function SelectionUI.showUpgrading()
 	if _upgradeBtn then
 		_upgradeBtn.Visible = true
 		local textLabel = _upgradeBtn:FindFirstChild("TextLabel")
-		if textLabel then textLabel.Text = "펫배치" end
+		if textLabel then textLabel.Text = "Assign Pet" end
 	end
 end
 

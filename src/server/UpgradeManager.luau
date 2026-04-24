@@ -55,27 +55,27 @@ function UpgradeManager.setCurrencyFunctions(hasCoins, spendCoins, addCoins)
 end
 
 ----------------------------------------------------------------
--- 업그레이드 시작
+-- upgrade started
 ----------------------------------------------------------------
 function UpgradeManager.startUpgrade(player: Player, building: BasePart): (boolean, string?)
 	local level = building:GetAttribute("Level") or 1
 	if level >= UpgradeCfg.MAX_LEVEL then
-		return false, "최대 레벨"
+		return false, "Max level"
 	end
 
 	local state = building:GetAttribute("UpgradeState") or ""
 	if state == Constants.UpgradeState.Upgrading then
-		return false, "이미 수리중"
+		return false, "Already upgrading"
 	end
 
 	-- 비용 체크
 	local cost = UpgradeCfg.COST[level] or 0
 	if cost > 0 then
 		if not _hasCoinsFunc or not _hasCoinsFunc(player, cost) then
-			return false, "코인 부족 (" .. cost .. " 필요)"
+			return false, "Not enough coins (" .. cost .. " needed)"
 		end
 		if not _spendCoinsFunc(player, cost) then
-			return false, "코인 차감 실패"
+			return false, "Coin deduction failed"
 		end
 	end
 
@@ -91,17 +91,17 @@ function UpgradeManager.startUpgrade(player: Player, building: BasePart): (boole
 	-- 클라이언트 알림
 	upgradeStateChanged:FireClient(player, buildingId, "started", level)
 
-	print(player.Name .. " - " .. (building:GetAttribute("ItemName") or "?") .. " 업그레이드 시작 (Lv." .. level .. ")")
+	print(player.Name .. " - " .. (building:GetAttribute("ItemName") or "?") .. " upgrade started (Lv." .. level .. ")")
 	return true
 end
 
 ----------------------------------------------------------------
--- 업그레이드 취소
+-- upgrade cancelled
 ----------------------------------------------------------------
 function UpgradeManager.cancelUpgrade(player: Player, building: BasePart): (boolean, string?)
 	local state = building:GetAttribute("UpgradeState") or ""
 	if state ~= Constants.UpgradeState.Upgrading then
-		return false, "수리중이 아님"
+		return false, "Not upgrading"
 	end
 
 	local buildingId = building:GetAttribute("BuildingId")
@@ -110,11 +110,11 @@ function UpgradeManager.cancelUpgrade(player: Player, building: BasePart): (bool
 	-- 루프 중단
 	_activeLoops[buildingId] = nil
 
-	-- 코인 환불
+	-- coins 환불
 	local cost = UpgradeCfg.COST[level] or 0
 	if cost > 0 and _addCoinsFunc then
 		_addCoinsFunc(player, cost)
-		print(player.Name .. " - 업그레이드 취소 환불: " .. cost .. " 코인")
+		print(player.Name .. " - upgrade cancelled, refund: " .. cost .. " coins")
 	end
 
 	-- 상태 복원
@@ -125,7 +125,7 @@ function UpgradeManager.cancelUpgrade(player: Player, building: BasePart): (bool
 	-- 클라이언트 알림
 	upgradeStateChanged:FireClient(player, buildingId, "cancelled")
 
-	print(player.Name .. " - " .. (building:GetAttribute("ItemName") or "?") .. " 업그레이드 취소")
+	print(player.Name .. " - " .. (building:GetAttribute("ItemName") or "?") .. " upgrade cancelled")
 	return true
 end
 
@@ -226,7 +226,7 @@ function UpgradeManager._completeUpgrade(player: Player, building: BasePart, bui
 	upgradeStateChanged:FireClient(player, buildingId, "completed", newLevel)
 
 	local itemName = (newBuilding or building):GetAttribute("ItemName") or "?"
-	print(player.Name .. " - " .. itemName .. " 레벨업! Lv." .. newLevel)
+	print(player.Name .. " - " .. itemName .. " level up! Lv." .. newLevel)
 
 	return assignedPetId
 end
@@ -259,7 +259,7 @@ function UpgradeManager._swapModel(oldBuilding: BasePart, template: Instance): B
 		newModel:PivotTo(cframe)
 		newBuilding = newModel.PrimaryPart or newModel:FindFirstChildWhichIsA("BasePart")
 		if not newBuilding then
-			warn("모델 스왑 실패: PrimaryPart 없음 - " .. itemName)
+			warn("Model swap failed: PrimaryPart not found - " .. itemName)
 			newModel:Destroy()
 			return nil
 		end
@@ -314,7 +314,7 @@ function UpgradeManager.applyVisualUpgrade(building: BasePart, level: number): B
 			if levelModel then
 				local newBuilding = UpgradeManager._swapModel(building, levelModel)
 				if newBuilding then
-					print("모델 스왑 완료: " .. itemName .. " → Level" .. level)
+					print("Model swap complete: " .. itemName .. " → Level" .. level)
 					return newBuilding
 				end
 			end
