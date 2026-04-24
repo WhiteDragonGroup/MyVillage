@@ -1016,23 +1016,60 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			end
 
 			if petTarget then
-					task.spawn(function()
-						local pets = getPetsFunc:InvokeServer()
-						if pets then
-							local petId = petTarget:GetAttribute("PetId")
-							for _, pet in pets do
-								if pet.petId == petId then
-									PetDetailUI.show(pet)
-									break
-								end
+				-- 직접 펫 클릭
+				task.spawn(function()
+					local pets = getPetsFunc:InvokeServer()
+					if pets then
+						local petId = petTarget:GetAttribute("PetId")
+						for _, pet in pets do
+							if pet.petId == petId then
+								PetDetailUI.show(pet)
+								break
 							end
 						end
-					end)
+					end
+				end)
 			elseif eggTarget then
 				local eggId = eggTarget:GetAttribute("EggId")
 				local readyToHatch = eggTarget:GetAttribute("ReadyToHatch")
 				if eggId and readyToHatch then
 					hatchEggEvent:FireServer(eggId)
+				end
+			elseif target then
+				-- 근처 펫 자동 감지 (10 stud 이내)
+				local clickPos = mouse.Hit.Position
+				local plotsFolder = workspace:FindFirstChild("Plots")
+				if plotsFolder then
+					for _, plot in plotsFolder:GetChildren() do
+						if plot:GetAttribute("Owner") == player.Name then
+							local closestPet = nil
+							local closestDist = 10
+							for _, desc in plot:GetDescendants() do
+								if desc:IsA("BasePart") and desc:GetAttribute("PetId") then
+									local dist = (desc.Position - clickPos).Magnitude
+									if dist < closestDist then
+										closestDist = dist
+										closestPet = desc
+									end
+								end
+							end
+							if closestPet then
+								task.spawn(function()
+									local pets = getPetsFunc:InvokeServer()
+									if pets then
+										local petId = closestPet:GetAttribute("PetId")
+										for _, pet in pets do
+											if pet.petId == petId then
+												PetDetailUI.show(pet)
+												break
+											end
+										end
+									end
+								end)
+							end
+							break
+						end
+					end
 				end
 			end
 		end
