@@ -81,6 +81,13 @@ function UpgradeUI.show(level: number, itemName: string)
 		end
 	end
 
+	-- 임시 보석 아이콘 숨기기
+	for _, desc in popUpFrame:GetDescendants() do
+		if desc:IsA("ImageLabel") and desc.Name ~= "BackPattern" then
+			desc.Visible = false
+		end
+	end
+
 	popUpFrame.Visible = true
 end
 
