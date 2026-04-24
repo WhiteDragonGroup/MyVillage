@@ -1396,7 +1396,6 @@ MainHUD.init({
 		if not hrp then return end
 
 		if destination == "village" then
-			-- BuildZone으로 텔레포트
 			local bz = getMyBuildZone()
 			if bz then
 				hrp.CFrame = bz.CFrame + Vector3.new(0, 5, 0)

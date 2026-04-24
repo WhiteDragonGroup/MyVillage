@@ -161,7 +161,7 @@ function EggManager.placeEgg(player: Player, eggType: string, position: Vector3)
 	local placedCount = 0
 	for _ in placed do placedCount = placedCount + 1 end
 	if placedCount >= EggCfg.MAX_PLACED_EGGS then
-		return false, "Max " .. EggCfg.MAX_PLACED_EGGS .. "" max placeable""
+		return false, "Max " .. EggCfg.MAX_PLACED_EGGS .. " placeable"
 	end
 
 	-- 인벤토리에서 차감
