@@ -31,6 +31,7 @@ local CollectionUI = require(clientScript:WaitForChild("build"):WaitForChild("Co
 local GiftUI = require(clientScript:WaitForChild("build"):WaitForChild("GiftUI"))
 local SettingsUI = require(clientScript:WaitForChild("build"):WaitForChild("SettingsUI"))
 local PetDetailUI = require(clientScript:WaitForChild("build"):WaitForChild("PetDetailUI"))
+local AdminUI = require(clientScript:WaitForChild("build"):WaitForChild("AdminUI"))
 
 local HighlightSystem = require(clientScript:WaitForChild("systems"):WaitForChild("HighlightSystem"))
 local CollisionDetector = require(clientScript:WaitForChild("systems"):WaitForChild("CollisionDetector"))
@@ -1620,5 +1621,8 @@ player.Chatted:Connect(function(msg)
 		end
 	end
 end)
+
+-- Admin Panel UI
+AdminUI.init()
 
 print("PlacementClient loaded - Build System v6")
