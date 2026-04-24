@@ -49,6 +49,13 @@ function PetDetailUI.show(petData: { [string]: any })
 	local xp = petData.xp or 0
 	local xpRequired = BalanceConfig.Pet.XP_REQUIRED[level] or 0
 
+	-- 더미 텍스트 "test" 제거
+	for _, desc in petInfoFrame:GetDescendants() do
+		if desc:IsA("TextLabel") and desc.Text:lower():find("test") then
+			desc.Text = ""
+		end
+	end
+
 	-- === Header ===
 	local header = petInfoFrame:FindFirstChild("Header")
 	if header then
@@ -163,8 +170,8 @@ function PetDetailUI.show(petData: { [string]: any })
 		end
 	end
 
-	-- Mutations
-	local mutationsFrame = frame:FindFirstChild("Mutations")
+	-- Mutations (Frame 또는 petInfoFrame에서 찾기)
+	local mutationsFrame = frame:FindFirstChild("Mutations") or petInfoFrame:FindFirstChild("Mutations", true)
 	if mutationsFrame then
 		local textLabel = mutationsFrame:FindFirstChild("TextLabel")
 			or mutationsFrame:FindFirstChildWhichIsA("TextLabel")
@@ -181,8 +188,8 @@ function PetDetailUI.show(petData: { [string]: any })
 		end
 	end
 
-	-- Buffs
-	local buffsFrame = frame:FindFirstChild("Buffs")
+	-- Buffs (Frame 또는 petInfoFrame에서 찾기)
+	local buffsFrame = frame:FindFirstChild("Buffs") or petInfoFrame:FindFirstChild("Buffs", true)
 	if buffsFrame then
 		local textLabel = buffsFrame:FindFirstChild("TextLabel")
 			or buffsFrame:FindFirstChildWhichIsA("TextLabel")
