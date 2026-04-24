@@ -270,6 +270,18 @@ local function createPreview(itemName: string, level: number?): BasePart?
 	return mainPart
 end
 
+-- 최상위 PlacementPreview Model 찾기
+local function getPreviewModel(part: BasePart): Model?
+	local current = part
+	while current and current ~= workspace do
+		if current.Name == "PlacementPreview" and current:IsA("Model") then
+			return current
+		end
+		current = current.Parent
+	end
+	return nil
+end
+
 -- 프리뷰 제거
 local function removePreview()
 	if previewPart then
@@ -547,14 +559,14 @@ local function toPlacingNew(itemName: string, level: number?)
 		if hrp then
 			local frontPos = hrp.Position + hrp.CFrame.LookVector * BalanceConfig.Building.PLACEMENT_PREVIEW_DISTANCE
 			local snappedCFrame = GridSnap.snapToGrid(currentBuildZone, frontPos, collisionSize)
-			-- Model이면 PivotTo 보정 (mainPart가 정확히 snappedCFrame에 오도록)
-			local pModel = previewPart.Parent
-			if pModel and pModel:IsA("Model") and pModel.Name == "PlacementPreview" then
-				local mainToPivot = previewPart.CFrame:ToObjectSpace(pModel:GetPivot())
-				pModel:PivotTo(snappedCFrame * mainToPivot)
+			-- 위치만 사용, 회전은 모델 원본 유지
+			local pModel = getPreviewModel(previewPart)
+			if pModel then
+				local posOnly = CFrame.new(snappedCFrame.Position)
+				pModel:PivotTo(posOnly)
 				GridSnap.adjustModelY(pModel, previewPart, currentBuildZone)
 			else
-				previewPart.CFrame = snappedCFrame
+				previewPart.CFrame = CFrame.new(snappedCFrame.Position)
 			end
 		end
 	end
@@ -572,10 +584,12 @@ local function toPlacingNew(itemName: string, level: number?)
 	DragHandler.startDrag(currentBuildZone, previewPart, currentRotationY, function(newCFrame)
 		if previewPart then
 			-- Model이면 PivotTo 보정 (mainPart가 정확히 newCFrame에 오도록)
-			local parentModel = previewPart.Parent
-			if parentModel and parentModel:IsA("Model") and parentModel.Name == "PlacementPreview" then
-				local mainToPivot = previewPart.CFrame:ToObjectSpace(parentModel:GetPivot())
-				parentModel:PivotTo(newCFrame * mainToPivot)
+			local parentModel = getPreviewModel(previewPart)
+			if parentModel then
+				-- 위치 + Y축 회전만 적용 (눕힘 방지)
+				local pos = newCFrame.Position
+				local _, yRot, _ = newCFrame:ToEulerAnglesYXZ()
+				parentModel:PivotTo(CFrame.new(pos) * CFrame.Angles(0, yRot, 0))
 				GridSnap.adjustModelY(parentModel, previewPart, currentBuildZone)
 			else
 				-- 단순 Part: Y를 BuildZone 상단 + Part 높이 절반으로 보정
@@ -712,7 +726,7 @@ InventoryUI.init(function(itemName: string, level: number)
 			DragHandler.startDrag(currentBuildZone, previewPart, currentRotationY, function(newCFrame)
 				if previewPart then
 					local pModel = previewPart.Parent
-					if pModel and pModel:IsA("Model") and pModel.Name == "PlacementPreview" then
+					if pModel then
 						local mainToPivot = previewPart.CFrame:ToObjectSpace(pModel:GetPivot())
 						pModel:PivotTo(newCFrame * mainToPivot)
 						GridSnap.adjustModelY(pModel, previewPart, currentBuildZone)
@@ -845,7 +859,7 @@ local function confirmPlace()
 		local pModel = previewPart.Parent
 		local mainCFrame = previewPart.CFrame
 		local pivotCFrame = nil
-		if pModel and pModel:IsA("Model") and pModel.Name == "PlacementPreview" then
+		if pModel then
 			pivotCFrame = pModel:GetPivot()
 		end
 		DragHandler.stopDrag()

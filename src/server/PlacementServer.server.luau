@@ -235,15 +235,22 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 			InventoryManager.addItem(player, itemName, 1, level) -- 인벤토리 복구
 			return
 		end
-		-- pivotCFrame이 있으면 PivotTo로 정확히 배치, 없으면 mainPart 기준
-		if pivotCFrame then
-			item:PivotTo(pivotCFrame)
-		else
-			local mainToPivot = mainPart.CFrame:ToObjectSpace(item:GetPivot())
-			item:PivotTo(cframe * mainToPivot)
-		end
+		-- 위치 + Y축 회전만 적용 (눕힘 방지)
+		local targetCFrame = pivotCFrame or cframe
+		local pos = targetCFrame.Position
+		local _, yRot, _ = targetCFrame:ToEulerAnglesYXZ()
+		item:PivotTo(CFrame.new(pos) * CFrame.Angles(0, yRot, 0))
 		item.Parent = plot
 		mainPart.Anchored = true
+
+		-- 바닥 보정: 모델 하단을 BuildZone 상단에 맞춤
+		local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
+		local bbCF, bbSize = item:GetBoundingBox()
+		local modelBottom = bbCF.Position.Y - bbSize.Y / 2
+		local yAdjust = buildZoneTop - modelBottom
+		if math.abs(yAdjust) > 0.01 then
+			item:PivotTo(item:GetPivot() + Vector3.new(0, yAdjust, 0))
+		end
 	end
 
 	-- 9. 건물 속성 설정 (mainPart에 부여)
