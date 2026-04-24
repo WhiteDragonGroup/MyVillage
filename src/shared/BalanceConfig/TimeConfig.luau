@@ -17,4 +17,8 @@ TimeConfig.UTC_OFFSET = 9
 TimeConfig.DAY_START_HOUR = 6
 TimeConfig.NIGHT_START_HOUR = 18
 
+-- Fixed ClockTime for instant day/night transition
+TimeConfig.DAY_CLOCK = 14    -- daytime lighting
+TimeConfig.NIGHT_CLOCK = 2   -- nighttime lighting
+
 return TimeConfig

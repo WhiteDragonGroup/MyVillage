@@ -12,10 +12,10 @@ Constants.ROTATION_STEP = BalanceConfig.Building.ROTATION_STEP
 
 -- 건물 유형
 Constants.BuildingType = {
-	Work = "일터",
-	Rest = "쉼터",
-	Support = "지원",
-	Decoration = "장식",
+	Work = "Work",
+	Rest = "Rest",
+	Support = "Support",
+	Decoration = "Decoration",
 }
 
 -- 건물 등급
@@ -41,29 +41,29 @@ Constants.RARITY_COLORS = {
 -- icon: 빌드모드 인벤토리 아이콘 이미지 (rbxassetid://숫자)
 -- TODO: 각 건물별 아이콘 이미지 Asset ID를 icon 필드에 입력해주세요
 Constants.BUILDINGS = {
-	TownHall    = { name = "마을회관",  types = {"지원"}, rarity = "일반", collisionSize = Vector3.new(8, 6, 8), icon = "" },
-	Garden      = { name = "텃밭",      types = {"일터"}, rarity = "일반", collisionSize = Vector3.new(6, 2, 6), workTypes = {"농사"}, icon = "" },
-	Mine        = { name = "광산",      types = {"일터"}, rarity = "희귀", collisionSize = Vector3.new(6, 4, 6), workTypes = {"채굴"}, icon = "" },
-	Lab         = { name = "연구소",    types = {"지원"}, rarity = "에픽", collisionSize = Vector3.new(8, 8, 8), icon = "" },
-	HotSpring   = { name = "온천",      types = {"쉼터"}, rarity = "희귀", collisionSize = Vector3.new(8, 2, 8), icon = "" },
-	Blacksmith  = { name = "대장간",    types = {"일터"}, rarity = "희귀", collisionSize = Vector3.new(6, 5, 6), workTypes = {"건설"}, icon = "" },
-	Inn         = { name = "여관",      types = {"쉼터"}, rarity = "일반", collisionSize = Vector3.new(7, 5, 6), icon = "" },
-	Fountain    = { name = "분수대",    types = {"장식"}, rarity = "일반", collisionSize = Vector3.new(4, 3, 4), icon = "" },
-	Market      = { name = "시장",      types = {"일터"}, rarity = "일반", collisionSize = Vector3.new(8, 4, 6), workTypes = {"농사", "채굴"}, icon = "" },
-	Library     = { name = "도서관",    types = {"지원"}, rarity = "희귀", collisionSize = Vector3.new(7, 6, 7), icon = "" },
-	MagicTower  = { name = "마법탑",    types = {"지원"}, rarity = "전설", collisionSize = Vector3.new(5, 12, 5), icon = "" },
-	Brewery     = { name = "양조장",    types = {"일터"}, rarity = "에픽", collisionSize = Vector3.new(6, 5, 8), workTypes = {"농사"}, icon = "" },
-	Pavilion    = { name = "정자",      types = {"쉼터"}, rarity = "에픽", collisionSize = Vector3.new(8, 4, 8), icon = "" },
-	Temple      = { name = "신전",      types = {"지원"}, rarity = "신화", collisionSize = Vector3.new(10, 8, 10), icon = "" },
-	WorldTree   = { name = "세계수",    types = {"쉼터"}, rarity = "신화", collisionSize = Vector3.new(6, 14, 6), icon = "" },
-	Campfire    = { name = "캠프파이어", types = {"쉼터"}, rarity = "일반", collisionSize = Vector3.new(4, 3, 4), icon = "" },
-	PotionCafe  = { name = "포션카페",  types = {"지원"}, rarity = "희귀", collisionSize = Vector3.new(6, 5, 6), icon = "" },
-	AltarOfBlessing = { name = "축복의 제단", types = {"지원"}, rarity = "전설", collisionSize = Vector3.new(8, 6, 8), icon = "" },
-	Farm        = { name = "농장",      types = {"일터"}, rarity = "일반", collisionSize = Vector3.new(8, 3, 8), workTypes = {"농사"}, icon = "" },
-	Laboratory  = { name = "연구소",    types = {"지원"}, rarity = "에픽", collisionSize = Vector3.new(8, 8, 8), icon = "" },
-	GiantFurnace = { name = "거대 용광로", types = {"일터"}, rarity = "에픽", collisionSize = Vector3.new(8, 8, 8), workTypes = {"채굴"}, icon = "" },
-	TreeOfGrowth = { name = "성장의 나무", types = {"쉼터"}, rarity = "전설", collisionSize = Vector3.new(6, 12, 6), icon = "" },
-	ClockTower  = { name = "시계탑",    types = {"장식"}, rarity = "희귀", collisionSize = Vector3.new(6, 10, 6), icon = "" },
+	TownHall    = { name = "마을회관",  types = {"Support"}, rarity = "일반", collisionSize = Vector3.new(8, 6, 8), icon = "" },
+	Garden      = { name = "텃밭",      types = {"Work"}, rarity = "일반", collisionSize = Vector3.new(6, 2, 6), workTypes = {"농사"}, icon = "" },
+	Mine        = { name = "광산",      types = {"Work"}, rarity = "희귀", collisionSize = Vector3.new(6, 4, 6), workTypes = {"채굴"}, icon = "" },
+	Lab         = { name = "연구소",    types = {"Support"}, rarity = "에픽", collisionSize = Vector3.new(8, 8, 8), icon = "" },
+	HotSpring   = { name = "온천",      types = {"Rest"}, rarity = "희귀", collisionSize = Vector3.new(8, 2, 8), icon = "" },
+	Blacksmith  = { name = "대장간",    types = {"Work"}, rarity = "희귀", collisionSize = Vector3.new(6, 5, 6), workTypes = {"건설"}, icon = "" },
+	Inn         = { name = "여관",      types = {"Rest"}, rarity = "일반", collisionSize = Vector3.new(7, 5, 6), icon = "" },
+	Fountain    = { name = "분수대",    types = {"Decoration"}, rarity = "일반", collisionSize = Vector3.new(4, 3, 4), icon = "" },
+	Market      = { name = "시장",      types = {"Work"}, rarity = "일반", collisionSize = Vector3.new(8, 4, 6), workTypes = {"농사", "채굴"}, icon = "" },
+	Library     = { name = "도서관",    types = {"Support"}, rarity = "희귀", collisionSize = Vector3.new(7, 6, 7), icon = "" },
+	MagicTower  = { name = "마법탑",    types = {"Support"}, rarity = "전설", collisionSize = Vector3.new(5, 12, 5), icon = "" },
+	Brewery     = { name = "양조장",    types = {"Work"}, rarity = "에픽", collisionSize = Vector3.new(6, 5, 8), workTypes = {"농사"}, icon = "" },
+	Pavilion    = { name = "정자",      types = {"Rest"}, rarity = "에픽", collisionSize = Vector3.new(8, 4, 8), icon = "" },
+	Temple      = { name = "신전",      types = {"Support"}, rarity = "신화", collisionSize = Vector3.new(10, 8, 10), icon = "" },
+	WorldTree   = { name = "세계수",    types = {"Rest"}, rarity = "신화", collisionSize = Vector3.new(6, 14, 6), icon = "" },
+	Campfire    = { name = "캠프파이어", types = {"Rest"}, rarity = "일반", collisionSize = Vector3.new(4, 3, 4), icon = "" },
+	PotionCafe  = { name = "포션카페",  types = {"Support"}, rarity = "희귀", collisionSize = Vector3.new(6, 5, 6), icon = "" },
+	AltarOfBlessing = { name = "축복의 제단", types = {"Support"}, rarity = "전설", collisionSize = Vector3.new(8, 6, 8), icon = "" },
+	Farm        = { name = "농장",      types = {"Work"}, rarity = "일반", collisionSize = Vector3.new(8, 3, 8), workTypes = {"농사"}, icon = "" },
+	Laboratory  = { name = "연구소",    types = {"Support"}, rarity = "에픽", collisionSize = Vector3.new(8, 8, 8), icon = "" },
+	GiantFurnace = { name = "거대 용광로", types = {"Work"}, rarity = "에픽", collisionSize = Vector3.new(8, 8, 8), workTypes = {"채굴"}, icon = "" },
+	TreeOfGrowth = { name = "성장의 나무", types = {"Rest"}, rarity = "전설", collisionSize = Vector3.new(6, 12, 6), icon = "" },
+	ClockTower  = { name = "시계탑",    types = {"Decoration"}, rarity = "희귀", collisionSize = Vector3.new(6, 10, 6), icon = "" },
 }
 
 -- 펫 유형

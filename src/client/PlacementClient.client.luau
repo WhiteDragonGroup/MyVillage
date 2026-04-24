@@ -377,6 +377,9 @@ local function toIdle()
 	hoveredPart = nil
 	currentBuildZone = nil
 
+	-- 빌드모드 UI 복원
+	MainHUD.restoreBuildModeUI()
+
 	-- 렌더 연결 해제
 	if renderConnection then
 		renderConnection:Disconnect()
@@ -403,6 +406,9 @@ local function toBuildMode()
 	-- 인벤토리 표시
 	InventoryUI.show()
 
+	-- 빌드모드 시 다른 UI 숨김 (사이드바 제외)
+	MainHUD.hideBuildModeUI()
+
 	-- 호버 렌더링 시작
 	if renderConnection then
 		renderConnection:Disconnect()
@@ -410,6 +416,22 @@ local function toBuildMode()
 
 	renderConnection = RunService.RenderStepped:Connect(function()
 		if currentState ~= BuildState.BuildMode then return end
+
+		-- 마을 벗어나면 자동 종료
+		local bz = getMyBuildZone()
+		if bz then
+			local character = player.Character
+			local hrp = character and character:FindFirstChild("HumanoidRootPart")
+			if hrp then
+				local localPos = bz.CFrame:PointToObjectSpace(hrp.Position)
+				local halfSize = bz.Size / 2
+				if math.abs(localPos.X) > halfSize.X + 15 or math.abs(localPos.Z) > halfSize.Z + 15 then
+					toIdle()
+					MainHUD.setActiveTab(nil)
+					return
+				end
+			end
+		end
 
 		local target = mouse.Target
 		local mainTarget = findBuildingMainPart(target)
@@ -1315,34 +1337,37 @@ ShopUI.init({
 MainHUD.init({
 	onTabChanged = function(tabId)
 		if tabId == "build" then
-			closeAllPanels()
-			if currentState == BuildState.Idle then
-				toBuildMode()
-			elseif currentState ~= BuildState.BuildMode then
-				-- 이미 빌드 관련 상태면 유지
-			end
-		elseif tabId == "shop" then
-			CollectionUI.hide()
-			if currentState ~= BuildState.Idle and currentState ~= BuildState.BuildMode then
-				-- 빌드 작업 중이면 탭 무시
+			-- 마을 안에 있는지 체크
+			local bz = getMyBuildZone()
+			if not bz then
+				MainHUD.showMessage("You need to be in your village to use Build Mode.")
 				MainHUD.setActiveTab(nil)
 				return
 			end
+			local character = player.Character
+			local hrp = character and character:FindFirstChild("HumanoidRootPart")
+			if hrp then
+				local localPos = bz.CFrame:PointToObjectSpace(hrp.Position)
+				local halfSize = bz.Size / 2
+				if math.abs(localPos.X) > halfSize.X + 10 or math.abs(localPos.Z) > halfSize.Z + 10 then
+					MainHUD.showMessage("You need to be in your village to use Build Mode.")
+					MainHUD.setActiveTab(nil)
+					return
+				end
+			end
+
+			closeAllPanels()
+			if currentState == BuildState.Idle then
+				toBuildMode()
+			end
+		elseif tabId == "shop" then
+			-- Shop = 알 상점 (BuildingsShop은 NPC)
+			closeAllPanels()
 			if currentState == BuildState.BuildMode then
 				toIdle()
 			end
 			ShopUI.show()
 			loadShopData()
-		elseif tabId == "collection" then
-			ShopUI.hide()
-			if currentState ~= BuildState.Idle and currentState ~= BuildState.BuildMode then
-				MainHUD.setActiveTab(nil)
-				return
-			end
-			if currentState == BuildState.BuildMode then
-				toIdle()
-			end
-			CollectionUI.show()
 		else
 			-- nil (탭 해제)
 			closeAllPanels()
@@ -1359,16 +1384,15 @@ MainHUD.init({
 		if not hrp then return end
 
 		if destination == "village" then
-			-- 내 마을(BuildZone)으로
+			-- 마을 입구 (BuildZone 앞쪽)
 			local bz = getMyBuildZone()
 			if bz then
-				hrp.CFrame = bz.CFrame + Vector3.new(0, 5, 0)
+				local entrance = bz.CFrame * CFrame.new(0, 5, bz.Size.Z / 2 + 5)
+				hrp.CFrame = entrance
 			end
 		elseif destination == "buildings" then
-			-- 건물 상점 앞
 			hrp.CFrame = CFrame.new(113.7, 10.8, 10.3)
 		elseif destination == "eggs" then
-			-- 알 상점 앞
 			hrp.CFrame = CFrame.new(97.3, 11.0, 24.0)
 		end
 	end,

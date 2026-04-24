@@ -25,11 +25,11 @@ local _activeFilter = "All"
 
 -- 디자인 카테고리 → 게임 유형 매핑
 local FILTER_MAP = {
-	All = "전체",
-	WorkSpots = "일터",
-	RestSpots = "쉼터",
-	Supports = "지원",
-	Decorations = "장식",
+	All = "All",
+	WorkSpots = "Work",
+	RestSpots = "Rest",
+	Supports = "Support",
+	Decorations = "Decoration",
 }
 
 function InventoryUI.init(onItemSelected: (string, number) -> (), onExit: (() -> ())?)
@@ -113,7 +113,7 @@ function InventoryUI._renderSlots()
 		catText.Text = _activeFilter
 	end
 
-	local filterType = FILTER_MAP[_activeFilter] or "전체"
+	local filterType = FILTER_MAP[_activeFilter] or "All"
 	local filteredIndex = 0
 
 	for i, item in _inventory do
@@ -124,7 +124,7 @@ function InventoryUI._renderSlots()
 		if not building and not eggInfo then continue end
 
 		-- 필터 적용
-		if filterType ~= "전체" and not isEgg then
+		if filterType ~= "All" and not isEgg then
 			local matchesFilter = false
 			if building then
 				for _, t in building.types do
@@ -137,7 +137,7 @@ function InventoryUI._renderSlots()
 		filteredIndex = filteredIndex + 1
 
 		local displayName = if building then building.name elseif eggInfo then eggInfo.name else item.itemName
-		local displayRarity = if building then building.rarity elseif eggInfo then eggInfo.rarity else "일반"
+		local displayRarity = if building then building.rarity elseif eggInfo then eggInfo.rarity else "Common"
 		local rarityColor = Constants.RARITY_COLORS[displayRarity] or Color3.fromRGB(180, 180, 180)
 
 		-- 슬롯 생성 (템플릿 복제 또는 새로 생성)

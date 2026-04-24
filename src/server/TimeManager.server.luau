@@ -20,13 +20,20 @@ local startRealTime = os.time()
 local startDate = os.date("!*t", startRealTime)
 local startGameHours = ((startDate.hour + UTC_OFFSET) % 24) + startDate.min / 60 + startDate.sec / 3600
 
+-- Day/Night fixed ClockTime values (instant transition)
+local DAY_CLOCK = BalanceConfig.Time.DAY_CLOCK or 14   -- daytime ClockTime
+local NIGHT_CLOCK = BalanceConfig.Time.NIGHT_CLOCK or 2 -- nighttime ClockTime
+
 local function updateTime()
 	local elapsed = os.time() - startRealTime
 	local gameElapsedHours = (elapsed * TIME_SCALE) / 3600
 	local clockTime = (startGameHours + gameElapsedHours) % 24
-	Lighting.ClockTime = clockTime
 
-	TimeState.update(clockTime, clockTime >= DAY_START and clockTime < NIGHT_START)
+	-- Instant day/night transition (fixed ClockTime)
+	local isDay = clockTime >= DAY_START and clockTime < NIGHT_START
+	Lighting.ClockTime = if isDay then DAY_CLOCK else NIGHT_CLOCK
+
+	TimeState.update(clockTime, isDay)
 end
 
 updateTime()

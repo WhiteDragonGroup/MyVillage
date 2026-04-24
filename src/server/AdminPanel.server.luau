@@ -136,8 +136,54 @@ local function onPlayerChatted(player: Player, message: string)
 		end
 		notify(player, "Use /reset from client")
 
+	elseif cmd == "/addallbuildings" then
+		local count = 0
+		for name, _ in Constants.BUILDINGS do
+			InventoryManager.addItem(player, name, 1, 1)
+			count = count + 1
+		end
+		notify(player, count .. " buildings added")
+
+	elseif cmd == "/addallpets" then
+		local count = 0
+		for petName, petInfo in Constants.PETS do
+			local petId = HttpService:GenerateGUID(false)
+			local size = petInfo.size or "Small"
+			local stdWeight = PetCfg.SIZE_STANDARD_WEIGHT[size] or 5
+			local weightMult = PetCfg.WEIGHT_MIN_MULT + math.random() * (PetCfg.WEIGHT_MAX_MULT - PetCfg.WEIGHT_MIN_MULT)
+			local petData = {
+				petId = petId,
+				petName = petName,
+				petType = petInfo.petTypes and petInfo.petTypes[1] or "Construction",
+				rarity = petInfo.rarity or "Common",
+				ownerId = player.UserId,
+				assignedBuildingId = "",
+				model = nil,
+				mutations = {},
+				size = size,
+				race = "Human",
+				traits = {},
+				weight = stdWeight * weightMult,
+				weightMult = weightMult,
+				level = 1,
+				xp = 0,
+				state = "Idle",
+				targetBuildingId = "",
+				previousWorkId = "",
+			}
+			PetManager.addPetDirect(player, petData)
+			count = count + 1
+		end
+		notify(player, count .. " pets added")
+
+	elseif cmd == "/addalleggs" then
+		for eggType, _ in BalanceConfig.Egg.EGGS do
+			EggManager.addEgg(player, eggType, 3)
+		end
+		notify(player, "All eggs added (x3 each)")
+
 	elseif cmd == "/adminhelp" then
-		notify(player, "/addcoins [n] /addegg [type] [n] /addbuilding [name] [n] /addpet [name] /settime [h] /restock")
+		notify(player, "/addcoins /setcoins /addegg /addbuilding /addpet /settime /restock /addallbuildings /addallpets /addalleggs")
 	end
 end
 

@@ -20,11 +20,13 @@ local _callbacks = {}
 local _activeTab = nil
 local _sideButtons = {}
 
+-- Weather icon image IDs: add rbxassetid:// to imageId field
+-- TODO: Replace empty imageId with actual asset IDs
 local WEATHER_INFO = {
-	Sunny        = { icon = "☀️", name = "Sunny",  desc = "It's a sunny day." },
-	Rain         = { icon = "🌧️", name = "Rain",    desc = "It's raining." },
-	Frost        = { icon = "❄️", name = "Frost",  desc = "A cold frost has settled." },
-	ThunderStorm = { icon = "⛈️", name = "Thunderstorm", desc = "Watch out for lightning!" },
+	Sunny        = { icon = "☀️", name = "Sunny",  desc = "It's a sunny day.", imageId = "" },
+	Rain         = { icon = "🌧️", name = "Rain",    desc = "It's raining.", imageId = "" },
+	Frost        = { icon = "❄️", name = "Frost",  desc = "A cold frost has settled.", imageId = "" },
+	ThunderStorm = { icon = "⛈️", name = "Thunderstorm", desc = "Watch out for lightning!", imageId = "" },
 }
 
 function MainHUD.init(callbacks: {
@@ -76,36 +78,7 @@ function MainHUD.init(callbacks: {
 			bookBtn.ImageTransparency = 0.5
 		end
 		connectButton(bookBtn, function()
-			local notifGui = Instance.new("ScreenGui")
-			notifGui.Name = "BookNotif"
-			notifGui.ResetOnSpawn = false
-			notifGui.DisplayOrder = 40
-			notifGui.Parent = playerGui
-
-			local notifFrame = Instance.new("Frame")
-			notifFrame.Size = UDim2.new(0, 240, 0, 40)
-			notifFrame.Position = UDim2.new(0.5, -120, 0.5, -20)
-			notifFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-			notifFrame.BorderSizePixel = 0
-			notifFrame.Parent = notifGui
-
-			local nCorner = Instance.new("UICorner")
-			nCorner.CornerRadius = UDim.new(0, 10)
-			nCorner.Parent = notifFrame
-
-			local nLabel = Instance.new("TextLabel")
-			nLabel.Size = UDim2.new(1, -12, 1, 0)
-			nLabel.Position = UDim2.new(0, 6, 0, 0)
-			nLabel.BackgroundTransparency = 1
-			nLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-			nLabel.TextSize = 14
-			nLabel.Font = Enum.Font.GothamBold
-			nLabel.Text = "Collection is under construction."
-			nLabel.Parent = notifFrame
-
-			task.delay(2, function()
-				if notifGui.Parent then notifGui:Destroy() end
-			end)
+			MainHUD.showMessage("Collection is under construction.")
 		end)
 	end
 
@@ -295,6 +268,13 @@ function MainHUD.updateWeather(weatherType: string)
 	local weatherFrame = normalGui:FindFirstChild("Weather")
 	if not weatherFrame then return end
 
+	-- 날씨 아이콘 이미지 변경
+	if weatherFrame:IsA("ImageButton") or weatherFrame:IsA("ImageLabel") then
+		if info.imageId and info.imageId ~= "" then
+			weatherFrame.Image = info.imageId
+		end
+	end
+
 	-- Weather Info 프레임에 텍스트 업데이트
 	local infoFrame = weatherFrame:FindFirstChild("Info")
 	if infoFrame then
@@ -303,6 +283,21 @@ function MainHUD.updateWeather(weatherType: string)
 			textLabel.Text = info.name .. " - " .. info.desc
 		end
 	end
+end
+
+-- Message TextLabel로 메시지 표시
+function MainHUD.showMessage(text: string, duration: number?)
+	if not normalGui then return end
+	local messageLabel = normalGui:FindFirstChild("Message")
+	if not messageLabel then return end
+	messageLabel.Text = text
+	messageLabel.Visible = true
+	task.delay(duration or 2, function()
+		if messageLabel.Text == text then
+			messageLabel.Visible = false
+			messageLabel.Text = ""
+		end
+	end)
 end
 
 -- Shadow (오버레이) 표시/숨김
@@ -316,6 +311,28 @@ function MainHUD.hideShadow()
 	if not normalGui then return end
 	local shadow = normalGui:FindFirstChild("Shadow")
 	if shadow then shadow.Visible = false end
+end
+
+-- 빌드모드: 다른 UI 숨김 (사이드바 Frame 제외)
+function MainHUD.hideBuildModeUI()
+	if not normalGui then return end
+	for _, child in normalGui:GetChildren() do
+		if child.Name ~= "Frame" and child:IsA("GuiObject") then
+			child:SetAttribute("_wasVisible", child.Visible)
+			child.Visible = false
+		end
+	end
+end
+
+-- 빌드모드 종료: UI 복원
+function MainHUD.restoreBuildModeUI()
+	if not normalGui then return end
+	for _, child in normalGui:GetChildren() do
+		if child:IsA("GuiObject") and child:GetAttribute("_wasVisible") ~= nil then
+			child.Visible = child:GetAttribute("_wasVisible")
+			child:SetAttribute("_wasVisible", nil)
+		end
+	end
 end
 
 function MainHUD.destroy()
