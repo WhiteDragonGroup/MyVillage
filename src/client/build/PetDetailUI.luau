@@ -1,6 +1,7 @@
 -- PetDetailUI.luau
--- 디자인 UI 사용 (StarterGui/Features/PetInfo)
--- Frame(Info, Jobs, Level, Weight), Header(Rarity), Icon
+-- Design UI: Features > PetInfo
+-- Header: NameText, NameTextShadow, Rarity
+-- Frame: Info, Jobs, Level(GaugeBar), Weight, Mutations, Buffs, Icon
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18,27 +19,19 @@ local _visible = false
 
 function PetDetailUI.init()
 	local featuresGui = playerGui:WaitForChild("Features", 10)
-	if not featuresGui then
-		warn("[PetDetailUI] Features ScreenGui를 찾을 수 없음")
-		return
-	end
+	if not featuresGui then return end
 
 	petInfoFrame = featuresGui:FindFirstChild("PetInfo")
-	if not petInfoFrame then
-		warn("[PetDetailUI] PetInfo를 찾을 수 없음")
-		return
-	end
+	if not petInfoFrame then return end
 
 	petInfoFrame.Visible = false
 
-	-- Header Close 버튼
+	-- Header Close button
 	local header = petInfoFrame:FindFirstChild("Header")
 	if header then
 		local closeBtn = header:FindFirstChild("Close")
-		if not closeBtn then
-			-- Close가 없으면 ImageButton 찾기
-			closeBtn = header:FindFirstChildWhichIsA("ImageButton") or header:FindFirstChildWhichIsA("TextButton")
-		end
+			or header:FindFirstChildWhichIsA("ImageButton")
+			or header:FindFirstChildWhichIsA("TextButton")
 		if closeBtn and closeBtn:IsA("GuiButton") then
 			closeBtn.MouseButton1Click:Connect(function()
 				PetDetailUI.hide()
@@ -51,79 +44,146 @@ function PetDetailUI.show(petData: { [string]: any })
 	if not petInfoFrame then return end
 	_visible = true
 
-	-- Header: 이름 + 희귀도
+	local petInfo = Constants.PETS[petData.petName]
+	local level = petData.level or 1
+	local xp = petData.xp or 0
+	local xpRequired = BalanceConfig.Pet.XP_REQUIRED[level] or 0
+
+	-- === Header ===
 	local header = petInfoFrame:FindFirstChild("Header")
 	if header then
-		local textLabel = header:FindFirstChild("TextLabel")
-		if textLabel then
-			textLabel.Text = petData.petName or "???"
-		end
+		-- NameText
+		local nameText = header:FindFirstChild("NameText")
+		if nameText then nameText.Text = petData.petName or "???" end
 
+		local nameShadow = header:FindFirstChild("NameTextShadow")
+		if nameShadow then nameShadow.Text = petData.petName or "???" end
+
+		-- Rarity
 		local rarityFrame = header:FindFirstChild("Rarity")
 		if rarityFrame then
-			local rarityText = rarityFrame:FindFirstChild("TextLabel") or rarityFrame:FindFirstChildWhichIsA("TextLabel")
-			if rarityText then
-				rarityText.Text = petData.rarity or "Common"
+			local rarityLabel = rarityFrame:FindFirstChild("TextLabel")
+				or rarityFrame:FindFirstChildWhichIsA("TextLabel")
+			if rarityLabel then
+				rarityLabel.Text = petData.rarity or "Common"
 			end
 		end
 	end
 
-	-- Frame: 상세 정보
+	-- === Frame ===
 	local frame = petInfoFrame:FindFirstChild("Frame")
-	if frame then
-		-- Info
-		local infoFrame = frame:FindFirstChild("Info")
-		if infoFrame then
-			local textLabel = infoFrame:FindFirstChild("TextLabel") or infoFrame:FindFirstChildWhichIsA("TextLabel")
-			if textLabel then
-				local petType = petData.petType or "Construction"
-				local petTypeKor = Constants.PetType[petType] or petType
-				textLabel.Text = petData.petName .. " - " .. petTypeKor .. " specialist"
+	if not frame then
+		petInfoFrame.Visible = true
+		return
+	end
+
+	-- Info (description - visible on hover)
+	local infoFrame = frame:FindFirstChild("Info")
+	if infoFrame then
+		local textLabel = infoFrame:FindFirstChild("TextLabel")
+			or infoFrame:FindFirstChildWhichIsA("TextLabel")
+		if textLabel then
+			local petType = petData.petType or "Construction"
+			local typeName = Constants.PetType[petType] or petType
+
+			-- Build description from pet types
+			local typeNames = {}
+			if petInfo and petInfo.petTypes then
+				for _, pt in petInfo.petTypes do
+					table.insert(typeNames, Constants.PetType[pt] or pt)
+				end
+			else
+				table.insert(typeNames, typeName)
 			end
+
+			textLabel.Text = "Specializes in: " .. table.concat(typeNames, ", ")
+		end
+	end
+
+	-- Jobs
+	local jobsFrame = frame:FindFirstChild("Jobs")
+	if jobsFrame then
+		local textLabel = jobsFrame:FindFirstChild("TextLabel")
+			or jobsFrame:FindFirstChildWhichIsA("TextLabel")
+		if textLabel then
+			local jobList = {}
+			if petInfo and petInfo.petTypes then
+				for _, pt in petInfo.petTypes do
+					table.insert(jobList, Constants.PetType[pt] or pt)
+				end
+			else
+				table.insert(jobList, Constants.PetType[petData.petType] or petData.petType or "?")
+			end
+			textLabel.Text = table.concat(jobList, ", ")
+		end
+	end
+
+	-- Weight
+	local weightFrame = frame:FindFirstChild("Weight")
+	if weightFrame then
+		local textLabel = weightFrame:FindFirstChild("TextLabel")
+			or weightFrame:FindFirstChildWhichIsA("TextLabel")
+		if textLabel then
+			textLabel.Text = string.format("%.1fkg", petData.weight or 0)
+		end
+	end
+
+	-- Level + GaugeBar (EXP)
+	local levelFrame = frame:FindFirstChild("Level")
+	if levelFrame then
+		local textLabel = levelFrame:FindFirstChild("TextLabel")
+			or levelFrame:FindFirstChildWhichIsA("TextLabel")
+		if textLabel then
+			textLabel.Text = "Level: " .. level
 		end
 
-		-- Jobs (하는 일)
-		local jobsFrame = frame:FindFirstChild("Jobs")
-		if jobsFrame then
-			local textLabel = jobsFrame:FindFirstChild("TextLabel") or jobsFrame:FindFirstChildWhichIsA("TextLabel")
-			if textLabel then
-				local petType = petData.petType or "Construction"
-				textLabel.Text = Constants.PetType[petType] or petType
+		-- GaugeBar (EXP progress bar)
+		local gaugeBar = levelFrame:FindFirstChild("GaugeBar")
+			or levelFrame:FindFirstChildWhichIsA("Frame")
+		if gaugeBar then
+			local fill = gaugeBar:FindFirstChild("Fill")
+				or gaugeBar:FindFirstChildWhichIsA("Frame")
+			if fill then
+				local ratio = if xpRequired > 0 then math.clamp(xp / xpRequired, 0, 1) else 1
+				fill.Size = UDim2.new(ratio, 0, fill.Size.Y.Scale, fill.Size.Y.Offset)
+			end
+
+			local expLabel = gaugeBar:FindFirstChild("TextLabel")
+				or gaugeBar:FindFirstChildWhichIsA("TextLabel")
+			if expLabel then
+				expLabel.Text = xp .. "/" .. (xpRequired > 0 and xpRequired or "MAX")
 			end
 		end
+	end
 
-		-- Weight
-		local weightFrame = frame:FindFirstChild("Weight")
-		if weightFrame then
-			local textLabel = weightFrame:FindFirstChild("TextLabel") or weightFrame:FindFirstChildWhichIsA("TextLabel")
-			if textLabel then
-				textLabel.Text = string.format("%.1fkg", petData.weight or 0)
+	-- Mutations
+	local mutationsFrame = frame:FindFirstChild("Mutations")
+	if mutationsFrame then
+		local textLabel = mutationsFrame:FindFirstChild("TextLabel")
+			or mutationsFrame:FindFirstChildWhichIsA("TextLabel")
+		if textLabel then
+			if petData.mutations and #petData.mutations > 0 then
+				local mutNames = {}
+				for _, mut in petData.mutations do
+					table.insert(mutNames, Constants.MUTATION_NAMES[mut] or mut)
+				end
+				textLabel.Text = table.concat(mutNames, ", ")
+			else
+				textLabel.Text = "None"
 			end
 		end
+	end
 
-		-- Level (2개 있음 - 하나는 레벨 숫자, 하나는 EXP 바)
-		local levels = {}
-		for _, child in frame:GetChildren() do
-			if child.Name == "Level" then
-				table.insert(levels, child)
-			end
-		end
-
-		local level = petData.level or 1
-		local xp = petData.xp or 0
-		local xpRequired = BalanceConfig.Pet.XP_REQUIRED[level] or 0
-
-		if levels[1] then
-			local textLabel = levels[1]:FindFirstChild("TextLabel") or levels[1]:FindFirstChildWhichIsA("TextLabel")
-			if textLabel then
-				textLabel.Text = "Lv." .. level
-			end
-		end
-
-		if levels[2] then
-			local textLabel = levels[2]:FindFirstChild("TextLabel") or levels[2]:FindFirstChildWhichIsA("TextLabel")
-			if textLabel then
-				textLabel.Text = xp .. " / " .. (xpRequired > 0 and xpRequired or "MAX") .. " EXP"
+	-- Buffs
+	local buffsFrame = frame:FindFirstChild("Buffs")
+	if buffsFrame then
+		local textLabel = buffsFrame:FindFirstChild("TextLabel")
+			or buffsFrame:FindFirstChildWhichIsA("TextLabel")
+		if textLabel then
+			if petData.traits and #petData.traits > 0 then
+				textLabel.Text = table.concat(petData.traits, ", ")
+			else
+				textLabel.Text = "None"
 			end
 		end
 	end
