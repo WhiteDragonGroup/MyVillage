@@ -102,8 +102,15 @@ function AdminUI.init()
 		btnCorner.Parent = button
 
 		button.MouseButton1Click:Connect(function()
-			-- 채팅으로 명령어 실행
-			player:Chat(btn.cmd)
+			-- TextChatService로 명령어 전송
+			local textChatService = game:GetService("TextChatService")
+			local channel = textChatService:FindFirstChild("TextChannels")
+			if channel then
+				local rbxGeneral = channel:FindFirstChild("RBXGeneral")
+				if rbxGeneral then
+					rbxGeneral:SendAsync(btn.cmd)
+				end
+			end
 		end)
 
 		y = y + 34
