@@ -163,12 +163,37 @@ function PetDetailUI.show(petData: { [string]: any })
 		if building then building.Visible = (petTypes["Construction"] == true) end
 	end
 
-	-- Icon > Buffs
+	-- Icon > Buffs > 내부 Info(Fortune 호버) 숨기기
 	local iconFrame = frame:FindFirstChild("Icon")
 	if iconFrame then
-		local buffsFrame = iconFrame:FindFirstChild("Buffs")
-		if buffsFrame then
-			-- TODO: 실제 버프 데이터로 업데이트
+		for _, desc in iconFrame:GetDescendants() do
+			if desc.Name == "Info" and desc:IsA("Frame") then
+				desc.Visible = false
+			end
+		end
+	end
+
+	-- 위쪽 Fortune (Frame > Info)도 기본 숨기고 호버로만
+	local infoFrame = frame:FindFirstChild("Info")
+	if infoFrame then
+		infoFrame.Visible = false
+
+		-- 호버 설정 (Icon에 마우스 대면 Info 보이기)
+		if iconFrame and not iconFrame:GetAttribute("_infoHover") then
+			iconFrame:SetAttribute("_infoHover", true)
+			local hoverBtn = Instance.new("TextButton")
+			hoverBtn.Name = "_InfoHover"
+			hoverBtn.Size = UDim2.new(1, 0, 1, 0)
+			hoverBtn.BackgroundTransparency = 1
+			hoverBtn.Text = ""
+			hoverBtn.ZIndex = 10
+			hoverBtn.Parent = iconFrame
+			hoverBtn.MouseEnter:Connect(function()
+				infoFrame.Visible = true
+			end)
+			hoverBtn.MouseLeave:Connect(function()
+				infoFrame.Visible = false
+			end)
 		end
 	end
 
