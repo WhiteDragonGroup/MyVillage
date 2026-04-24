@@ -996,15 +996,30 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 				toSelected(mainPart)
 			end
 		elseif currentState == BuildState.Idle then
-			-- Idle 상태에서 펫 클릭 → 상세 정보
+			-- Idle 상태에서 펫/알 클릭
 			local target = mouse.Target
-			if target and target:IsA("BasePart") then
-				if target:GetAttribute("PetId") then
-					-- 펫 클릭 → 상세 정보
+			-- 클릭한 파트 또는 조상에서 PetId/IsEgg 찾기
+			local petTarget = nil
+			local eggTarget = nil
+			local current = target
+			while current and current ~= workspace do
+				if current:IsA("BasePart") then
+					if current:GetAttribute("PetId") then
+						petTarget = current
+						break
+					elseif current:GetAttribute("IsEgg") then
+						eggTarget = current
+						break
+					end
+				end
+				current = current.Parent
+			end
+
+			if petTarget then
 					task.spawn(function()
 						local pets = getPetsFunc:InvokeServer()
 						if pets then
-							local petId = target:GetAttribute("PetId")
+							local petId = petTarget:GetAttribute("PetId")
 							for _, pet in pets do
 								if pet.petId == petId then
 									PetDetailUI.show(pet)
@@ -1013,13 +1028,11 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 							end
 						end
 					end)
-				elseif target:GetAttribute("IsEgg") then
-					-- 알 클릭 → 부화 시도
-					local eggId = target:GetAttribute("EggId")
-					local readyToHatch = target:GetAttribute("ReadyToHatch")
-					if eggId and readyToHatch then
-						hatchEggEvent:FireServer(eggId)
-					end
+			elseif eggTarget then
+				local eggId = eggTarget:GetAttribute("EggId")
+				local readyToHatch = eggTarget:GetAttribute("ReadyToHatch")
+				if eggId and readyToHatch then
+					hatchEggEvent:FireServer(eggId)
 				end
 			end
 		end
