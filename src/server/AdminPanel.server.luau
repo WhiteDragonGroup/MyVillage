@@ -92,6 +92,20 @@ adminEvent.OnServerEvent:Connect(function(player, cmd, arg1, arg2)
 		end
 		notify(player, "All eggs added (x3 each)")
 
+	elseif cmd == "removeallbuildings" then
+		-- 인벤토리 초기화
+		InventoryManager.initPlayer(player, nil)
+		notify(player, "All buildings removed from inventory")
+
+	elseif cmd == "removeallpets" then
+		PetManager.removePlayer(player)
+		PetManager.initPlayer(player, nil)
+		notify(player, "All pets removed")
+
+	elseif cmd == "removealleggs" then
+		EggManager.initPlayer(player, nil)
+		notify(player, "All eggs removed")
+
 	elseif cmd == "addbuilding" then
 		local itemName = arg1 or "Mine"
 		local count = tonumber(arg2) or 1

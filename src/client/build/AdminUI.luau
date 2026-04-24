@@ -19,15 +19,17 @@ local PANEL_WIDTH = 260
 local PANEL_HEIGHT = 400
 
 local BUTTONS = {
-	{ label = "모든 건물 추가", cmd = "addallbuildings" },
-	{ label = "모든 펫 추가", cmd = "addallpets" },
-	{ label = "모든 알 추가", cmd = "addalleggs" },
+	{ label = "모든 건물 추가/삭제", cmd = "togglebuildings", toggle = true },
+	{ label = "모든 펫 추가/삭제", cmd = "togglepets", toggle = true },
+	{ label = "모든 알 추가/삭제", cmd = "toggleeggs", toggle = true },
 	{ label = "코인 10000 추가", cmd = "addcoins", arg1 = 10000 },
 	{ label = "코인 500으로 설정", cmd = "setcoins", arg1 = 500 },
 	{ label = "상점 재고 리필", cmd = "restock" },
 	{ label = "낮으로 변경", cmd = "settime", arg1 = 14 },
 	{ label = "밤으로 변경", cmd = "settime", arg1 = 2 },
 }
+
+local _toggleStates = {}
 
 function AdminUI.init()
 	screenGui = Instance.new("ScreenGui")
@@ -104,7 +106,23 @@ function AdminUI.init()
 		btnCorner.Parent = button
 
 		button.MouseButton1Click:Connect(function()
-			adminEvent:FireServer(btn.cmd, btn.arg1, btn.arg2)
+			if btn.toggle then
+				local on = not _toggleStates[btn.cmd]
+				_toggleStates[btn.cmd] = on
+				if on then
+					-- 추가
+					local addCmd = btn.cmd:gsub("toggle", "addall")
+					adminEvent:FireServer(addCmd, btn.arg1, btn.arg2)
+					button.BackgroundColor3 = Color3.fromRGB(50, 120, 50)
+				else
+					-- 삭제
+					local removeCmd = btn.cmd:gsub("toggle", "removeall")
+					adminEvent:FireServer(removeCmd, btn.arg1, btn.arg2)
+					button.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+				end
+			else
+				adminEvent:FireServer(btn.cmd, btn.arg1, btn.arg2)
+			end
 		end)
 
 		y = y + 34
