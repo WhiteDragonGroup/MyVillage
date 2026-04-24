@@ -1396,10 +1396,30 @@ MainHUD.init({
 		if not hrp then return end
 
 		if destination == "village" then
-			-- BuildZone으로 텔레포트 (입구 파트 추가 시 변경 예정)
-			local bz = getMyBuildZone()
-			if bz then
-				hrp.CFrame = bz.CFrame + Vector3.new(0, 5, 0)
+			-- Plot > Sign 위치로 텔레포트 (입구)
+			local plotsFolder = workspace:FindFirstChild("Plots")
+			local teleported = false
+			if plotsFolder then
+				for _, plot in plotsFolder:GetChildren() do
+					if plot:GetAttribute("Owner") == player.Name then
+						local sign = plot:FindFirstChild("Sign")
+						if sign then
+							local part = if sign:IsA("BasePart") then sign
+								else sign:FindFirstChildWhichIsA("BasePart", true)
+							if part then
+								hrp.CFrame = CFrame.new(part.Position + Vector3.new(0, 3, 0))
+								teleported = true
+							end
+						end
+						break
+					end
+				end
+			end
+			if not teleported then
+				local bz = getMyBuildZone()
+				if bz then
+					hrp.CFrame = bz.CFrame + Vector3.new(0, 5, 0)
+				end
 			end
 		elseif destination == "buildings" then
 			hrp.CFrame = CFrame.new(113.7, 10.8, 10.3)
