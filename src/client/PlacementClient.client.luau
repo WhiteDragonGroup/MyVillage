@@ -1409,7 +1409,10 @@ MainHUD.init({
 							local part = if sign:IsA("BasePart") then sign
 								else sign:FindFirstChildWhichIsA("BasePart", true)
 							if part then
-								hrp.CFrame = CFrame.new(part.Position + Vector3.new(0, 3, 0))
+								-- 표지판 XZ 위치, Y는 BuildZone 높이
+								local bz = getMyBuildZone()
+								local groundY = if bz then bz.Position.Y + bz.Size.Y / 2 + 3 else part.Position.Y
+								hrp.CFrame = CFrame.new(part.Position.X, groundY, part.Position.Z)
 								teleported = true
 							end
 						end
