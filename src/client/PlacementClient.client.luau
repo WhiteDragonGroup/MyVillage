@@ -1403,6 +1403,8 @@ MainHUD.init({
 				for _, plot in plotsFolder:GetChildren() do
 					if plot:GetAttribute("Owner") == player.Name then
 						local sign = plot:FindFirstChild("Sign")
+						local vs = sign and sign:FindFirstChild("VillageSign")
+						if vs then sign = vs end
 						if sign then
 							local part = if sign:IsA("BasePart") then sign
 								else sign:FindFirstChildWhichIsA("BasePart", true)
