@@ -163,20 +163,54 @@ function PetDetailUI.show(petData: { [string]: any })
 		if building then building.Visible = (petTypes["Construction"] == true) end
 	end
 
-	-- Icon > Buffs > 내부 Info(Fortune 호버) 숨기기
+	-- 모든 Info 프레임 숨기기 (Frame 직속 Info 제외한 나머지)
 	local iconFrame = frame:FindFirstChild("Icon")
-	if iconFrame then
-		for _, desc in iconFrame:GetDescendants() do
-			if desc.Name == "Info" and desc:IsA("Frame") then
-				desc.Visible = false
-			end
+
+	-- 위쪽 Info (설명) — 호버로만 표시
+	local infoFrame = frame:FindFirstChild("Info")
+	if infoFrame then
+		infoFrame.Visible = false
+
+		if iconFrame and not iconFrame:GetAttribute("_infoHover") then
+			iconFrame:SetAttribute("_infoHover", true)
+			local hoverBtn = Instance.new("TextButton")
+			hoverBtn.Name = "_InfoHover"
+			hoverBtn.Size = UDim2.new(1, 0, 1, 0)
+			hoverBtn.BackgroundTransparency = 1
+			hoverBtn.Text = ""
+			hoverBtn.ZIndex = 10
+			hoverBtn.Parent = iconFrame
+			hoverBtn.MouseEnter:Connect(function()
+				infoFrame.Visible = true
+			end)
+			hoverBtn.MouseLeave:Connect(function()
+				infoFrame.Visible = false
+			end)
 		end
 	end
 
-	-- 위쪽 Info (설명) — 항상 보이기, 텍스트만 업데이트
-	local infoFrame = frame:FindFirstChild("Info")
-	if infoFrame then
-		infoFrame.Visible = true
+	-- 나머지 Info 프레임도 호버로 (Fortune 등 — 부모에 마우스 대면 보이기)
+	for _, desc in frame:GetDescendants() do
+		if desc.Name == "Info" and desc:IsA("Frame") and desc ~= infoFrame then
+			desc.Visible = false
+			local parent = desc.Parent
+			if parent and not parent:GetAttribute("_infoHover") then
+				parent:SetAttribute("_infoHover", true)
+				local btn = Instance.new("TextButton")
+				btn.Name = "_Hover"
+				btn.Size = UDim2.new(1, 0, 1, 0)
+				btn.BackgroundTransparency = 1
+				btn.Text = ""
+				btn.ZIndex = 10
+				btn.Parent = parent
+				btn.MouseEnter:Connect(function()
+					desc.Visible = true
+				end)
+				btn.MouseLeave:Connect(function()
+					desc.Visible = false
+				end)
+			end
+		end
 	end
 
 	petInfoFrame.Visible = true
