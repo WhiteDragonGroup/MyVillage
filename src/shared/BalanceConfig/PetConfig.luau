@@ -56,8 +56,8 @@ PetConfig.LEVEL_EFFICIENCY = {
 
 -- 기본 지급 펫 (플레이어 최초 접속 시)
 PetConfig.DEFAULT_PETS = {
-	{ petName = "FarmerNewbie", petType = "Farming", rarity = "일반",
-	  size = "Small", race = "인간", traits = {} },
+	{ petName = "FarmerNewbie", petType = "Farming", rarity = "Common",
+	  size = "Small", race = "Human", traits = {} },
 }
 
 -- 펫 카탈로그 (petType별 작업 효율 배율)
@@ -70,20 +70,20 @@ PetConfig.TYPE_MULTIPLIER = {
 
 -- 등급별 건설 속도 배율
 PetConfig.RARITY_MULTIPLIER = {
-	["일반"] = 1.0,
-	["희귀"] = 1.5,
-	["에픽"] = 2.0,
-	["전설"] = 3.0,
-	["신화"] = 5.0,
+	["Common"] = 1.0,
+	["Rare"] = 1.5,
+	["Epic"] = 2.0,
+	["Legendary"] = 3.0,
+	["Mythic"] = 5.0,
 }
 
 -- 등급별 펫 색상
 PetConfig.RARITY_COLORS = {
-	["일반"] = Color3.fromRGB(140, 200, 140),
-	["희귀"] = Color3.fromRGB(100, 180, 255),
-	["에픽"] = Color3.fromRGB(200, 130, 255),
-	["전설"] = Color3.fromRGB(255, 200, 80),
-	["신화"] = Color3.fromRGB(255, 100, 100),
+	["Common"] = Color3.fromRGB(140, 200, 140),
+	["Rare"] = Color3.fromRGB(100, 180, 255),
+	["Epic"] = Color3.fromRGB(200, 130, 255),
+	["Legendary"] = Color3.fromRGB(255, 200, 80),
+	["Mythic"] = Color3.fromRGB(255, 100, 100),
 }
 
 return PetConfig

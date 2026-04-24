@@ -51,7 +51,7 @@ EggManager.setPetFunction(function(player, petData)
 		model = nil,
 		mutations = mutations,
 		size = size,
-		race = petData.race or "인간",
+		race = petData.race or "Human",
 		traits = {},
 		weight = stdWeight * weightMult,
 		weightMult = weightMult,

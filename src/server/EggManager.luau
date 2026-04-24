@@ -320,7 +320,7 @@ function EggManager.hatchEgg(player: Player, eggId: string): (boolean, string, {
 			petType = selectedPet.petType,
 			rarity = selectedPet.rarity,
 			size = selectedPet.size or "Small",
-			race = selectedPet.race or "인간",
+			race = selectedPet.race or "Human",
 			mutations = mutations,
 		}
 		_addPet(player, petData)
@@ -367,7 +367,7 @@ function EggManager._rollRarity(weights: { [string]: number }): string
 	for rarity, _ in weights do
 		return rarity
 	end
-	return "일반"
+	return "Common"
 end
 
 -- 배치된 알 목록

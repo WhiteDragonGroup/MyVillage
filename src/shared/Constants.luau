@@ -20,20 +20,20 @@ Constants.BuildingType = {
 
 -- 건물 등급
 Constants.BuildingRarity = {
-	Common = "일반",
-	Rare = "희귀",
-	Epic = "에픽",
-	Legendary = "전설",
-	Mythic = "신화",
+	Common = "Common",
+	Rare = "Rare",
+	Epic = "Epic",
+	Legendary = "Legendary",
+	Mythic = "Mythic",
 }
 
 -- 등급별 색상
 Constants.RARITY_COLORS = {
-	["일반"] = Color3.fromRGB(180, 180, 180),
-	["희귀"] = Color3.fromRGB(0, 150, 255),
-	["에픽"] = Color3.fromRGB(180, 0, 255),
-	["전설"] = Color3.fromRGB(255, 180, 0),
-	["신화"] = Color3.fromRGB(255, 50, 50),
+	["Common"] = Color3.fromRGB(180, 180, 180),
+	["Rare"] = Color3.fromRGB(0, 150, 255),
+	["Epic"] = Color3.fromRGB(180, 0, 255),
+	["Legendary"] = Color3.fromRGB(255, 180, 0),
+	["Mythic"] = Color3.fromRGB(255, 50, 50),
 }
 
 -- 건물 카탈로그
@@ -41,37 +41,37 @@ Constants.RARITY_COLORS = {
 -- icon: 빌드모드 인벤토리 아이콘 이미지 (rbxassetid://숫자)
 -- TODO: 각 건물별 아이콘 이미지 Asset ID를 icon 필드에 입력해주세요
 Constants.BUILDINGS = {
-	TownHall    = { name = "마을회관",  types = {"Support"}, rarity = "일반", collisionSize = Vector3.new(8, 6, 8), icon = "" },
-	Garden      = { name = "텃밭",      types = {"Work"}, rarity = "일반", collisionSize = Vector3.new(6, 2, 6), workTypes = {"농사"}, icon = "" },
-	Mine        = { name = "광산",      types = {"Work"}, rarity = "희귀", collisionSize = Vector3.new(6, 4, 6), workTypes = {"채굴"}, icon = "" },
-	Lab         = { name = "연구소",    types = {"Support"}, rarity = "에픽", collisionSize = Vector3.new(8, 8, 8), icon = "" },
-	HotSpring   = { name = "온천",      types = {"Rest"}, rarity = "희귀", collisionSize = Vector3.new(8, 2, 8), icon = "" },
-	Blacksmith  = { name = "대장간",    types = {"Work"}, rarity = "희귀", collisionSize = Vector3.new(6, 5, 6), workTypes = {"건설"}, icon = "" },
-	Inn         = { name = "여관",      types = {"Rest"}, rarity = "일반", collisionSize = Vector3.new(7, 5, 6), icon = "" },
-	Fountain    = { name = "분수대",    types = {"Decoration"}, rarity = "일반", collisionSize = Vector3.new(4, 3, 4), icon = "" },
-	Market      = { name = "시장",      types = {"Work"}, rarity = "일반", collisionSize = Vector3.new(8, 4, 6), workTypes = {"농사", "채굴"}, icon = "" },
-	Library     = { name = "도서관",    types = {"Support"}, rarity = "희귀", collisionSize = Vector3.new(7, 6, 7), icon = "" },
-	MagicTower  = { name = "마법탑",    types = {"Support"}, rarity = "전설", collisionSize = Vector3.new(5, 12, 5), icon = "" },
-	Brewery     = { name = "양조장",    types = {"Work"}, rarity = "에픽", collisionSize = Vector3.new(6, 5, 8), workTypes = {"농사"}, icon = "" },
-	Pavilion    = { name = "정자",      types = {"Rest"}, rarity = "에픽", collisionSize = Vector3.new(8, 4, 8), icon = "" },
-	Temple      = { name = "신전",      types = {"Support"}, rarity = "신화", collisionSize = Vector3.new(10, 8, 10), icon = "" },
-	WorldTree   = { name = "세계수",    types = {"Rest"}, rarity = "신화", collisionSize = Vector3.new(6, 14, 6), icon = "" },
-	Campfire    = { name = "캠프파이어", types = {"Rest"}, rarity = "일반", collisionSize = Vector3.new(4, 3, 4), icon = "" },
-	PotionCafe  = { name = "포션카페",  types = {"Support"}, rarity = "희귀", collisionSize = Vector3.new(6, 5, 6), icon = "" },
-	AltarOfBlessing = { name = "축복의 제단", types = {"Support"}, rarity = "전설", collisionSize = Vector3.new(8, 6, 8), icon = "" },
-	Farm        = { name = "농장",      types = {"Work"}, rarity = "일반", collisionSize = Vector3.new(8, 3, 8), workTypes = {"농사"}, icon = "" },
-	Laboratory  = { name = "연구소",    types = {"Support"}, rarity = "에픽", collisionSize = Vector3.new(8, 8, 8), icon = "" },
-	GiantFurnace = { name = "거대 용광로", types = {"Work"}, rarity = "에픽", collisionSize = Vector3.new(8, 8, 8), workTypes = {"채굴"}, icon = "" },
-	TreeOfGrowth = { name = "성장의 나무", types = {"Rest"}, rarity = "전설", collisionSize = Vector3.new(6, 12, 6), icon = "" },
-	ClockTower  = { name = "시계탑",    types = {"Decoration"}, rarity = "희귀", collisionSize = Vector3.new(6, 10, 6), icon = "" },
+	TownHall    = { name = "Town Hall",  types = {"Support"}, rarity = "Common", collisionSize = Vector3.new(8, 6, 8), icon = "" },
+	Garden      = { name = "Garden",      types = {"Work"}, rarity = "Common", collisionSize = Vector3.new(6, 2, 6), workTypes = {"Farming"}, icon = "" },
+	Mine        = { name = "Mine",      types = {"Work"}, rarity = "Rare", collisionSize = Vector3.new(6, 4, 6), workTypes = {"Mining"}, icon = "" },
+	Lab         = { name = "Laboratory",    types = {"Support"}, rarity = "Epic", collisionSize = Vector3.new(8, 8, 8), icon = "" },
+	HotSpring   = { name = "Hot Spring",      types = {"Rest"}, rarity = "Rare", collisionSize = Vector3.new(8, 2, 8), icon = "" },
+	Blacksmith  = { name = "Blacksmith",    types = {"Work"}, rarity = "Rare", collisionSize = Vector3.new(6, 5, 6), workTypes = {"Construction"}, icon = "" },
+	Inn         = { name = "Inn",      types = {"Rest"}, rarity = "Common", collisionSize = Vector3.new(7, 5, 6), icon = "" },
+	Fountain    = { name = "Fountain",    types = {"Decoration"}, rarity = "Common", collisionSize = Vector3.new(4, 3, 4), icon = "" },
+	Market      = { name = "Market",      types = {"Work"}, rarity = "Common", collisionSize = Vector3.new(8, 4, 6), workTypes = {"Farming", "Mining"}, icon = "" },
+	Library     = { name = "Library",    types = {"Support"}, rarity = "Rare", collisionSize = Vector3.new(7, 6, 7), icon = "" },
+	MagicTower  = { name = "Magic Tower",    types = {"Support"}, rarity = "Legendary", collisionSize = Vector3.new(5, 12, 5), icon = "" },
+	Brewery     = { name = "Brewery",    types = {"Work"}, rarity = "Epic", collisionSize = Vector3.new(6, 5, 8), workTypes = {"Farming"}, icon = "" },
+	Pavilion    = { name = "Pavilion",      types = {"Rest"}, rarity = "Epic", collisionSize = Vector3.new(8, 4, 8), icon = "" },
+	Temple      = { name = "Temple",      types = {"Support"}, rarity = "Mythic", collisionSize = Vector3.new(10, 8, 10), icon = "" },
+	WorldTree   = { name = "World Tree",    types = {"Rest"}, rarity = "Mythic", collisionSize = Vector3.new(6, 14, 6), icon = "" },
+	Campfire    = { name = "Campfire", types = {"Rest"}, rarity = "Common", collisionSize = Vector3.new(4, 3, 4), icon = "" },
+	PotionCafe  = { name = "Potion Cafe",  types = {"Support"}, rarity = "Rare", collisionSize = Vector3.new(6, 5, 6), icon = "" },
+	AltarOfBlessing = { name = "Altar of Blessing", types = {"Support"}, rarity = "Legendary", collisionSize = Vector3.new(8, 6, 8), icon = "" },
+	Farm        = { name = "Farm",      types = {"Work"}, rarity = "Common", collisionSize = Vector3.new(8, 3, 8), workTypes = {"Farming"}, icon = "" },
+	Laboratory  = { name = "Laboratory",    types = {"Support"}, rarity = "Epic", collisionSize = Vector3.new(8, 8, 8), icon = "" },
+	GiantFurnace = { name = "Giant Furnace", types = {"Work"}, rarity = "Epic", collisionSize = Vector3.new(8, 8, 8), workTypes = {"Mining"}, icon = "" },
+	TreeOfGrowth = { name = "Tree of Growth", types = {"Rest"}, rarity = "Legendary", collisionSize = Vector3.new(6, 12, 6), icon = "" },
+	ClockTower  = { name = "Clock Tower",    types = {"Decoration"}, rarity = "Rare", collisionSize = Vector3.new(6, 10, 6), icon = "" },
 }
 
 -- 펫 유형
 Constants.PetType = {
-	Construction = "건설",
-	Farming = "농사",
-	Mining = "채굴",
-	Buff = "버프",
+	Construction = "Construction",
+	Farming = "Farming",
+	Mining = "Mining",
+	Buff = "Buff",
 }
 
 -- 펫 행동 상태
@@ -97,8 +97,8 @@ Constants.PetSize = {
 
 -- 펫 종족
 Constants.PetRace = {
-	Human = "인간", Plant = "식물", Dinosaur = "공룡", Bug = "벌레",
-	Robot = "로봇", Golem = "골렘", Skeleton = "해골",
+	Human = "Human", Plant = "Plant", Dinosaur = "Dinosaur", Bug = "Bug",
+	Robot = "Robot", Golem = "Golem", Skeleton = "Skeleton",
 }
 
 -- 업그레이드 상태
@@ -110,24 +110,24 @@ Constants.UpgradeState = {
 -- 펫 카탈로그
 Constants.PETS = {
 	-- 일반
-	["FarmerNewbie"]  = { name = "농부 뉴비",      petTypes = {"Farming", "Construction"},  rarity = "일반", size = "Small" },
-	["Skeleton"]      = { name = "스켈레톤",        petTypes = {"Mining", "Construction"},   rarity = "일반", size = "Small" },
-	["Ghost"]         = { name = "유령",            petTypes = {"Farming", "Buff"},          rarity = "일반", size = "Small" },
-	["SnowMole"]      = { name = "눈 두더지",       petTypes = {"Mining"},                   rarity = "일반", size = "Small" },
-	["Firewood"]      = { name = "장작 필요",       petTypes = {"Buff"},                     rarity = "일반" },
+	["FarmerNewbie"]  = { name = "Farmer Newbie",      petTypes = {"Farming", "Construction"},  rarity = "Common", size = "Small" },
+	["Skeleton"]      = { name = "Skeleton",        petTypes = {"Mining", "Construction"},   rarity = "Common", size = "Small" },
+	["Ghost"]         = { name = "Ghost",            petTypes = {"Farming", "Buff"},          rarity = "Common", size = "Small" },
+	["SnowMole"]      = { name = "Snow Mole",       petTypes = {"Mining"},                   rarity = "Common", size = "Small" },
+	["Firewood"]      = { name = "Firewood",       petTypes = {"Buff"},                     rarity = "Common" },
 	-- 레어
-	["Imp"]           = { name = "임프",            petTypes = {"Mining", "Construction", "Buff"}, rarity = "희귀", size = "Medium" },
-	["Sunflowie"]     = { name = "썬플라워",        petTypes = {"Farming", "Buff"},          rarity = "희귀", size = "Medium" },
-	["ZombieNewbie"]  = { name = "좀비 뉴비",       petTypes = {"Farming", "Construction"},  rarity = "희귀", size = "Small" },
-	["Yeti"]          = { name = "예티",            petTypes = {"Farming", "Construction"},  rarity = "희귀", size = "Big" },
+	["Imp"]           = { name = "Imp",            petTypes = {"Mining", "Construction", "Buff"}, rarity = "Rare", size = "Medium" },
+	["Sunflowie"]     = { name = "Sunflowie",        petTypes = {"Farming", "Buff"},          rarity = "Rare", size = "Medium" },
+	["ZombieNewbie"]  = { name = "Zombie Newbie",       petTypes = {"Farming", "Construction"},  rarity = "Rare", size = "Small" },
+	["Yeti"]          = { name = "Yeti",            petTypes = {"Farming", "Construction"},  rarity = "Rare", size = "Big" },
 	-- 에픽
-	["Zipbit"]        = { name = "집비트",          petTypes = {"Construction", "Buff"},     rarity = "에픽", size = "Small" },
-	["CrystalGolem"]  = { name = "크리스탈 골렘",   petTypes = {"Mining", "Construction"},   rarity = "에픽", size = "Medium" },
-	["IceGolem"]      = { name = "아이스 골렘",     petTypes = {"Mining", "Construction"},   rarity = "에픽", size = "Medium" },
+	["Zipbit"]        = { name = "Zipbit",          petTypes = {"Construction", "Buff"},     rarity = "Epic", size = "Small" },
+	["CrystalGolem"]  = { name = "Crystal Golem",   petTypes = {"Mining", "Construction"},   rarity = "Epic", size = "Medium" },
+	["IceGolem"]      = { name = "Ice Golem",     petTypes = {"Mining", "Construction"},   rarity = "Epic", size = "Medium" },
 	-- 전설
-	["BabyDragon"]    = { name = "베이비 드래곤",   petTypes = {"Mining", "Construction", "Buff"}, rarity = "전설", size = "Medium" },
-	["Witch"]         = { name = "마녀",            petTypes = {"Farming"},                  rarity = "전설", size = "Medium" },
-	["Lumini"]        = { name = "루미니",          petTypes = {"Farming", "Buff"},          rarity = "전설", size = "Small" },
+	["BabyDragon"]    = { name = "Baby Dragon",   petTypes = {"Mining", "Construction", "Buff"}, rarity = "Legendary", size = "Medium" },
+	["Witch"]         = { name = "Witch",            petTypes = {"Farming"},                  rarity = "Legendary", size = "Medium" },
+	["Lumini"]        = { name = "Lumini",          petTypes = {"Farming", "Buff"},          rarity = "Legendary", size = "Small" },
 }
 
 -- 돌연변이 타입
@@ -142,12 +142,12 @@ Constants.MutationType = {
 
 -- 돌연변이 표시명
 Constants.MUTATION_NAMES = {
-	Shocked = "충전된",
-	Gold = "골드",
-	Inverted = "반전된",
-	Celestial = "셀레스티얼",
-	Charged = "차지드",
-	Potential = "포텐셜",
+	Shocked = "Shocked",
+	Gold = "Gold",
+	Inverted = "Inverted",
+	Celestial = "Celestial",
+	Charged = "Charged",
+	Potential = "Potential",
 }
 
 -- 돌연변이 색상 (UI/VFX 참조)

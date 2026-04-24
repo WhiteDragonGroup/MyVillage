@@ -17,19 +17,18 @@ WeatherConfig.WEIGHTS = {
 	-- 추후 추가: Glitch, Eclipse 등
 }
 
--- 알림 메시지 { 영어, 한국어 }
 WeatherConfig.MESSAGES = {
 	Rain = {
-		start = "비는 대지를 적시고 생명을 깨웁니다.\n농사 효율이 50% 증가합니다!",
-		finish = "비가 그쳤습니다.",
+		start = "Rain soaks the earth and awakens life.\nFarming efficiency increased by 50%!",
+		finish = "The rain has stopped.",
 	},
 	Frost = {
-		start = "차가운 기운이 시간을 얼려버립니다.\n펫의 버프 지속시간이 소모되지 않습니다!",
-		finish = "눈이 그쳤습니다.",
+		start = "A cold chill freezes time itself.\nPet buff durations are paused!",
+		finish = "The frost has lifted.",
 	},
 	ThunderStorm = {
-		start = "폭풍우 속 번개의 힘이 깃듭니다!\n번개에 맞은 펫이 영구적으로 더 강력해집니다!",
-		finish = "뇌우가 지나갔습니다.",
+		start = "Lightning strikes with great power!\nPets struck by lightning become permanently stronger!",
+		finish = "The thunderstorm has passed.",
 	},
 }
 

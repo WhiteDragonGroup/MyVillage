@@ -190,7 +190,7 @@ local function createPetModel(petData, position: Vector3): BasePart
 	target:SetAttribute("PetLevel", petData.level or 1)
 	target:SetAttribute("PetWeight", petData.weight or 5)
 	target:SetAttribute("PetSize", petData.size or "Small")
-	target:SetAttribute("PetRace", petData.race or "인간")
+	target:SetAttribute("PetRace", petData.race or "Human")
 
 	-- 돌연변이 (쉼표 구분 문자열)
 	local mutList = {}
@@ -649,14 +649,14 @@ function PetManager.initPlayer(player: Player, savedPets: { any }?)
 				petId = petId,
 				petName = savedPet.petName or "???",
 				petType = savedPet.petType or "Construction",
-				rarity = savedPet.rarity or "일반",
+				rarity = savedPet.rarity or "Common",
 				ownerId = player.UserId,
 				assignedBuildingId = "",
 				model = nil,
 				mutations = restoredMutations,
 				-- 신규 필드
 				size = size,
-				race = savedPet.race or "인간",
+				race = savedPet.race or "Human",
 				traits = savedPet.traits or {},
 				weight = savedPet.weight or (stdWeight * weightMult),
 				weightMult = weightMult,
@@ -686,7 +686,7 @@ function PetManager.initPlayer(player: Player, savedPets: { any }?)
 				model = nil,
 				mutations = {},
 				size = size,
-				race = defaultPet.race or "인간",
+				race = defaultPet.race or "Human",
 				traits = defaultPet.traits or {},
 				weight = stdWeight * weightMult,
 				weightMult = weightMult,
