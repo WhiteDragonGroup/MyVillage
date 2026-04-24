@@ -173,28 +173,10 @@ function PetDetailUI.show(petData: { [string]: any })
 		end
 	end
 
-	-- 위쪽 Fortune (Frame > Info)도 기본 숨기고 호버로만
+	-- 위쪽 Info (설명) — 항상 보이기, 텍스트만 업데이트
 	local infoFrame = frame:FindFirstChild("Info")
 	if infoFrame then
-		infoFrame.Visible = false
-
-		-- 호버 설정 (Icon에 마우스 대면 Info 보이기)
-		if iconFrame and not iconFrame:GetAttribute("_infoHover") then
-			iconFrame:SetAttribute("_infoHover", true)
-			local hoverBtn = Instance.new("TextButton")
-			hoverBtn.Name = "_InfoHover"
-			hoverBtn.Size = UDim2.new(1, 0, 1, 0)
-			hoverBtn.BackgroundTransparency = 1
-			hoverBtn.Text = ""
-			hoverBtn.ZIndex = 10
-			hoverBtn.Parent = iconFrame
-			hoverBtn.MouseEnter:Connect(function()
-				infoFrame.Visible = true
-			end)
-			hoverBtn.MouseLeave:Connect(function()
-				infoFrame.Visible = false
-			end)
-		end
+		infoFrame.Visible = true
 	end
 
 	petInfoFrame.Visible = true
