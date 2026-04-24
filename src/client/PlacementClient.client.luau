@@ -533,12 +533,12 @@ local function toMoving(building: BasePart)
 		DragHandler.init(GridSnap)
 		DragHandler.startDrag(currentBuildZone, previewPart, currentRotationY, function(newCFrame)
 			if previewPart then
-				-- 부모 Model 찾기 (건물 Model 또는 플롯 내 Model)
-				local moveParent = previewPart.Parent
-				local isModel = moveParent and moveParent:IsA("Model") and moveParent ~= workspace
-				if isModel then
-					local mainToPivot = previewPart.CFrame:ToObjectSpace(moveParent:GetPivot())
-					moveParent:PivotTo(newCFrame * mainToPivot)
+				-- 최상위 건물 Model 찾기
+				local moveParent = getParentModel(previewPart)
+				if moveParent then
+					local pos = newCFrame.Position
+					local _, yRot, _ = newCFrame:ToEulerAnglesYXZ()
+					moveParent:PivotTo(CFrame.new(pos) * CFrame.Angles(0, yRot, 0))
 					GridSnap.adjustModelY(moveParent, previewPart, currentBuildZone)
 				else
 					-- 단순 Part: Y를 BuildZone 상단 + Part 높이 절반으로 보정
