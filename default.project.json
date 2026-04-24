@@ -95,6 +95,9 @@
         },
         "EggUpdate": {
           "$className": "RemoteEvent"
+        },
+        "AdminCommand": {
+          "$className": "RemoteEvent"
         }
       },
       "Weather": {

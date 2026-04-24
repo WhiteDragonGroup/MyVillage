@@ -1,10 +1,13 @@
 -- AdminUI.luau
--- 어드민 테스트 패널 UI (채팅 /admin 으로 열기)
+-- Admin test panel UI (/admin to open)
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+local remotes = ReplicatedStorage:WaitForChild("Remotes")
+local adminEvent = remotes:WaitForChild("AdminCommand")
 
 local AdminUI = {}
 
@@ -13,18 +16,17 @@ local mainFrame = nil
 local _visible = false
 
 local PANEL_WIDTH = 260
-local PANEL_HEIGHT = 380
+local PANEL_HEIGHT = 400
 
 local BUTTONS = {
-	{ label = "Add All Buildings", cmd = "/addallbuildings" },
-	{ label = "Add All Pets", cmd = "/addallpets" },
-	{ label = "Add All Eggs", cmd = "/addalleggs" },
-	{ label = "Add 10K Coins", cmd = "/addcoins 10000" },
-	{ label = "Set Coins 200", cmd = "/setcoins 200" },
-	{ label = "Restock Shop", cmd = "/restock" },
-	{ label = "Set Day", cmd = "/settime 14" },
-	{ label = "Set Night", cmd = "/settime 2" },
-	{ label = "Reset Data", cmd = "/reset" },
+	{ label = "Add All Buildings", cmd = "addallbuildings" },
+	{ label = "Add All Pets", cmd = "addallpets" },
+	{ label = "Add All Eggs", cmd = "addalleggs" },
+	{ label = "Add 10K Coins", cmd = "addcoins", arg1 = 10000 },
+	{ label = "Set Coins 500", cmd = "setcoins", arg1 = 500 },
+	{ label = "Restock Shop", cmd = "restock" },
+	{ label = "Set Day", cmd = "settime", arg1 = 14 },
+	{ label = "Set Night", cmd = "settime", arg1 = 2 },
 }
 
 function AdminUI.init()
@@ -102,21 +104,13 @@ function AdminUI.init()
 		btnCorner.Parent = button
 
 		button.MouseButton1Click:Connect(function()
-			-- TextChatService로 명령어 전송
-			local textChatService = game:GetService("TextChatService")
-			local channel = textChatService:FindFirstChild("TextChannels")
-			if channel then
-				local rbxGeneral = channel:FindFirstChild("RBXGeneral")
-				if rbxGeneral then
-					rbxGeneral:SendAsync(btn.cmd)
-				end
-			end
+			adminEvent:FireServer(btn.cmd, btn.arg1, btn.arg2)
 		end)
 
 		y = y + 34
 	end
 
-	-- /admin 채팅으로 열기
+	-- /admin chat to toggle
 	player.Chatted:Connect(function(msg)
 		if msg == "/admin" then
 			AdminUI.toggle()
@@ -144,10 +138,6 @@ function AdminUI.toggle()
 	else
 		AdminUI.show()
 	end
-end
-
-function AdminUI.isVisible()
-	return _visible
 end
 
 return AdminUI
