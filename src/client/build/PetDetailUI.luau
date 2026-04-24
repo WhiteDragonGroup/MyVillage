@@ -163,8 +163,67 @@ function PetDetailUI.show(petData: { [string]: any })
 		if building then building.Visible = (petTypes["Construction"] == true) end
 	end
 
-	-- 모든 Info 프레임 숨기기 (Frame 직속 Info 제외한 나머지)
+	-- Icon: ViewportFrame으로 3D 펫 모델 표시
 	local iconFrame = frame:FindFirstChild("Icon")
+	if iconFrame then
+		-- 기존 이미지 숨기기
+		if iconFrame:IsA("ImageLabel") then
+			iconFrame.Image = ""
+		end
+
+		-- 기존 ViewportFrame 제거
+		local oldVP = iconFrame:FindFirstChild("_PetViewport")
+		if oldVP then oldVP:Destroy() end
+
+		-- 월드에서 해당 펫 모델 찾기 (Pet_{petId})
+		local petModel = nil
+		local plotsFolder = workspace:FindFirstChild("Plots")
+		if plotsFolder then
+			for _, plot in plotsFolder:GetChildren() do
+				if plot:GetAttribute("Owner") == game:GetService("Players").LocalPlayer.Name then
+					for _, desc in plot:GetDescendants() do
+						if desc:GetAttribute("PetId") == petData.petId then
+							-- 최상위 Model 찾기
+							local mdl = desc
+							local cur = desc.Parent
+							while cur and cur ~= plot do
+								if cur:IsA("Model") then mdl = cur end
+								cur = cur.Parent
+							end
+							if mdl:IsA("Model") then
+								petModel = mdl
+							end
+							break
+						end
+					end
+					break
+				end
+			end
+		end
+
+		if petModel then
+			local vpf = Instance.new("ViewportFrame")
+			vpf.Name = "_PetViewport"
+			vpf.Size = UDim2.new(1, 0, 1, 0)
+			vpf.BackgroundTransparency = 1
+			vpf.ZIndex = 2
+			vpf.Parent = iconFrame
+
+			local clone = petModel:Clone()
+			clone.Parent = vpf
+
+			local camera = Instance.new("Camera")
+			vpf.CurrentCamera = camera
+			camera.Parent = vpf
+
+			local cf, size = clone:GetBoundingBox()
+			local maxDim = math.max(size.X, size.Y, size.Z)
+			camera.CFrame = CFrame.lookAt(
+				cf.Position + Vector3.new(maxDim * 0.8, maxDim * 0.5, maxDim * 1.2),
+				cf.Position
+			)
+		end
+	end
 
 	-- 위쪽 Info (설명) — 항상 보이기
 	local infoFrame = frame:FindFirstChild("Info")
