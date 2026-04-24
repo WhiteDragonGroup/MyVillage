@@ -46,10 +46,22 @@ function PetDetailUI.show(petData: { [string]: any })
 	local xp = petData.xp or 0
 	local xpRequired = BalanceConfig.Pet.XP_REQUIRED[level] or 0
 
-	-- === Hide all hover Info frames ===
-	for _, desc in petInfoFrame:GetDescendants() do
-		if desc.Name == "Info" and desc:IsA("Frame") then
-			desc.Visible = false
+	-- Frame 직속 Info만 호버 처리 (Fortune 팝업)
+	local frame = petInfoFrame:FindFirstChild("Frame")
+	if frame then
+		local infoFrame = frame:FindFirstChild("Info")
+		if infoFrame and infoFrame:IsA("Frame") then
+			-- Info 텍스트에 설명 채우기
+			local infoText = infoFrame:FindFirstChild("TextLabel")
+			if infoText then
+				local typeNames = {}
+				if petInfo and petInfo.petTypes then
+					for _, pt in petInfo.petTypes do
+						table.insert(typeNames, Constants.PetType[pt] or pt)
+					end
+				end
+				infoText.Text = (petData.petName or "") .. "\nSpecializes in: " .. table.concat(typeNames, ", ")
+			end
 		end
 	end
 
@@ -78,7 +90,7 @@ function PetDetailUI.show(petData: { [string]: any })
 		return
 	end
 
-	-- Level (2개 — 첫 번째: 레벨 표시)
+	-- Level (2개 모두 업데이트)
 	local levelFrames = {}
 	for _, child in frame:GetChildren() do
 		if child.Name == "Level" then
@@ -86,13 +98,13 @@ function PetDetailUI.show(petData: { [string]: any })
 		end
 	end
 
-	if levelFrames[1] then
-		local nameText = levelFrames[1]:FindFirstChild("NameText")
+	for _, lvlFrame in levelFrames do
+		local nameText = lvlFrame:FindFirstChild("NameText")
 		if nameText then nameText.Text = "Level: " .. level end
-		local nameShadow = levelFrames[1]:FindFirstChild("NameTextShadow")
+		local nameShadow = lvlFrame:FindFirstChild("NameTextShadow")
 		if nameShadow then nameShadow.Text = "Level: " .. level end
 
-		local gaugeBar = levelFrames[1]:FindFirstChild("GaugeBar")
+		local gaugeBar = lvlFrame:FindFirstChild("GaugeBar")
 		if gaugeBar then
 			local gauge = gaugeBar:FindFirstChild("Gauge")
 			if gauge then
