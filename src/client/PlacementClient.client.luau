@@ -113,17 +113,20 @@ local function getBuildingModel(building: BasePart): Model?
 	return parent
 end
 
--- 건물의 부모 Model 찾기 (플롯 안의 건물 Model도 반환)
--- 이동/복원 시 사용 — 플롯 자체만 제외
+-- 건물의 최상위 Model 찾기 (플롯까지 올라가서 가장 높은 Model 반환)
 local function getParentModel(building: BasePart): Model?
-	local parent = building.Parent
-	if not parent or not parent:IsA("Model") then return nil end
-	if parent == workspace then return nil end
-	-- 플롯(Plots 직속 + Owner 있음)만 제외
-	if parent:GetAttribute("Owner") ~= nil and parent.Parent and parent.Parent.Name == "Plots" then
-		return nil
+	local topModel = nil
+	local current = building.Parent
+	while current and current ~= workspace do
+		-- 플롯에 도달하면 중단
+		if current:GetAttribute("Owner") ~= nil then break end
+		if current.Name == "Plots" then break end
+		if current:IsA("Model") then
+			topModel = current
+		end
+		current = current.Parent
 	end
-	return parent
+	return topModel
 end
 
 ----------------------------------------------------------------

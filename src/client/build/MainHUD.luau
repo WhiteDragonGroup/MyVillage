@@ -317,20 +317,20 @@ end
 function MainHUD.hideBuildModeUI()
 	if not normalGui then return end
 	for _, child in normalGui:GetChildren() do
-		if child.Name ~= "Frame" and child:IsA("GuiObject") then
-			child:SetAttribute("_wasVisible", child.Visible)
+		if child.Name ~= "Frame" and child:IsA("GuiObject") and child.Visible then
+			child:SetAttribute("_wasHidden", true)
 			child.Visible = false
 		end
 	end
 end
 
--- 빌드모드 종료: UI 복원
+-- 빌드모드 종료: UI 복원 (숨겼던 것 다시 보이기)
 function MainHUD.restoreBuildModeUI()
 	if not normalGui then return end
 	for _, child in normalGui:GetChildren() do
-		if child:IsA("GuiObject") and child:GetAttribute("_wasVisible") ~= nil then
-			child.Visible = child:GetAttribute("_wasVisible")
-			child:SetAttribute("_wasVisible", nil)
+		if child:IsA("GuiObject") and child:GetAttribute("_wasHidden") then
+			child.Visible = true
+			child:SetAttribute("_wasHidden", nil)
 		end
 	end
 end
