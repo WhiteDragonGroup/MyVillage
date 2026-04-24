@@ -110,9 +110,9 @@ function AdminUI.init()
 		y = y + 34
 	end
 
-	-- /admin chat to toggle
+	-- /admin wd 로 열기 (비번: wd)
 	player.Chatted:Connect(function(msg)
-		if msg == "/admin" then
+		if msg == "/admin wd" then
 			AdminUI.toggle()
 		end
 	end)
