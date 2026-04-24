@@ -1,7 +1,5 @@
 -- PetDetailUI.luau
 -- Design UI: Features > PetInfo
--- Header: NameText, NameTextShadow, Rarity
--- Frame: Info, Jobs, Level(GaugeBar), Weight, Mutations, Buffs, Icon
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -26,7 +24,6 @@ function PetDetailUI.init()
 
 	petInfoFrame.Visible = false
 
-	-- Header Close button
 	local header = petInfoFrame:FindFirstChild("Header")
 	if header then
 		local closeBtn = header:FindFirstChild("Close")
@@ -49,34 +46,27 @@ function PetDetailUI.show(petData: { [string]: any })
 	local xp = petData.xp or 0
 	local xpRequired = BalanceConfig.Pet.XP_REQUIRED[level] or 0
 
-	-- 더미 텍스트 "test" 제거
+	-- === Hide all hover Info frames ===
 	for _, desc in petInfoFrame:GetDescendants() do
-		if desc:IsA("TextLabel") and desc.Text:lower():find("test") then
-			desc.Text = ""
+		if desc.Name == "Info" and desc:IsA("Frame") then
+			desc.Visible = false
 		end
 	end
 
-	-- === Header ===
+	-- === Header: Name + Rarity ===
 	local header = petInfoFrame:FindFirstChild("Header")
 	if header then
-		-- Name: TextLabel 또는 NameText
-		local nameText = header:FindFirstChild("NameText") or header:FindFirstChild("TextLabel")
+		local nameText = header:FindFirstChild("TextLabel")
 		if nameText then nameText.Text = petData.petName or "???" end
 
-		local nameShadow = header:FindFirstChild("NameTextShadow") or header:FindFirstChild("TextLabelShadow")
+		local nameShadow = header:FindFirstChild("TextLabelShadow")
 		if nameShadow then nameShadow.Text = petData.petName or "???" end
 
-		-- Rarity
 		local rarityFrame = header:FindFirstChild("Rarity")
 		if rarityFrame then
 			local rarityLabel = rarityFrame:FindFirstChild("TextLabel")
-				or rarityFrame:FindFirstChildWhichIsA("TextLabel")
 			if rarityLabel then
-				local rarity = petData.rarity
-			if not rarity or rarity == "" then
-				rarity = petInfo and petInfo.rarity or "Common"
-			end
-			rarityLabel.Text = rarity
+				rarityLabel.Text = (petInfo and petInfo.rarity) or petData.rarity or "Common"
 			end
 		end
 	end
@@ -88,117 +78,85 @@ function PetDetailUI.show(petData: { [string]: any })
 		return
 	end
 
-	-- Info (Fortune) — hover only, hidden by default
-	local infoFrame = frame:FindFirstChild("Info")
-	if infoFrame then
-		infoFrame.Visible = false
-		-- Info 텍스트는 디자인 UI의 Fortune 더미 그대로 유지 (또는 업데이트)
-	end
-
-	-- Icon hover → show/hide Info (Fortune)
-	local iconFrame = frame:FindFirstChild("Icon")
-	if iconFrame and infoFrame and not iconFrame:GetAttribute("_hoverSet") then
-		iconFrame:SetAttribute("_hoverSet", true)
-		local hoverBtn = Instance.new("TextButton")
-		hoverBtn.Name = "_Hover"
-		hoverBtn.Size = UDim2.new(1, 0, 1, 0)
-		hoverBtn.BackgroundTransparency = 1
-		hoverBtn.Text = ""
-		hoverBtn.ZIndex = 10
-		hoverBtn.Parent = iconFrame
-		hoverBtn.MouseEnter:Connect(function()
-			infoFrame.Visible = true
-		end)
-		hoverBtn.MouseLeave:Connect(function()
-			infoFrame.Visible = false
-		end)
-	end
-
-	-- Jobs
-	local jobsFrame = frame:FindFirstChild("Jobs")
-	if jobsFrame then
-		local textLabel = jobsFrame:FindFirstChild("TextLabel")
-			or jobsFrame:FindFirstChildWhichIsA("TextLabel")
-		if textLabel then
-			local jobList = {}
-			if petInfo and petInfo.petTypes then
-				for _, pt in petInfo.petTypes do
-					table.insert(jobList, Constants.PetType[pt] or pt)
-				end
-			else
-				table.insert(jobList, Constants.PetType[petData.petType] or petData.petType or "?")
-			end
-			textLabel.Text = table.concat(jobList, ", ")
+	-- Level (2개 — 첫 번째: 레벨 표시)
+	local levelFrames = {}
+	for _, child in frame:GetChildren() do
+		if child.Name == "Level" then
+			table.insert(levelFrames, child)
 		end
 	end
 
-	-- Weight
-	local weightFrame = frame:FindFirstChild("Weight")
-	if weightFrame then
-		local textLabel = weightFrame:FindFirstChild("TextLabel")
-			or weightFrame:FindFirstChildWhichIsA("TextLabel")
-		if textLabel then
-			textLabel.Text = string.format("%.1fkg", petData.weight or 0)
-		end
-	end
+	if levelFrames[1] then
+		local nameText = levelFrames[1]:FindFirstChild("NameText")
+		if nameText then nameText.Text = "Level: " .. level end
+		local nameShadow = levelFrames[1]:FindFirstChild("NameTextShadow")
+		if nameShadow then nameShadow.Text = "Level: " .. level end
 
-	-- Level + GaugeBar (EXP)
-	local levelFrame = frame:FindFirstChild("Level")
-	if levelFrame then
-		local textLabel = levelFrame:FindFirstChild("TextLabel")
-			or levelFrame:FindFirstChildWhichIsA("TextLabel")
-		if textLabel then
-			textLabel.Text = "Level: " .. level
-		end
-
-		-- GaugeBar (EXP progress bar)
-		local gaugeBar = levelFrame:FindFirstChild("GaugeBar")
-			or levelFrame:FindFirstChildWhichIsA("Frame")
+		local gaugeBar = levelFrames[1]:FindFirstChild("GaugeBar")
 		if gaugeBar then
-			local fill = gaugeBar:FindFirstChild("Fill")
-				or gaugeBar:FindFirstChildWhichIsA("Frame")
-			if fill then
+			local gauge = gaugeBar:FindFirstChild("Gauge")
+			if gauge then
 				local ratio = if xpRequired > 0 then math.clamp(xp / xpRequired, 0, 1) else 1
-				fill.Size = UDim2.new(ratio, 0, fill.Size.Y.Scale, fill.Size.Y.Offset)
+				gauge.Size = UDim2.new(ratio, 0, gauge.Size.Y.Scale, gauge.Size.Y.Offset)
 			end
-
-			local expLabel = gaugeBar:FindFirstChild("TextLabel")
-				or gaugeBar:FindFirstChildWhichIsA("TextLabel")
+			local expLabel = gaugeBar:FindFirstChild("EXP")
 			if expLabel then
 				expLabel.Text = xp .. "/" .. (xpRequired > 0 and xpRequired or "MAX")
 			end
 		end
 	end
 
-	-- Mutations (Frame 또는 petInfoFrame에서 찾기)
-	local mutationsFrame = frame:FindFirstChild("Mutations") or petInfoFrame:FindFirstChild("Mutations", true)
-	if mutationsFrame then
-		local textLabel = mutationsFrame:FindFirstChild("TextLabel")
-			or mutationsFrame:FindFirstChildWhichIsA("TextLabel")
-		if textLabel then
+	-- Weight > Weight (무게 텍스트)
+	local weightFrame = frame:FindFirstChild("Weight")
+	if weightFrame then
+		local weightLabel = weightFrame:FindFirstChild("Weight")
+		if weightLabel and weightLabel:IsA("TextLabel") then
+			weightLabel.Text = string.format("Weight : %.1fkg", petData.weight or 0)
+		end
+
+		-- Weight > Mutations (돌연변이 텍스트)
+		local mutLabel = weightFrame:FindFirstChild("Mutations")
+		if mutLabel and mutLabel:IsA("TextLabel") then
 			if petData.mutations and #petData.mutations > 0 then
 				local mutNames = {}
 				for _, mut in petData.mutations do
 					table.insert(mutNames, Constants.MUTATION_NAMES[mut] or mut)
 				end
-				textLabel.Text = table.concat(mutNames, ", ")
+				mutLabel.Text = "Mutations : " .. table.concat(mutNames, ", ")
 			else
-				textLabel.Text = "None"
+				mutLabel.Text = "Mutations : None"
 			end
 		end
 	end
 
-	-- Buffs (Frame 또는 petInfoFrame에서 찾기)
-	local buffsFrame = frame:FindFirstChild("Buffs") or petInfoFrame:FindFirstChild("Buffs", true)
-	if buffsFrame then
-		local textLabel = buffsFrame:FindFirstChild("TextLabel")
-			or buffsFrame:FindFirstChildWhichIsA("TextLabel")
-		if textLabel then
-			if petData.traits and #petData.traits > 0 then
-				textLabel.Text = table.concat(petData.traits, ", ")
-			else
-				textLabel.Text = "None"
+	-- Jobs (Farming/Mining/Building — 해당하는 것만 보이기)
+	local jobsFrame = frame:FindFirstChild("Jobs")
+	if jobsFrame then
+		local petTypes = {}
+		if petInfo and petInfo.petTypes then
+			for _, pt in petInfo.petTypes do
+				petTypes[pt] = true
 			end
+		else
+			petTypes[petData.petType or "Construction"] = true
+		end
+
+		local farming = jobsFrame:FindFirstChild("Farming")
+		if farming then farming.Visible = petTypes["Farming"] == true end
+
+		local mining = jobsFrame:FindFirstChild("Mining")
+		if mining then mining.Visible = petTypes["Mining"] == true end
+
+		local building = jobsFrame:FindFirstChild("Building")
+		if building then building.Visible = (petTypes["Construction"] == true) end
+	end
+
+	-- Icon > Buffs
+	local iconFrame = frame:FindFirstChild("Icon")
+	if iconFrame then
+		local buffsFrame = iconFrame:FindFirstChild("Buffs")
+		if buffsFrame then
+			-- TODO: 실제 버프 데이터로 업데이트
 		end
 	end
 
