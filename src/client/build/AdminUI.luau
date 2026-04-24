@@ -19,14 +19,14 @@ local PANEL_WIDTH = 260
 local PANEL_HEIGHT = 400
 
 local BUTTONS = {
-	{ label = "Add All Buildings", cmd = "addallbuildings" },
-	{ label = "Add All Pets", cmd = "addallpets" },
-	{ label = "Add All Eggs", cmd = "addalleggs" },
-	{ label = "Add 10K Coins", cmd = "addcoins", arg1 = 10000 },
-	{ label = "Set Coins 500", cmd = "setcoins", arg1 = 500 },
-	{ label = "Restock Shop", cmd = "restock" },
-	{ label = "Set Day", cmd = "settime", arg1 = 14 },
-	{ label = "Set Night", cmd = "settime", arg1 = 2 },
+	{ label = "모든 건물 추가", cmd = "addallbuildings" },
+	{ label = "모든 펫 추가", cmd = "addallpets" },
+	{ label = "모든 알 추가", cmd = "addalleggs" },
+	{ label = "코인 10000 추가", cmd = "addcoins", arg1 = 10000 },
+	{ label = "코인 500으로 설정", cmd = "setcoins", arg1 = 500 },
+	{ label = "상점 재고 리필", cmd = "restock" },
+	{ label = "낮으로 변경", cmd = "settime", arg1 = 14 },
+	{ label = "밤으로 변경", cmd = "settime", arg1 = 2 },
 }
 
 function AdminUI.init()
