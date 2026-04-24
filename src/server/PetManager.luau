@@ -98,12 +98,19 @@ local function createPetModel(petData, position: Vector3): BasePart
 	local template = nil
 
 	-- 1. ServerStorage/Pets에서 찾기
+	-- 구조: Pets > {펫이름} > Model(Folder) > {실제Model}
 	if serverPetsFolder then
 		local petFolder = serverPetsFolder:FindFirstChild(petName)
 		if petFolder then
-			template = petFolder:FindFirstChild("Model") or petFolder:FindFirstChildWhichIsA("Model")
-			if not template then
-				template = petFolder:FindFirstChildWhichIsA("BasePart")
+			local modelFolder = petFolder:FindFirstChild("Model")
+			if modelFolder and modelFolder:IsA("Folder") then
+				-- Folder 안의 실제 Model 찾기
+				template = modelFolder:FindFirstChildWhichIsA("Model") or modelFolder:FindFirstChildWhichIsA("BasePart")
+			elseif modelFolder and modelFolder:IsA("Model") then
+				template = modelFolder
+			else
+				-- Model 폴더 없으면 직접 탐색
+				template = petFolder:FindFirstChildWhichIsA("Model") or petFolder:FindFirstChildWhichIsA("BasePart")
 			end
 		end
 	end
