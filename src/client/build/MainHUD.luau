@@ -316,8 +316,9 @@ end
 -- 빌드모드: 다른 UI 숨김 (사이드바 Frame 제외)
 function MainHUD.hideBuildModeUI()
 	if not normalGui then return end
+	local keepVisible = { Frame = true, Diamond = true, Money = true }
 	for _, child in normalGui:GetChildren() do
-		if child.Name ~= "Frame" and child:IsA("GuiObject") and child.Visible then
+		if not keepVisible[child.Name] and child:IsA("GuiObject") and child.Visible then
 			child:SetAttribute("_wasHidden", true)
 			child.Visible = false
 		end

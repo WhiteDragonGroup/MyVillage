@@ -1401,9 +1401,21 @@ MainHUD.init({
 			if plotsFolder then
 				for _, plot in plotsFolder:GetChildren() do
 					if plot:GetAttribute("Owner") == player.Name then
+						-- Name 파트 또는 Adornee 찾기
 						local namePart = plot:FindFirstChild("Name")
-						if namePart and namePart:IsA("BasePart") then
-							hrp.CFrame = namePart.CFrame + Vector3.new(0, 3, 0)
+						local targetPart = nil
+						if namePart then
+							if namePart:IsA("BasePart") then
+								targetPart = namePart
+							elseif namePart:IsA("BillboardGui") and namePart.Adornee then
+								targetPart = namePart.Adornee
+							else
+								-- Name의 부모가 BasePart면 사용
+								targetPart = namePart:FindFirstChildWhichIsA("BasePart")
+							end
+						end
+						if targetPart then
+							hrp.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
 							teleported = true
 						end
 						break
