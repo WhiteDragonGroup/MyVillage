@@ -65,7 +65,11 @@ function PetDetailUI.show(petData: { [string]: any })
 			local rarityLabel = rarityFrame:FindFirstChild("TextLabel")
 				or rarityFrame:FindFirstChildWhichIsA("TextLabel")
 			if rarityLabel then
-				rarityLabel.Text = petData.rarity or "Common"
+				local rarity = petData.rarity
+			if not rarity or rarity == "" then
+				rarity = petInfo and petInfo.rarity or "Common"
+			end
+			rarityLabel.Text = rarity
 			end
 		end
 	end
@@ -77,26 +81,42 @@ function PetDetailUI.show(petData: { [string]: any })
 		return
 	end
 
-	-- Info (description - visible on hover)
+	-- Info (hover only - hidden by default)
 	local infoFrame = frame:FindFirstChild("Info")
 	if infoFrame then
+		infoFrame.Visible = false
+
 		local textLabel = infoFrame:FindFirstChild("TextLabel")
 			or infoFrame:FindFirstChildWhichIsA("TextLabel")
 		if textLabel then
-			local petType = petData.petType or "Construction"
-			local typeName = Constants.PetType[petType] or petType
-
-			-- Build description from pet types
 			local typeNames = {}
 			if petInfo and petInfo.petTypes then
 				for _, pt in petInfo.petTypes do
 					table.insert(typeNames, Constants.PetType[pt] or pt)
 				end
 			else
-				table.insert(typeNames, typeName)
+				table.insert(typeNames, Constants.PetType[petData.petType] or petData.petType or "?")
 			end
-
 			textLabel.Text = "Specializes in: " .. table.concat(typeNames, ", ")
+		end
+
+		-- Icon hover → show/hide Info
+		local iconFrame = frame:FindFirstChild("Icon")
+		if iconFrame and not iconFrame:GetAttribute("_hoverSet") then
+			iconFrame:SetAttribute("_hoverSet", true)
+			local hoverBtn = Instance.new("TextButton")
+			hoverBtn.Name = "_Hover"
+			hoverBtn.Size = UDim2.new(1, 0, 1, 0)
+			hoverBtn.BackgroundTransparency = 1
+			hoverBtn.Text = ""
+			hoverBtn.ZIndex = 10
+			hoverBtn.Parent = iconFrame
+			hoverBtn.MouseEnter:Connect(function()
+				if infoFrame then infoFrame.Visible = true end
+			end)
+			hoverBtn.MouseLeave:Connect(function()
+				if infoFrame then infoFrame.Visible = false end
+			end)
 		end
 	end
 
