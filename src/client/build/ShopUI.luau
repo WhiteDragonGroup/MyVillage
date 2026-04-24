@@ -279,16 +279,24 @@ end
 function ShopUI.show()
 	if _visible then return end
 	_visible = true
-	if buildingsShopFrame then buildingsShopFrame.Visible = true end
-	ShopUI._renderItems()
-	ShopUI._startTimer()
+	-- Shop 버튼 = 알 상점 (ShopFrame)
+	if shopFrame then shopFrame.Visible = true end
+end
+
+-- 건물 상점 열기 (NPC용)
+function ShopUI.showBuildingsShop()
+	if buildingsShopFrame then
+		buildingsShopFrame.Visible = true
+		ShopUI._renderItems()
+		ShopUI._startTimer()
+	end
 end
 
 function ShopUI.hide()
 	if not _visible then return end
 	_visible = false
-	if buildingsShopFrame then buildingsShopFrame.Visible = false end
 	if shopFrame then shopFrame.Visible = false end
+	if buildingsShopFrame then buildingsShopFrame.Visible = false end
 	if _timerConnection then
 		_timerConnection:Disconnect()
 		_timerConnection = nil
