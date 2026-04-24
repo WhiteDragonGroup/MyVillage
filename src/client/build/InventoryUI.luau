@@ -209,11 +209,30 @@ function InventoryUI._renderSlots()
 	local rows = math.ceil(filteredIndex / 2)
 	scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, PADDING * 2 + rows * (slotW + GAP))
 
-	-- PlacedNumber 업데이트 (인벤토리 수 / 최대)
+	-- PlacedNumber 업데이트 (배치된 건물 수)
+	InventoryUI._updatePlacedCount()
+end
+
+function InventoryUI._updatePlacedCount()
 	local placedNum = ownedFrame and ownedFrame:FindFirstChild("PlacedNumber")
-	if placedNum then
-		placedNum.Text = "Placed Buildings : " .. filteredIndex .. "/25"
+	if not placedNum then return end
+
+	local count = 0
+	local plotsFolder = workspace:FindFirstChild("Plots")
+	if plotsFolder then
+		local player = game:GetService("Players").LocalPlayer
+		for _, plot in plotsFolder:GetChildren() do
+			if plot:GetAttribute("Owner") == player.Name then
+				for _, desc in plot:GetDescendants() do
+					if desc:IsA("BasePart") and desc:GetAttribute("BuildingId") then
+						count = count + 1
+					end
+				end
+				break
+			end
+		end
 	end
+	placedNum.Text = "Placed Buildings : " .. count .. "/25"
 end
 
 function InventoryUI.show()

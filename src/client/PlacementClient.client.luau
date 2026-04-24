@@ -88,6 +88,7 @@ local currentBuildZone = nil       -- 현재 드래그 중인 BuildZone
 local hasCollision = false         -- 현재 충돌 상태
 local _lastCollisionDebug = nil    -- 디버그 출력 쓰로틀
 local inventory = {}               -- 로컬 인벤토리 캐시
+local _dragPaused = false          -- 드래그 일시 정지 (클릭으로 토글)
 
 -- 렌더 연결
 local renderConnection = nil
@@ -875,6 +876,7 @@ PetListUI.init({
 -- 배치 확정 (UI 버튼 + 마우스 클릭 공용)
 local function confirmPlace()
 	if hasCollision then return end
+	_dragPaused = false
 
 	if currentState == BuildState.PlacingNew and previewPart then
 		local isEggPreview = previewPart:GetAttribute("IsEggPreview") == true
@@ -976,7 +978,13 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	-- 마우스 클릭: 배치 확정 / BuildMode에서 건물 선택 / 펫 클릭
 	if input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessed then
 		if currentState == BuildState.PlacingNew or currentState == BuildState.Moving then
-			confirmPlace()
+			-- 클릭으로 드래그 멈춤/재개 토글 (Place 버튼으로만 확정)
+			_dragPaused = not _dragPaused
+			if _dragPaused then
+				DragHandler.pause()
+			else
+				DragHandler.resume()
+			end
 		elseif currentState == BuildState.BuildMode then
 			local target = mouse.Target
 			local mainPart = findBuildingMainPart(target)

@@ -14,6 +14,7 @@ local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild(
 local DragHandler = {}
 
 local _active = false
+local _paused = false
 local _buildZone = nil
 local _targetPart = nil
 local _currentRotationY = 0
@@ -53,7 +54,7 @@ function DragHandler.startDrag(
 
 	-- 매 프레임 위치 업데이트
 	_renderConnection = RunService.RenderStepped:Connect(function()
-		if not _active or not _buildZone or not _targetPart then return end
+		if not _active or not _buildZone or not _targetPart or _paused then return end
 
 		-- 마우스 → BuildZone 레이캐스트
 		local rayParams = RaycastParams.new()
@@ -89,9 +90,24 @@ function DragHandler.getCurrentRotation(): number
 	return _currentRotationY
 end
 
+-- 드래그 일시 정지
+function DragHandler.pause()
+	_paused = true
+end
+
+-- 드래그 재개
+function DragHandler.resume()
+	_paused = false
+end
+
+function DragHandler.isPaused(): boolean
+	return _paused
+end
+
 -- 드래그 종료
 function DragHandler.stopDrag()
 	_active = false
+	_paused = false
 	if _renderConnection then
 		_renderConnection:Disconnect()
 		_renderConnection = nil
