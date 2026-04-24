@@ -1016,7 +1016,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			end
 
 			if petTarget then
-				-- 직접 펫 클릭
 				task.spawn(function()
 					local pets = getPetsFunc:InvokeServer()
 					if pets then

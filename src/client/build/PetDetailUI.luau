@@ -52,11 +52,11 @@ function PetDetailUI.show(petData: { [string]: any })
 	-- === Header ===
 	local header = petInfoFrame:FindFirstChild("Header")
 	if header then
-		-- NameText
-		local nameText = header:FindFirstChild("NameText")
+		-- Name: TextLabel 또는 NameText
+		local nameText = header:FindFirstChild("NameText") or header:FindFirstChild("TextLabel")
 		if nameText then nameText.Text = petData.petName or "???" end
 
-		local nameShadow = header:FindFirstChild("NameTextShadow")
+		local nameShadow = header:FindFirstChild("NameTextShadow") or header:FindFirstChild("TextLabelShadow")
 		if nameShadow then nameShadow.Text = petData.petName or "???" end
 
 		-- Rarity
@@ -81,43 +81,30 @@ function PetDetailUI.show(petData: { [string]: any })
 		return
 	end
 
-	-- Info (hover only - hidden by default)
+	-- Info (Fortune) — hover only, hidden by default
 	local infoFrame = frame:FindFirstChild("Info")
 	if infoFrame then
 		infoFrame.Visible = false
+		-- Info 텍스트는 디자인 UI의 Fortune 더미 그대로 유지 (또는 업데이트)
+	end
 
-		local textLabel = infoFrame:FindFirstChild("TextLabel")
-			or infoFrame:FindFirstChildWhichIsA("TextLabel")
-		if textLabel then
-			local typeNames = {}
-			if petInfo and petInfo.petTypes then
-				for _, pt in petInfo.petTypes do
-					table.insert(typeNames, Constants.PetType[pt] or pt)
-				end
-			else
-				table.insert(typeNames, Constants.PetType[petData.petType] or petData.petType or "?")
-			end
-			textLabel.Text = "Specializes in: " .. table.concat(typeNames, ", ")
-		end
-
-		-- Icon hover → show/hide Info
-		local iconFrame = frame:FindFirstChild("Icon")
-		if iconFrame and not iconFrame:GetAttribute("_hoverSet") then
-			iconFrame:SetAttribute("_hoverSet", true)
-			local hoverBtn = Instance.new("TextButton")
-			hoverBtn.Name = "_Hover"
-			hoverBtn.Size = UDim2.new(1, 0, 1, 0)
-			hoverBtn.BackgroundTransparency = 1
-			hoverBtn.Text = ""
-			hoverBtn.ZIndex = 10
-			hoverBtn.Parent = iconFrame
-			hoverBtn.MouseEnter:Connect(function()
-				if infoFrame then infoFrame.Visible = true end
-			end)
-			hoverBtn.MouseLeave:Connect(function()
-				if infoFrame then infoFrame.Visible = false end
-			end)
-		end
+	-- Icon hover → show/hide Info (Fortune)
+	local iconFrame = frame:FindFirstChild("Icon")
+	if iconFrame and infoFrame and not iconFrame:GetAttribute("_hoverSet") then
+		iconFrame:SetAttribute("_hoverSet", true)
+		local hoverBtn = Instance.new("TextButton")
+		hoverBtn.Name = "_Hover"
+		hoverBtn.Size = UDim2.new(1, 0, 1, 0)
+		hoverBtn.BackgroundTransparency = 1
+		hoverBtn.Text = ""
+		hoverBtn.ZIndex = 10
+		hoverBtn.Parent = iconFrame
+		hoverBtn.MouseEnter:Connect(function()
+			infoFrame.Visible = true
+		end)
+		hoverBtn.MouseLeave:Connect(function()
+			infoFrame.Visible = false
+		end)
 	end
 
 	-- Jobs
