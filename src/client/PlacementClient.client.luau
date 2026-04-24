@@ -1396,36 +1396,10 @@ MainHUD.init({
 		if not hrp then return end
 
 		if destination == "village" then
-			-- Plot > Name 위치로 텔레포트 (입구)
-			local plotsFolder = workspace:FindFirstChild("Plots")
-			local teleported = false
-			if plotsFolder then
-				for _, plot in plotsFolder:GetChildren() do
-					if plot:GetAttribute("Owner") == player.Name then
-						local namePart = plot:FindFirstChild("Name", true)
-						if namePart then
-							if namePart:IsA("BasePart") then
-								hrp.CFrame = CFrame.new(namePart.Position + Vector3.new(0, 3, 0))
-								teleported = true
-							else
-								for _, desc in namePart:GetDescendants() do
-									if desc:IsA("BasePart") then
-										hrp.CFrame = CFrame.new(desc.Position + Vector3.new(0, 3, 0))
-										teleported = true
-										break
-									end
-								end
-							end
-						end
-						break
-					end
-				end
-			end
-			if not teleported then
-				local bz = getMyBuildZone()
-				if bz then
-					hrp.CFrame = bz.CFrame + Vector3.new(0, 5, 0)
-				end
+			-- BuildZone으로 텔레포트 (입구 파트 추가 시 변경 예정)
+			local bz = getMyBuildZone()
+			if bz then
+				hrp.CFrame = bz.CFrame + Vector3.new(0, 5, 0)
 			end
 		elseif destination == "buildings" then
 			hrp.CFrame = CFrame.new(113.7, 10.8, 10.3)
