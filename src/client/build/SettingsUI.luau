@@ -1,10 +1,11 @@
 -- SettingsUI.luau
--- 디자인 UI 사용 (StarterGui/Features/Settings)
--- Header(Close), ScrollingFrame(Code, LowDetailMode, Music, SFX)
+-- Design UI: Features > Settings
+-- Header(Close), ScrollingFrame(Music, SFX, LowDetailMode, Code)
 
 local Players = game:GetService("Players")
 local SoundService = game:GetService("SoundService")
 local Lighting = game:GetService("Lighting")
+local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -19,20 +20,14 @@ function SettingsUI.init(callbacks: { onCodeSubmit: ((string) -> ())? }?)
 	_onCodeSubmit = callbacks and callbacks.onCodeSubmit or nil
 
 	local featuresGui = playerGui:WaitForChild("Features", 10)
-	if not featuresGui then
-		warn("[SettingsUI] Features ScreenGui를 찾을 수 없음")
-		return
-	end
+	if not featuresGui then return end
 
 	settingsFrame = featuresGui:FindFirstChild("Settings")
-	if not settingsFrame then
-		warn("[SettingsUI] Settings를 찾을 수 없음")
-		return
-	end
+	if not settingsFrame then return end
 
 	settingsFrame.Visible = false
 
-	-- Close 버튼
+	-- Close button
 	local header = settingsFrame:FindFirstChild("Header")
 	if header then
 		local closeBtn = header:FindFirstChild("Close")
@@ -43,19 +38,19 @@ function SettingsUI.init(callbacks: { onCodeSubmit: ((string) -> ())? }?)
 		end
 	end
 
-	-- ScrollingFrame 내 설정 항목 연결
+	-- ScrollingFrame
 	local scrollFrame = settingsFrame:FindFirstChild("ScrollingFrame")
 	if not scrollFrame then return end
 
-	-- Music 슬라이더
+	-- Music slider
 	local musicFrame = scrollFrame:FindFirstChild("Music")
 	if musicFrame then
 		SettingsUI._connectSlider(musicFrame, function(val)
-			-- Music 볼륨 조절
+			-- TODO: Music volume group
 		end)
 	end
 
-	-- SFX 슬라이더
+	-- SFX slider
 	local sfxFrame = scrollFrame:FindFirstChild("SFX")
 	if sfxFrame then
 		SettingsUI._connectSlider(sfxFrame, function(val)
@@ -63,7 +58,7 @@ function SettingsUI.init(callbacks: { onCodeSubmit: ((string) -> ())? }?)
 		end)
 	end
 
-	-- LowDetailMode 토글
+	-- Low Detail Mode toggle
 	local lowDetailFrame = scrollFrame:FindFirstChild("LowDetailMode")
 	if lowDetailFrame then
 		SettingsUI._connectToggle(lowDetailFrame, function(isOn)
@@ -71,11 +66,12 @@ function SettingsUI.init(callbacks: { onCodeSubmit: ((string) -> ())? }?)
 		end)
 	end
 
-	-- Code 입력
+	-- Code input
 	local codeFrame = scrollFrame:FindFirstChild("Code")
 	if codeFrame then
-		local textBox = codeFrame:FindFirstChildWhichIsA("TextBox")
-		local submitBtn = codeFrame:FindFirstChildWhichIsA("TextButton") or codeFrame:FindFirstChildWhichIsA("ImageButton")
+		local textBox = codeFrame:FindFirstChildWhichIsA("TextBox", true)
+		local submitBtn = codeFrame:FindFirstChildWhichIsA("ImageButton", true)
+			or codeFrame:FindFirstChildWhichIsA("TextButton", true)
 		if submitBtn and textBox then
 			submitBtn.MouseButton1Click:Connect(function()
 				local code = textBox.Text
@@ -88,35 +84,90 @@ function SettingsUI.init(callbacks: { onCodeSubmit: ((string) -> ())? }?)
 	end
 end
 
--- 슬라이더 연결 헬퍼 (디자인 UI의 슬라이더 구조에 맞춰 조정 필요)
+-- Slider: find bar/fill and make clickable
 function SettingsUI._connectSlider(frame, onChange)
-	-- 디자인 UI 구조에 따라 슬라이더 바/핸들 찾아서 연결
-	local slider = frame:FindFirstChildWhichIsA("TextButton") or frame:FindFirstChildWhichIsA("ImageButton")
-	if slider then
-		slider.MouseButton1Click:Connect(function()
-			-- 간단 구현: 클릭 위치 기반 값 계산
-			local mouse = Players.LocalPlayer:GetMouse()
-			local fill = frame:FindFirstChild("Fill") or frame:FindFirstChildWhichIsA("Frame")
-			if fill then
-				local absPos = frame.AbsolutePosition.X
-				local absSize = frame.AbsoluteSize.X
-				local ratio = math.clamp((mouse.X - absPos) / absSize, 0, 1)
-				onChange(ratio)
+	-- Find the slider bar (Frame with a fill child)
+	local sliderBar = nil
+	local fillBar = nil
+	local handle = nil
+
+	for _, child in frame:GetDescendants() do
+		if child:IsA("Frame") and child.Name ~= frame.Name then
+			-- Look for a frame that could be a slider bar
+			local possibleFill = child:FindFirstChildWhichIsA("Frame")
+			if possibleFill then
+				sliderBar = child
+				fillBar = possibleFill
 			end
-		end)
+		end
 	end
+
+	if not sliderBar then return end
+
+	-- Create invisible click area over the bar
+	local clickArea = Instance.new("TextButton")
+	clickArea.Name = "_SliderClick"
+	clickArea.Size = UDim2.new(1, 0, 1, 0)
+	clickArea.BackgroundTransparency = 1
+	clickArea.Text = ""
+	clickArea.ZIndex = 10
+	clickArea.Parent = sliderBar
+
+	local dragging = false
+
+	local function updateSlider(inputX)
+		local absPos = sliderBar.AbsolutePosition.X
+		local absSize = sliderBar.AbsoluteSize.X
+		if absSize == 0 then return end
+		local ratio = math.clamp((inputX - absPos) / absSize, 0, 1)
+		if fillBar then
+			fillBar.Size = UDim2.new(ratio, 0, fillBar.Size.Y.Scale, fillBar.Size.Y.Offset)
+		end
+		onChange(ratio)
+	end
+
+	clickArea.MouseButton1Down:Connect(function()
+		dragging = true
+		local mouse = player:GetMouse()
+		updateSlider(mouse.X)
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			updateSlider(input.Position.X)
+		end
+	end)
+
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end)
 end
 
--- 토글 연결 헬퍼
+-- Toggle: find clickable element
 function SettingsUI._connectToggle(frame, onChange)
-	local toggleBtn = frame:FindFirstChildWhichIsA("TextButton") or frame:FindFirstChildWhichIsA("ImageButton")
-	if toggleBtn then
-		local isOn = false
-		toggleBtn.MouseButton1Click:Connect(function()
-			isOn = not isOn
-			onChange(isOn)
-		end)
+	local isOn = false
+
+	-- Find any button or clickable in the frame
+	local toggleBtn = frame:FindFirstChildWhichIsA("ImageButton", true)
+		or frame:FindFirstChildWhichIsA("TextButton", true)
+
+	if not toggleBtn then
+		-- Add transparent button
+		toggleBtn = Instance.new("TextButton")
+		toggleBtn.Name = "_Toggle"
+		toggleBtn.Size = UDim2.new(1, 0, 1, 0)
+		toggleBtn.BackgroundTransparency = 1
+		toggleBtn.Text = ""
+		toggleBtn.ZIndex = 10
+		toggleBtn.Parent = frame
 	end
+
+	toggleBtn.MouseButton1Click:Connect(function()
+		isOn = not isOn
+		onChange(isOn)
+	end)
 end
 
 function SettingsUI.show()
