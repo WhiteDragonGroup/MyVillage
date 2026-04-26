@@ -42,10 +42,23 @@ function ShopUI.init(callbacks: { onBuy: (string) -> (), onBuyGem: ((string) -> 
 		local header = buildingsShopFrame:FindFirstChild("Header")
 		if header then
 			local closeBtn = header:FindFirstChild("Close")
-			if closeBtn and closeBtn:IsA("GuiButton") then
-				closeBtn.MouseButton1Click:Connect(function()
-					ShopUI.hide()
-				end)
+			if closeBtn then
+				if closeBtn:IsA("GuiButton") then
+					closeBtn.MouseButton1Click:Connect(function()
+						ShopUI.hide()
+					end)
+				else
+					local btn = Instance.new("TextButton")
+					btn.Name = "_Close"
+					btn.Size = UDim2.new(1, 0, 1, 0)
+					btn.BackgroundTransparency = 1
+					btn.Text = ""
+					btn.ZIndex = 10
+					btn.Parent = closeBtn
+					btn.MouseButton1Click:Connect(function()
+						ShopUI.hide()
+					end)
+				end
 			end
 		end
 	end
