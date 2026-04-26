@@ -1699,10 +1699,22 @@ local HAILEY_CHOICES = {
 DialogUI.init()
 
 if openShopEvent then
-	openShopEvent.OnClientEvent:Connect(function(shopType)
+	openShopEvent.OnClientEvent:Connect(function(shopType, npcName)
 		if shopType == "buildings" then
 			ShopUI.showBuildingsShop()
 		elseif shopType == "eggs" then
+			-- Find NPC part for BillboardGui
+			local adornee = nil
+			local npcFolder = workspace:FindFirstChild("NPC")
+			if npcFolder and npcName then
+				local npc = npcFolder:FindFirstChild(npcName)
+				if npc then
+					adornee = npc:FindFirstChild("Head")
+						or npc:FindFirstChild("HumanoidRootPart")
+						or npc:FindFirstChildWhichIsA("BasePart", true)
+				end
+			end
+
 			local greeting = HAILEY_GREETINGS[math.random(#HAILEY_GREETINGS)]
 			DialogUI.show("Hailey", greeting, HAILEY_CHOICES, function(choiceId)
 				if choiceId == "eggshop" then

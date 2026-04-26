@@ -44,7 +44,7 @@ local function setupNPC(npc, shopType, actionText)
 	prompt.Parent = targetPart
 
 	prompt.Triggered:Connect(function(player)
-		openShopEvent:FireClient(player, shopType)
+		openShopEvent:FireClient(player, shopType, npc.Name)
 	end)
 
 	print("[NPCInteraction] " .. npc.Name .. " → " .. shopType .. " prompt added")
