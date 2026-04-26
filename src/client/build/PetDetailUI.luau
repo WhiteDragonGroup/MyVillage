@@ -255,6 +255,12 @@ function PetDetailUI.show(petData: { [string]: any })
 		end
 	end
 
+	-- 3D 캐릭터에 가리지 않도록 DisplayOrder 높이기
+	local featuresGui = petInfoFrame:FindFirstAncestorWhichIsA("ScreenGui")
+	if featuresGui then
+		featuresGui.DisplayOrder = 100
+	end
+
 	petInfoFrame.Visible = true
 end
 
