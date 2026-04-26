@@ -1674,4 +1674,19 @@ end)
 -- Admin Panel UI
 AdminUI.init()
 
+-- NPC 상점 열기 (ProximityPrompt E키)
+local openShopEvent = remotes:FindFirstChild("OpenShop")
+if not openShopEvent then
+	openShopEvent = remotes:WaitForChild("OpenShop", 5)
+end
+if openShopEvent then
+	openShopEvent.OnClientEvent:Connect(function(shopType)
+		if shopType == "buildings" then
+			ShopUI.showBuildingsShop()
+		elseif shopType == "eggs" then
+			ShopUI.show()
+		end
+	end)
+end
+
 print("PlacementClient loaded - Build System v6")
