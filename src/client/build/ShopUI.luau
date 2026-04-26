@@ -299,6 +299,7 @@ end
 -- 건물 상점 열기 (NPC용)
 function ShopUI.showBuildingsShop()
 	if buildingsShopFrame then
+		_visible = true
 		buildingsShopFrame.Visible = true
 		ShopUI._renderItems()
 		ShopUI._startTimer()
