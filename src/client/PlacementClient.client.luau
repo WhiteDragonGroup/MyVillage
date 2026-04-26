@@ -32,6 +32,7 @@ local GiftUI = require(clientScript:WaitForChild("build"):WaitForChild("GiftUI")
 local SettingsUI = require(clientScript:WaitForChild("build"):WaitForChild("SettingsUI"))
 local PetDetailUI = require(clientScript:WaitForChild("build"):WaitForChild("PetDetailUI"))
 local AdminUI = require(clientScript:WaitForChild("build"):WaitForChild("AdminUI"))
+local DialogUI = require(clientScript:WaitForChild("build"):WaitForChild("DialogUI"))
 
 local HighlightSystem = require(clientScript:WaitForChild("systems"):WaitForChild("HighlightSystem"))
 local CollisionDetector = require(clientScript:WaitForChild("systems"):WaitForChild("CollisionDetector"))
@@ -1679,12 +1680,42 @@ local openShopEvent = remotes:FindFirstChild("OpenShop")
 if not openShopEvent then
 	openShopEvent = remotes:WaitForChild("OpenShop", 5)
 end
+-- Hailey (PetDealer) greetings
+local HAILEY_GREETINGS = {
+	"Hi there! Need any help?",
+	"Welcome! What kind of buddy are you looking for?",
+	"Oh, hey! Feel free to look around!",
+	"You might find one you really like!",
+	"We've got lots of cute little friends!",
+}
+
+local HAILEY_CHOICES = {
+	{ text = "Show me the Egg Shop", id = "eggshop" },
+	{ text = "I want to sell my pet", id = "sellpet" },
+	{ text = "Show me pet info", id = "petinfo" },
+	{ text = "Nevermind", id = "nevermind" },
+}
+
+DialogUI.init()
+
 if openShopEvent then
 	openShopEvent.OnClientEvent:Connect(function(shopType)
 		if shopType == "buildings" then
 			ShopUI.showBuildingsShop()
 		elseif shopType == "eggs" then
-			ShopUI.show()
+			local greeting = HAILEY_GREETINGS[math.random(#HAILEY_GREETINGS)]
+			DialogUI.show("Hailey", greeting, HAILEY_CHOICES, function(choiceId)
+				if choiceId == "eggshop" then
+					DialogUI.hide()
+					ShopUI.show()
+				elseif choiceId == "sellpet" then
+					DialogUI.showResponse("This feature is coming soon!", 2)
+				elseif choiceId == "petinfo" then
+					DialogUI.showResponse("This feature is coming soon!", 2)
+				elseif choiceId == "nevermind" then
+					DialogUI.showResponse("Goodbye!", 1)
+				end
+			end)
 		end
 	end)
 end
