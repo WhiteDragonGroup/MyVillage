@@ -219,7 +219,7 @@ function PetDetailUI.show(petData: { [string]: any })
 			local cf, size = clone:GetBoundingBox()
 			local maxDim = math.max(size.X, size.Y, size.Z)
 			camera.CFrame = CFrame.lookAt(
-				cf.Position + Vector3.new(maxDim * 0.8, maxDim * 0.5, maxDim * 1.2),
+				cf.Position + Vector3.new(maxDim * 0.6, maxDim * 0.3, maxDim * 0.9),
 				cf.Position
 			)
 		end

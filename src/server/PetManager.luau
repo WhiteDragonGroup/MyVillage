@@ -215,15 +215,23 @@ end
 -- 부드러운 이동 (목표 위치로)
 ----------------------------------------------------------------
 local function movePetTo(petData, targetPos: Vector3): boolean
-	local model = petData.model
-	if not model or not model.Parent then return false end
+	local mainPart = petData.model
+	if not mainPart or not mainPart.Parent then return false end
 
-	local startPos = model.Position
+	-- 최상위 Model 찾기 (전체를 이동)
+	local wholeModel = petData._petModel
+	local useModel = wholeModel and wholeModel.Parent
+
+	local startPos = mainPart.Position
 	local distance = (targetPos - startPos).Magnitude
 	local duration = distance / PetCfg.MOVE_SPEED
 
 	if duration < 0.1 then
-		model.Position = targetPos
+		if useModel then
+			wholeModel:PivotTo(CFrame.new(targetPos))
+		else
+			mainPart.Position = targetPos
+		end
 		return true
 	end
 
@@ -232,8 +240,13 @@ local function movePetTo(petData, targetPos: Vector3): boolean
 		local dt = task.wait()
 		elapsed = elapsed + dt
 		local alpha = math.min(1, elapsed / duration)
-		if model.Parent then
-			model.Position = startPos:Lerp(targetPos, alpha)
+		if mainPart.Parent then
+			local newPos = startPos:Lerp(targetPos, alpha)
+			if useModel then
+				wholeModel:PivotTo(CFrame.new(newPos))
+			else
+				mainPart.Position = newPos
+			end
 		else
 			return false
 		end
