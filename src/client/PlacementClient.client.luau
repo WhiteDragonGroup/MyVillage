@@ -996,6 +996,11 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 				toSelected(mainPart)
 			end
 		elseif currentState == BuildState.Idle then
+			-- PetDetail 열려있으면 닫기 (펫 아닌 곳 클릭 시)
+			if PetDetailUI.isVisible() then
+				PetDetailUI.hide()
+			end
+
 			-- Idle 상태에서 펫/알 클릭
 			local target = mouse.Target
 			-- 클릭한 파트 또는 조상에서 PetId/IsEgg 찾기

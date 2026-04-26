@@ -225,33 +225,24 @@ function PetDetailUI.show(petData: { [string]: any })
 		end
 	end
 
-	-- 위쪽 Info (설명) — 항상 보이기
+	-- Info (설명) — 항상 보이기
 	local infoFrame = frame:FindFirstChild("Info")
 	if infoFrame then
 		infoFrame.Visible = true
 	end
 
-	-- 나머지 Info 프레임도 호버로 (Fortune 등 — 부모에 마우스 대면 보이기)
+	-- Buffs (해/클로버) 임시 UI 제거
+	if iconFrame then
+		local buffsFrame = iconFrame:FindFirstChild("Buffs")
+		if buffsFrame then
+			buffsFrame.Visible = false
+		end
+	end
+
+	-- 하위 Fortune Info 숨기기
 	for _, desc in frame:GetDescendants() do
 		if desc.Name == "Info" and desc:IsA("Frame") and desc ~= infoFrame then
 			desc.Visible = false
-			local parent = desc.Parent
-			if parent and not parent:GetAttribute("_infoHover") then
-				parent:SetAttribute("_infoHover", true)
-				local btn = Instance.new("TextButton")
-				btn.Name = "_Hover"
-				btn.Size = UDim2.new(1, 0, 1, 0)
-				btn.BackgroundTransparency = 1
-				btn.Text = ""
-				btn.ZIndex = 10
-				btn.Parent = parent
-				btn.MouseEnter:Connect(function()
-					desc.Visible = true
-				end)
-				btn.MouseLeave:Connect(function()
-					desc.Visible = false
-				end)
-			end
 		end
 	end
 
