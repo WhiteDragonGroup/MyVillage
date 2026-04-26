@@ -306,7 +306,6 @@ function ShopUI.showBuildingsShop()
 end
 
 function ShopUI.hide()
-	if not _visible then return end
 	_visible = false
 	if shopFrame then shopFrame.Visible = false end
 	if buildingsShopFrame then buildingsShopFrame.Visible = false end
