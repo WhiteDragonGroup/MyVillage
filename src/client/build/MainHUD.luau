@@ -142,6 +142,16 @@ function MainHUD.init(callbacks: {
 	connectTeleport(eggsBtn, "eggs")
 	connectTeleport(villageBtn, "village")
 
+	-- Setting 버튼 → Settings UI 열기
+	local settingBtn = normalGui:FindFirstChild("Setting")
+	if settingBtn then
+		connectButton(settingBtn, function()
+			if _callbacks.onSettings then
+				_callbacks.onSettings()
+			end
+		end)
+	end
+
 	-- 날씨 표시: Weather > Info
 	local weatherBtn = normalGui:FindFirstChild("Weather")
 	if weatherBtn then
