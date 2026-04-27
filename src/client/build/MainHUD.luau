@@ -66,6 +66,56 @@ function MainHUD.init(callbacks: {
 		end
 	end
 
+	-- Button hover/click animation helper
+	local function addButtonAnimation(element, tiltEnabled)
+		if not element then return end
+		local btn = element
+		if not btn:IsA("GuiObject") then return end
+
+		-- Store original
+		local origSize = btn.Size
+		local origRot = btn.Rotation
+
+		local function onHover()
+			local growSize = UDim2.new(origSize.X.Scale, origSize.X.Offset + 6, origSize.Y.Scale, origSize.Y.Offset + 6)
+			TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+				Size = growSize,
+				Rotation = if tiltEnabled then 5 else origRot,
+			}):Play()
+		end
+
+		local function onLeave()
+			TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
+				Size = origSize,
+				Rotation = origRot,
+			}):Play()
+		end
+
+		local function onClick()
+			local shrinkSize = UDim2.new(origSize.X.Scale, origSize.X.Offset - 4, origSize.Y.Scale, origSize.Y.Offset - 4)
+			TweenService:Create(btn, TweenInfo.new(0.05, Enum.EasingStyle.Quad), {
+				Size = shrinkSize,
+			}):Play()
+			task.delay(0.05, function()
+				TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+					Size = origSize,
+				}):Play()
+			end)
+		end
+
+		btn.MouseEnter:Connect(onHover)
+		btn.MouseLeave:Connect(onLeave)
+
+		-- Find clickable child for click feedback
+		local clickTarget = btn
+		if not btn:IsA("GuiButton") then
+			clickTarget = btn:FindFirstChild("_ClickArea") or btn:FindFirstChildWhichIsA("GuiButton")
+		end
+		if clickTarget and clickTarget:IsA("GuiButton") then
+			clickTarget.MouseButton1Down:Connect(onClick)
+		end
+	end
+
 	-- 좌측 사이드 버튼 연결 (Normal > Frame 안에 있음)
 	local bookBtn = sideFrame and sideFrame:FindFirstChild("Pets")  -- Pets = 도감(베타)
 	local buildBtn = sideFrame and sideFrame:FindFirstChild("BulildMode")
@@ -151,6 +201,17 @@ function MainHUD.init(callbacks: {
 			end
 		end)
 	end
+
+	-- Apply button animations
+	-- Side buttons: tilt + grow
+	addButtonAnimation(bookBtn, true)
+	addButtonAnimation(buildBtn, true)
+	addButtonAnimation(shopBtn, true)
+	addButtonAnimation(settingBtn, true)
+	-- Teleport buttons: size only, no tilt
+	addButtonAnimation(buildingsBtn, false)
+	addButtonAnimation(eggsBtn, false)
+	addButtonAnimation(villageBtn, false)
 
 	-- 날씨 표시: Weather > Info
 	local weatherBtn = normalGui:FindFirstChild("Weather")
@@ -295,18 +356,94 @@ function MainHUD.updateWeather(weatherType: string)
 	end
 end
 
--- Message TextLabel로 메시지 표시
+-- Message system: multiple simultaneous messages with float-up animation
+local _messageContainer = nil
+
+local function ensureMessageContainer()
+	if _messageContainer and _messageContainer.Parent then return _messageContainer end
+	if not normalGui then return nil end
+
+	_messageContainer = Instance.new("Frame")
+	_messageContainer.Name = "_MessageContainer"
+	_messageContainer.Size = UDim2.new(1, 0, 0.5, 0)
+	_messageContainer.Position = UDim2.new(0, 0, 0.3, 0)
+	_messageContainer.BackgroundTransparency = 1
+	_messageContainer.ZIndex = 100
+	_messageContainer.Parent = normalGui
+
+	local layout = Instance.new("UIListLayout")
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+	layout.Padding = UDim.new(0, 4)
+	layout.Parent = _messageContainer
+
+	return _messageContainer
+end
+
+local _messageOrder = 0
+
 function MainHUD.showMessage(text: string, duration: number?)
 	if not normalGui then return end
-	local messageLabel = normalGui:FindFirstChild("Message")
-	if not messageLabel then return end
-	messageLabel.Text = text
-	messageLabel.Visible = true
-	task.delay(duration or 2, function()
-		if messageLabel.Text == text then
-			messageLabel.Visible = false
-			messageLabel.Text = ""
+
+	local container = ensureMessageContainer()
+	if not container then return end
+
+	_messageOrder = _messageOrder + 1
+
+	local label = Instance.new("TextLabel")
+	label.Name = "_Msg_" .. _messageOrder
+	label.Size = UDim2.new(0.6, 0, 0, 30)
+	label.BackgroundColor3 = Color3.fromRGB(30, 25, 20)
+	label.BackgroundTransparency = 0.3
+	label.TextColor3 = Color3.fromRGB(255, 255, 255)
+	label.TextSize = 13
+	label.Font = Enum.Font.GothamBold
+	label.Text = text
+	label.TextWrapped = true
+	label.LayoutOrder = -_messageOrder
+	label.ZIndex = 101
+	label.Parent = container
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 8)
+	corner.Parent = label
+
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(180, 140, 80)
+	stroke.Thickness = 1
+	stroke.Parent = label
+
+	-- Start below and transparent, float up
+	label.Position = UDim2.new(0, 0, 0, 40)
+	label.TextTransparency = 1
+	label.BackgroundTransparency = 1
+
+	-- Float up + fade in
+	local fadeIn = TweenService:Create(label, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		TextTransparency = 0,
+		BackgroundTransparency = 0.3,
+	})
+	fadeIn:Play()
+
+	-- Hold, then fade out
+	local holdTime = duration or 2
+	task.delay(holdTime, function()
+		if not label.Parent then return end
+		local fadeOut = TweenService:Create(label, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+			TextTransparency = 1,
+			BackgroundTransparency = 1,
+		})
+		-- Also fade stroke
+		if stroke and stroke.Parent then
+			TweenService:Create(stroke, TweenInfo.new(0.6), {
+				Transparency = 1,
+			}):Play()
 		end
+		fadeOut:Play()
+		fadeOut.Completed:Connect(function()
+			label:Destroy()
+		end)
 	end)
 end
 
@@ -323,12 +460,11 @@ function MainHUD.hideShadow()
 	if shadow then shadow.Visible = false end
 end
 
--- 빌드모드: 다른 UI 숨김 (사이드바 Frame 제외)
+-- 빌드모드: 모든 다른 UI 숨김 (메시지 컨테이너 제외)
 function MainHUD.hideBuildModeUI()
 	if not normalGui then return end
-	local keepVisible = { Frame = true, Diamond = true, Money = true }
 	for _, child in normalGui:GetChildren() do
-		if not keepVisible[child.Name] and child:IsA("GuiObject") and child.Visible then
+		if child:IsA("GuiObject") and child.Name ~= "_MessageContainer" and child.Visible then
 			child:SetAttribute("_wasHidden", true)
 			child.Visible = false
 		end
@@ -343,6 +479,15 @@ function MainHUD.restoreBuildModeUI()
 			child.Visible = true
 			child:SetAttribute("_wasHidden", nil)
 		end
+	end
+end
+
+-- Build mode button visual state
+function MainHUD.setBuildButtonEnabled(enabled: boolean)
+	local btn = _sideButtons["build"]
+	if not btn then return end
+	if btn:IsA("ImageLabel") or btn:IsA("ImageButton") then
+		btn.ImageTransparency = if enabled then 0 else 0.5
 	end
 end
 

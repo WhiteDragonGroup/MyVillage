@@ -1013,6 +1013,79 @@ function PetManager.getSaveData(player: Player): { any }
 end
 
 ----------------------------------------------------------------
+-- Pet sell price calculation
+----------------------------------------------------------------
+function PetManager.getSellPrice(petData): number
+	local rarity = petData.rarity or "Common"
+	local basePrice = PetCfg.SELL_BASE_PRICE[rarity] or 100
+
+	-- Weight multiplier (0.8 ~ 1.2)
+	local weightMult = petData.weightMult or 1.0
+	local weightRange = PetCfg.WEIGHT_MAX_MULT - PetCfg.WEIGHT_MIN_MULT
+	local weightRatio = if weightRange > 0 then math.clamp((weightMult - PetCfg.WEIGHT_MIN_MULT) / weightRange, 0, 1) else 0.5
+	local sellWeightMult = PetCfg.SELL_WEIGHT_MULT_MIN + weightRatio * (PetCfg.SELL_WEIGHT_MULT_MAX - PetCfg.SELL_WEIGHT_MULT_MIN)
+
+	-- Level multiplier (1.0 ~ 2.0)
+	local level = petData.level or 1
+	local levelRatio = math.clamp((level - 1) / (PetCfg.MAX_LEVEL - 1), 0, 1)
+	local sellLevelMult = PetCfg.SELL_LEVEL_MULT_MIN + levelRatio * (PetCfg.SELL_LEVEL_MULT_MAX - PetCfg.SELL_LEVEL_MULT_MIN)
+
+	-- Mutation multiplier (sum of all mutation bonuses)
+	local mutationTotal = 0
+	if petData.mutations then
+		if typeof(petData.mutations) == "table" then
+			-- Handle both dict {Shocked=true} and array {"Shocked"}
+			for k, v in petData.mutations do
+				local mutName = if typeof(k) == "string" then k else v
+				local bonus = PetCfg.SELL_MUTATION_BONUS[mutName] or 0
+				mutationTotal = mutationTotal + bonus
+			end
+		end
+	end
+	local mutMult = if mutationTotal > 0 then mutationTotal else 1
+
+	return math.floor(basePrice * sellWeightMult * sellLevelMult * mutMult)
+end
+
+----------------------------------------------------------------
+-- Remove a pet (for selling)
+----------------------------------------------------------------
+function PetManager.removePet(player: Player, petId: string): (boolean, string?)
+	local pets = _playerPets[player]
+	if not pets or not pets[petId] then
+		return false, "Pet not found"
+	end
+
+	local petData = pets[petId]
+
+	-- Cannot sell assigned/placed pets
+	if petData.assignedBuildingId and petData.assignedBuildingId ~= "" then
+		return false, "Pet is assigned to a building"
+	end
+
+	-- Stop behavior loop
+	_behaviorLoops[petId] = nil
+
+	-- Destroy model
+	if petData._petModel and petData._petModel.Parent then
+		petData._petModel:Destroy()
+	elseif petData.model and petData.model.Parent then
+		petData.model:Destroy()
+	end
+
+	-- Remove from data
+	pets[petId] = nil
+
+	-- Notify client
+	local petUpdateEvent = remotes:FindFirstChild("PetUpdate")
+	if petUpdateEvent then
+		petUpdateEvent:FireClient(player, "removed", { petId = petId })
+	end
+
+	return true
+end
+
+----------------------------------------------------------------
 -- 정리
 ----------------------------------------------------------------
 function PetManager.removePlayer(player: Player)

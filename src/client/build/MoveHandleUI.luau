@@ -78,13 +78,38 @@ function MoveHandleUI.hide()
 	setAllVisible(false)
 end
 
-function MoveHandleUI.setPlaceEnabled(enabled: boolean)
+local _origPlaceColor = nil
+
+-- State: "moving" = dragging (semi-transparent, disabled)
+--        "collision" = fixed or moving with overlap (red, disabled)
+--        "ready" = fixed, no collision (normal, enabled)
+function MoveHandleUI.setPlaceState(state: string)
 	if not _placeBtn then return end
-	_placeBtn.Active = enabled
-	if enabled then
-		_placeBtn.BackgroundTransparency = 0
-	else
+	if not _origPlaceColor then
+		_origPlaceColor = _placeBtn.BackgroundColor3
+	end
+
+	if state == "moving" then
+		_placeBtn.Active = false
 		_placeBtn.BackgroundTransparency = 0.5
+		_placeBtn.BackgroundColor3 = _origPlaceColor
+	elseif state == "collision" then
+		_placeBtn.Active = false
+		_placeBtn.BackgroundTransparency = 0
+		_placeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+	elseif state == "ready" then
+		_placeBtn.Active = true
+		_placeBtn.BackgroundTransparency = 0
+		_placeBtn.BackgroundColor3 = _origPlaceColor
+	end
+end
+
+-- Legacy compat
+function MoveHandleUI.setPlaceEnabled(enabled: boolean)
+	if enabled then
+		MoveHandleUI.setPlaceState("ready")
+	else
+		MoveHandleUI.setPlaceState("moving")
 	end
 end
 

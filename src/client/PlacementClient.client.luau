@@ -33,6 +33,8 @@ local SettingsUI = require(clientScript:WaitForChild("build"):WaitForChild("Sett
 local PetDetailUI = require(clientScript:WaitForChild("build"):WaitForChild("PetDetailUI"))
 local AdminUI = require(clientScript:WaitForChild("build"):WaitForChild("AdminUI"))
 local DialogUI = require(clientScript:WaitForChild("build"):WaitForChild("DialogUI"))
+local PetSellUI = require(clientScript:WaitForChild("build"):WaitForChild("PetSellUI"))
+local EggInfoUI = require(clientScript:WaitForChild("build"):WaitForChild("EggInfoUI"))
 
 local HighlightSystem = require(clientScript:WaitForChild("systems"):WaitForChild("HighlightSystem"))
 local CollisionDetector = require(clientScript:WaitForChild("systems"):WaitForChild("CollisionDetector"))
@@ -72,6 +74,16 @@ local getPlacedEggsFunc = remotes:WaitForChild("GetPlacedEggs")
 local eggUpdateEvent = remotes:WaitForChild("EggUpdate")
 
 local itemsFolder = ReplicatedStorage:WaitForChild("Items")
+
+-- Close all popup UIs (mutual exclusion)
+local function closeAllPopups()
+	ShopUI.hide()
+	SettingsUI.hide()
+	PetSellUI.hide()
+	EggInfoUI.hide()
+	if PetDetailUI.isVisible() then PetDetailUI.hide() end
+	DialogUI.hide()
+end
 
 -- 상태
 local BuildState = Constants.BuildState
@@ -345,13 +357,19 @@ local function updateCollisionState()
 
 	hasCollision = colliding
 
-	-- Highlight로 충돌 시각 피드백 (Model 전체에 적용됨)
+	-- Highlight + Place button state based on drag state
 	if colliding then
+		-- Collision: always red highlight + red button
 		HighlightSystem.applyTo(previewPart, Constants.HIGHLIGHT_COLORS.Collision, 0.5)
-		MoveHandleUI.setPlaceEnabled(false)
+		MoveHandleUI.setPlaceState("collision")
+	elseif _dragPaused then
+		-- Fixed, no collision: no highlight, Place enabled
+		HighlightSystem.removeFrom(previewPart)
+		MoveHandleUI.setPlaceState("ready")
 	else
-		HighlightSystem.applyTo(previewPart, Constants.HIGHLIGHT_COLORS.Selected, 0.6)
-		MoveHandleUI.setPlaceEnabled(true)
+		-- Moving (dragging): blue highlight, Place disabled (semi-transparent)
+		HighlightSystem.applyTo(previewPart, Constants.HIGHLIGHT_COLORS.Moving, 0.6)
+		MoveHandleUI.setPlaceState("moving")
 	end
 end
 
@@ -479,7 +497,9 @@ local function toSelected(building: BasePart)
 		SelectionUI.showUpgrading()
 	else
 		local level = building:GetAttribute("Level") or 1
-		SelectionUI.showNormal(level, BalanceConfig.Upgrade.MAX_LEVEL)
+		local itemName = building:GetAttribute("ItemName") or ""
+		local canStore = itemName ~= "ClockTower"
+		SelectionUI.showNormal(level, BalanceConfig.Upgrade.MAX_LEVEL, canStore)
 	end
 	SelectionUI.show()
 
@@ -529,6 +549,11 @@ local function toMoving(building: BasePart)
 	SelectionUI.hide()
 	InventoryUI.hide()
 	MoveHandleUI.show()
+	MoveHandleUI.setPlaceState("moving")
+	_dragPaused = false
+
+	-- Blue highlight while moving
+	HighlightSystem.applyTo(building, Constants.HIGHLIGHT_COLORS.Moving, 0.6)
 
 	-- 드래그 시작
 	if currentBuildZone then
@@ -779,6 +804,11 @@ end)
 SelectionUI.init({
 	onStore = function()
 		if currentState == BuildState.Selected and selectedBuilding then
+			local itemName = selectedBuilding:GetAttribute("ItemName") or ""
+			if itemName == "ClockTower" then
+				MainHUD.showMessage("Clock Tower cannot be stored.", 2)
+				return
+			end
 			local buildingId = selectedBuilding:GetAttribute("BuildingId")
 			if buildingId then
 				storeBuildingEvent:FireServer(buildingId)
@@ -983,12 +1013,25 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	-- 마우스 클릭: 배치 확정 / BuildMode에서 건물 선택 / 펫 클릭
 	if input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessed then
 		if currentState == BuildState.PlacingNew or currentState == BuildState.Moving then
-			-- 클릭으로 드래그 멈춤/재개 토글 (Place 버튼으로만 확정)
-			_dragPaused = not _dragPaused
 			if _dragPaused then
-				DragHandler.pause()
+				-- Paused: click the building to resume drag
+				local target = mouse.Target
+				if target and previewPart then
+					local previewModel = getParentModel(previewPart)
+					local clickedModel = getParentModel(target)
+					local isPreview = (target == previewPart)
+						or (previewModel and (target:IsDescendantOf(previewModel) or clickedModel == previewModel))
+					if isPreview then
+						_dragPaused = false
+						DragHandler.resume()
+						updateCollisionState()
+					end
+				end
 			else
-				DragHandler.resume()
+				-- Moving: click anywhere to pause
+				_dragPaused = true
+				DragHandler.pause()
+				updateCollisionState()
 			end
 		elseif currentState == BuildState.BuildMode then
 			local target = mouse.Target
@@ -1292,20 +1335,25 @@ task.spawn(function()
 				end
 				-- 프로필 아이콘
 				local profileIcon = plotSign:FindFirstChild("ProfileIcon")
-				if profileIcon and owner ~= "" then
-					local imageLabel = profileIcon:FindFirstChildWhichIsA("ImageLabel")
-					if imageLabel then
-						local Players = game:GetService("Players")
-						local success, result = pcall(function()
-							return Players:GetUserThumbnailAsync(
-								Players:GetUserIdFromNameAsync(owner),
-								Enum.ThumbnailType.HeadShot,
-								Enum.ThumbnailSize.Size100x100
-							)
-						end)
-						if success and result then
-							imageLabel.Image = result
+				if profileIcon then
+					if owner ~= "" then
+						profileIcon.Visible = true
+						local imageLabel = profileIcon:FindFirstChildWhichIsA("ImageLabel")
+						if imageLabel then
+							local Players = game:GetService("Players")
+							local success, result = pcall(function()
+								return Players:GetUserThumbnailAsync(
+									Players:GetUserIdFromNameAsync(owner),
+									Enum.ThumbnailType.HeadShot,
+									Enum.ThumbnailSize.Size100x100
+								)
+							end)
+							if success and result then
+								imageLabel.Image = result
+							end
 						end
+					else
+						profileIcon.Visible = false
 					end
 				end
 			end
@@ -1430,6 +1478,7 @@ MainHUD.init({
 		elseif tabId == "shop" then
 			-- Shop = 알 상점 (BuildingsShop은 NPC)
 			closeAllPanels()
+			closeAllPopups()
 			if currentState == BuildState.BuildMode then
 				toIdle()
 			end
@@ -1492,6 +1541,7 @@ MainHUD.init({
 		if SettingsUI.isVisible() then
 			SettingsUI.hide()
 		else
+			closeAllPopups()
 			SettingsUI.show()
 		end
 	end,
@@ -1559,8 +1609,23 @@ loadShopData()
 
 SettingsUI.init({
 	onCodeSubmit = function(code)
-		print("[Code] Entered: " .. code)
-		-- TODO: 서버에 코드 전송 후 보상 처리
+		local redeemFunc = remotes:FindFirstChild("RedeemCode")
+		if not redeemFunc then
+			MainHUD.showMessage("Code system unavailable", 2)
+			return
+		end
+		local ok, message = redeemFunc:InvokeServer(code)
+		if ok then
+			MainHUD.showMessage(message, 3)
+		else
+			if message == "Code already used" then
+				MainHUD.showMessage("You already used this code!", 2)
+			elseif message == "Invalid code" then
+				MainHUD.showMessage("Invalid code.", 2)
+			else
+				MainHUD.showMessage(message or "Failed to redeem", 2)
+			end
+		end
 	end,
 })
 PetDetailUI.init()
@@ -1690,46 +1755,140 @@ local HAILEY_GREETINGS = {
 }
 
 local HAILEY_CHOICES = {
-	{ text = "Show me the Egg Shop", id = "eggshop" },
 	{ text = "I want to sell my pet", id = "sellpet" },
+	{ text = "How much is this pet worth?", id = "petworth" },
 	{ text = "Show me pet info", id = "petinfo" },
 	{ text = "Nevermind", id = "nevermind" },
 }
 
 DialogUI.init()
+PetSellUI.init()
+EggInfoUI.init()
+
+local _npcDistanceConn = nil
+local NPC_MAX_DISTANCE = 15
+
+local function stopNpcDistanceCheck()
+	if _npcDistanceConn then
+		_npcDistanceConn:Disconnect()
+		_npcDistanceConn = nil
+	end
+end
+
+local function startNpcDistanceCheck(npcPart: BasePart)
+	stopNpcDistanceCheck()
+	_npcDistanceConn = RunService.Heartbeat:Connect(function()
+		local character = player.Character
+		if not character then return end
+		local hrp = character:FindFirstChild("HumanoidRootPart")
+		if not hrp or not npcPart or not npcPart.Parent then
+			stopNpcDistanceCheck()
+			DialogUI.hide()
+			ShopUI.hide()
+			return
+		end
+		local dist = (hrp.Position - npcPart.Position).Magnitude
+		if dist > NPC_MAX_DISTANCE then
+			stopNpcDistanceCheck()
+			DialogUI.hide()
+			ShopUI.hide()
+		end
+	end)
+end
 
 if openShopEvent then
 	openShopEvent.OnClientEvent:Connect(function(shopType, npcName)
-		if shopType == "buildings" then
-			ShopUI.showBuildingsShop()
-		elseif shopType == "eggs" then
-			-- Find NPC part for BillboardGui
-			local adornee = nil
-			local npcFolder = workspace:FindFirstChild("NPC")
-			if npcFolder and npcName then
-				local npc = npcFolder:FindFirstChild(npcName)
-				if npc then
-					adornee = npc:FindFirstChild("Head")
-						or npc:FindFirstChild("HumanoidRootPart")
-						or npc:FindFirstChildWhichIsA("BasePart", true)
-				end
+		-- Find NPC parts
+		local npcPart = nil
+		local npcHead = nil
+		local npcFolder = workspace:FindFirstChild("NPC")
+		if npcFolder and npcName then
+			local npc = npcFolder:FindFirstChild(npcName)
+			if npc then
+				npcHead = npc:FindFirstChild("Head")
+				npcPart = npc:FindFirstChild("HumanoidRootPart")
+					or npcHead
+					or npc:FindFirstChildWhichIsA("BasePart", true)
 			end
+		end
 
+		if shopType == "buildings" then
+			closeAllPopups()
+			ShopUI.showBuildingsShop()
+			if npcPart then startNpcDistanceCheck(npcPart) end
+		elseif shopType == "eggs" then
 			local greeting = HAILEY_GREETINGS[math.random(#HAILEY_GREETINGS)]
 			DialogUI.show("Hailey", greeting, HAILEY_CHOICES, function(choiceId)
 				if choiceId == "eggshop" then
 					DialogUI.hide()
 					ShopUI.show()
 				elseif choiceId == "sellpet" then
-					DialogUI.showResponse("This feature is coming soon!", 2)
+					DialogUI.hide()
+					PetSellUI.show()
+				elseif choiceId == "petworth" then
+					-- Find player's nearby pet (within 10 studs)
+					local character = player.Character
+					local hrp = character and character:FindFirstChild("HumanoidRootPart")
+					if hrp then
+						local nearestPetId = nil
+						local nearestDist = 10
+						local plotsFolder = workspace:FindFirstChild("Plots")
+						if plotsFolder then
+							for _, plot in plotsFolder:GetChildren() do
+								if plot:GetAttribute("Owner") == player.Name then
+									for _, desc in plot:GetDescendants() do
+										if desc:GetAttribute("PetId") and desc:IsA("BasePart") then
+											local dist = (hrp.Position - desc.Position).Magnitude
+											if dist < nearestDist then
+												nearestDist = dist
+												nearestPetId = desc:GetAttribute("PetId")
+											end
+										end
+									end
+									break
+								end
+							end
+						end
+
+						if nearestPetId then
+							local getPriceFunc = remotes:FindFirstChild("GetPetSellPrice")
+							if getPriceFunc then
+								local price = getPriceFunc:InvokeServer(nearestPetId)
+								DialogUI.showResponse("This one's worth $" .. price .. ".", 3)
+							end
+						else
+							DialogUI.showResponse("I can't see anything...", 2)
+						end
+					else
+						DialogUI.showResponse("I can't see anything...", 2)
+					end
 				elseif choiceId == "petinfo" then
-					DialogUI.showResponse("This feature is coming soon!", 2)
+					DialogUI.hide()
+					EggInfoUI.show()
 				elseif choiceId == "nevermind" then
 					DialogUI.showResponse("Goodbye!", 1)
 				end
-			end)
+			end, npcHead or npcPart)
+			if npcPart then startNpcDistanceCheck(npcPart) end
 		end
 	end)
 end
+
+-- Build button enable/disable based on village proximity
+RunService.Heartbeat:Connect(function()
+	if currentState ~= BuildState.Idle then return end
+	local bz = getMyBuildZone()
+	if not bz then
+		MainHUD.setBuildButtonEnabled(false)
+		return
+	end
+	local character = player.Character
+	local hrp = character and character:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+	local localPos = bz.CFrame:PointToObjectSpace(hrp.Position)
+	local halfSize = bz.Size / 2
+	local inVillage = math.abs(localPos.X) <= halfSize.X + 10 and math.abs(localPos.Z) <= halfSize.Z + 10
+	MainHUD.setBuildButtonEnabled(inVillage)
+end)
 
 print("PlacementClient loaded - Build System v6")

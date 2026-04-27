@@ -77,6 +77,34 @@ PetConfig.RARITY_MULTIPLIER = {
 	["Mythic"] = 5.0,
 }
 
+-- === Pet Sell Price ===
+-- Base sell price by rarity
+PetConfig.SELL_BASE_PRICE = {
+	["Common"] = 100,
+	["Rare"] = 300,
+	["Epic"] = 1000,
+	["Legendary"] = 5000,
+	["Mythic"] = 20000,
+}
+
+-- Weight multiplier: min weight → 0.8, max weight → 1.2 (linear interpolation)
+PetConfig.SELL_WEIGHT_MULT_MIN = 0.8
+PetConfig.SELL_WEIGHT_MULT_MAX = 1.2
+
+-- Level multiplier: level 1 → 1.0, level 10 → 2.0 (linear)
+PetConfig.SELL_LEVEL_MULT_MIN = 1.0
+PetConfig.SELL_LEVEL_MULT_MAX = 2.0
+
+-- Mutation sell bonus values (summed, then multiplied)
+PetConfig.SELL_MUTATION_BONUS = {
+	Shocked = 1,
+	Gold = 3,
+	Inverted = 5,
+	Celestial = 4,
+	Charged = 2,
+	Potential = 2,
+}
+
 -- 등급별 펫 색상
 PetConfig.RARITY_COLORS = {
 	["Common"] = Color3.fromRGB(140, 200, 140),

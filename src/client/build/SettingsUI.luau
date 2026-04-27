@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 local SoundService = game:GetService("SoundService")
 local Lighting = game:GetService("Lighting")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -58,10 +59,10 @@ function SettingsUI.init(callbacks: { onCodeSubmit: ((string) -> ())? }?)
 		end)
 	end
 
-	-- Low Detail Mode toggle
+	-- Low Detail Mode (On/Off toggle via ImageButton in GaugeBar)
 	local lowDetailFrame = scrollFrame:FindFirstChild("LowDetailMode")
 	if lowDetailFrame then
-		SettingsUI._connectToggle(lowDetailFrame, function(isOn)
+		SettingsUI._connectOnOffToggle(lowDetailFrame, function(isOn)
 			Lighting.GlobalShadows = not isOn
 		end)
 	end
@@ -84,25 +85,20 @@ function SettingsUI.init(callbacks: { onCodeSubmit: ((string) -> ())? }?)
 	end
 end
 
--- Slider: find bar/fill and make clickable
+-- Slider: GaugeBar > Gauge (fill) + ImageButton (handle)
 function SettingsUI._connectSlider(frame, onChange)
-	-- Find the slider bar (Frame with a fill child)
-	local sliderBar = nil
-	local fillBar = nil
-	local handle = nil
+	-- Find GaugeBar
+	local gaugeBar = frame:FindFirstChild("GaugeBar", true)
+	if not gaugeBar then return end
 
-	for _, child in frame:GetDescendants() do
-		if child:IsA("Frame") and child.Name ~= frame.Name then
-			-- Look for a frame that could be a slider bar
-			local possibleFill = child:FindFirstChildWhichIsA("Frame")
-			if possibleFill then
-				sliderBar = child
-				fillBar = possibleFill
-			end
-		end
+	local fillBar = gaugeBar:FindFirstChild("Gauge")
+	local handle = gaugeBar:FindFirstChild("ImageButton")
+		or gaugeBar:FindFirstChildWhichIsA("ImageButton")
+
+	-- Set handle anchor for centering
+	if handle then
+		handle.AnchorPoint = Vector2.new(0.5, handle.AnchorPoint.Y)
 	end
-
-	if not sliderBar then return end
 
 	-- Create invisible click area over the bar
 	local clickArea = Instance.new("TextButton")
@@ -111,17 +107,20 @@ function SettingsUI._connectSlider(frame, onChange)
 	clickArea.BackgroundTransparency = 1
 	clickArea.Text = ""
 	clickArea.ZIndex = 10
-	clickArea.Parent = sliderBar
+	clickArea.Parent = gaugeBar
 
 	local dragging = false
 
 	local function updateSlider(inputX)
-		local absPos = sliderBar.AbsolutePosition.X
-		local absSize = sliderBar.AbsoluteSize.X
+		local absPos = gaugeBar.AbsolutePosition.X
+		local absSize = gaugeBar.AbsoluteSize.X
 		if absSize == 0 then return end
 		local ratio = math.clamp((inputX - absPos) / absSize, 0, 1)
 		if fillBar then
 			fillBar.Size = UDim2.new(ratio, 0, fillBar.Size.Y.Scale, fillBar.Size.Y.Offset)
+		end
+		if handle then
+			handle.Position = UDim2.new(ratio, 0, handle.Position.Y.Scale, handle.Position.Y.Offset)
 		end
 		onChange(ratio)
 	end
@@ -145,16 +144,23 @@ function SettingsUI._connectSlider(frame, onChange)
 	end)
 end
 
--- Toggle: find clickable element
+-- Toggle: find clickable element + visual feedback (text only)
 function SettingsUI._connectToggle(frame, onChange)
 	local isOn = false
 
-	-- Find any button or clickable in the frame
 	local toggleBtn = frame:FindFirstChildWhichIsA("ImageButton", true)
 		or frame:FindFirstChildWhichIsA("TextButton", true)
 
+	-- Find a TextLabel to show ON/OFF status
+	local statusLabel = nil
+	for _, desc in frame:GetDescendants() do
+		if desc:IsA("TextLabel") then
+			statusLabel = desc
+			break
+		end
+	end
+
 	if not toggleBtn then
-		-- Add transparent button
 		toggleBtn = Instance.new("TextButton")
 		toggleBtn.Name = "_Toggle"
 		toggleBtn.Size = UDim2.new(1, 0, 1, 0)
@@ -164,10 +170,78 @@ function SettingsUI._connectToggle(frame, onChange)
 		toggleBtn.Parent = frame
 	end
 
+	local function updateVisual()
+		if statusLabel then
+			statusLabel.Text = if isOn then "ON" else "OFF"
+			statusLabel.TextColor3 = if isOn
+				then Color3.fromRGB(80, 220, 80)
+				else Color3.fromRGB(180, 180, 180)
+		end
+	end
+
+	updateVisual()
+
 	toggleBtn.MouseButton1Click:Connect(function()
 		isOn = not isOn
+		updateVisual()
 		onChange(isOn)
 	end)
+end
+
+-- On/Off toggle: GaugeBar > ImageButton (handle) clicks to toggle left/right
+function SettingsUI._connectOnOffToggle(frame, onChange)
+	local gaugeBar = frame:FindFirstChild("GaugeBar", true)
+	if not gaugeBar then return end
+
+	local handle = gaugeBar:FindFirstChild("ImageButton")
+		or gaugeBar:FindFirstChildWhichIsA("ImageButton")
+	local gauge = gaugeBar:FindFirstChild("Gauge")
+
+	local isOn = false
+
+	-- Make handle clickable (it's already an ImageButton)
+	-- Also add transparent click area on the whole gauge bar
+	local clickArea = Instance.new("TextButton")
+	clickArea.Name = "_ToggleClick"
+	clickArea.Size = UDim2.new(1, 0, 1, 0)
+	clickArea.BackgroundTransparency = 1
+	clickArea.Text = ""
+	clickArea.ZIndex = 10
+	clickArea.Parent = gaugeBar
+
+	local function updateVisual()
+		if handle then
+			handle.AnchorPoint = Vector2.new(0.5, handle.AnchorPoint.Y)
+			if isOn then
+				TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+					Position = UDim2.new(1, 0, handle.Position.Y.Scale, handle.Position.Y.Offset),
+				}):Play()
+			else
+				TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+					Position = UDim2.new(0, 0, handle.Position.Y.Scale, handle.Position.Y.Offset),
+				}):Play()
+			end
+		end
+		if gauge then
+			TweenService:Create(gauge, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+				Size = UDim2.new(if isOn then 1 else 0, 0, gauge.Size.Y.Scale, gauge.Size.Y.Offset),
+			}):Play()
+		end
+	end
+
+	clickArea.MouseButton1Click:Connect(function()
+		isOn = not isOn
+		updateVisual()
+		onChange(isOn)
+	end)
+
+	if handle and handle:IsA("GuiButton") then
+		handle.MouseButton1Click:Connect(function()
+			isOn = not isOn
+			updateVisual()
+			onChange(isOn)
+		end)
+	end
 end
 
 function SettingsUI.show()

@@ -165,6 +165,7 @@ Constants.HIGHLIGHT_COLORS = {
 	Hover = Color3.fromRGB(255, 255, 255),     -- 흰색
 	Selected = Color3.fromRGB(0, 255, 0),      -- 초록
 	Collision = Color3.fromRGB(255, 0, 0),     -- 빨강
+	Moving = Color3.fromRGB(0, 120, 255),      -- 파란색 (이동 중)
 }
 
 -- 빌드 상태

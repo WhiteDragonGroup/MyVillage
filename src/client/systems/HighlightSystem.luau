@@ -74,6 +74,11 @@ function HighlightSystem.setCollision(target: BasePart)
 	ensureHighlight(target, Constants.HIGHLIGHT_COLORS.Collision, 0.5)
 end
 
+-- 이동 중 하이라이트 (파란색)
+function HighlightSystem.setMoving(target: BasePart)
+	ensureHighlight(target, Constants.HIGHLIGHT_COLORS.Moving, 0.6)
+end
+
 -- 하이라이트 제거
 function HighlightSystem.clear()
 	if _currentHighlight then

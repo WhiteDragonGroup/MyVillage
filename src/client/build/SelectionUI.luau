@@ -86,10 +86,25 @@ function SelectionUI.init(callbacks: {
 	end
 end
 
-function SelectionUI.showNormal(level: number, maxLevel: number)
+function SelectionUI.showNormal(level: number, maxLevel: number, canStore: boolean?)
 	if not selectFolder then return end
 	if _moveBtn then _moveBtn.Visible = true end
-	if _storeBtn then _storeBtn.Visible = true end
+	if _storeBtn then
+		_storeBtn.Visible = true
+		if canStore == false then
+			_storeBtn.Active = false
+			if _storeBtn:IsA("GuiButton") then
+				_storeBtn.AutoButtonColor = false
+			end
+			_storeBtn.BackgroundTransparency = 0.6
+		else
+			_storeBtn.Active = true
+			if _storeBtn:IsA("GuiButton") then
+				_storeBtn.AutoButtonColor = true
+			end
+			_storeBtn.BackgroundTransparency = 0
+		end
+	end
 	if _cancleBtn then _cancleBtn.Visible = true end
 	if _upgradeBtn then
 		_upgradeBtn.Visible = (level < maxLevel)

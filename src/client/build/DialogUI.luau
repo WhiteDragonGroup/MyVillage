@@ -1,74 +1,53 @@
 -- DialogUI.luau
--- NPC dialogue as BillboardGui (speech bubble next to NPC)
+-- NPC speech bubble on NPC head + Player choices on player head
 
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 local DialogUI = {}
 
-local _billboard = nil
+local _npcBillboard = nil   -- NPC greeting bubble
+local _playerBillboard = nil -- Player choices bubble
 local _visible = false
 local _onChoice = nil
+local _choices = {}
+local _keyConnection = nil
 
 function DialogUI.init()
-	-- Nothing to init - billboard created per show()
+	-- Nothing to init - billboards created per show()
 end
 
-function DialogUI.show(npcName: string, greeting: string, choices: { { text: string, id: string } }, onChoice: (string) -> (), adornee: BasePart?)
-	DialogUI.hide()
-	_visible = true
-	_onChoice = onChoice
-
-	-- Find NPC part to attach to
-	local targetPart = adornee
-	if not targetPart then
-		local npcFolder = workspace:FindFirstChild("NPC")
-		if npcFolder then
-			local npc = npcFolder:FindFirstChild("PetDealer") or npcFolder:FindFirstChild("BuildingDealer")
-			if npc then
-				targetPart = npc:FindFirstChild("HumanoidRootPart")
-					or npc:FindFirstChild("Head")
-					or npc:FindFirstChildWhichIsA("BasePart", true)
-			end
-		end
-	end
-
-	_billboard = Instance.new("BillboardGui")
-	_billboard.Name = "DialogBubble"
-	_billboard.Size = UDim2.new(0, 300, 0, 200)
-	_billboard.StudsOffset = Vector3.new(0, 5, 0)
-	_billboard.AlwaysOnTop = true
-	_billboard.MaxDistance = 30
-	_billboard.Parent = playerGui
+local function createBubble(targetPart: BasePart, studsOffset: Vector3, size: UDim2): BillboardGui
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "DialogBubble"
+	billboard.Size = size
+	billboard.StudsOffset = studsOffset
+	billboard.AlwaysOnTop = true
+	billboard.MaxDistance = 30
+	billboard.Parent = playerGui
 
 	if targetPart then
-		_billboard.Adornee = targetPart
-	else
-		-- Fallback: screen center
-		_billboard.Parent = nil
-		_billboard = nil
-		-- Use screen GUI instead
-		_billboard = Instance.new("ScreenGui")
-		_billboard.Name = "DialogFallback"
-		_billboard.DisplayOrder = 45
-		_billboard.Parent = playerGui
+		billboard.Adornee = targetPart
 	end
 
-	-- Main frame
+	return billboard
+end
+
+local function createFrame(parent: Instance, size: UDim2?): Frame
 	local frame = Instance.new("Frame")
 	frame.Name = "DialogFrame"
-	if _billboard:IsA("BillboardGui") then
-		frame.Size = UDim2.new(1, 0, 1, 0)
+	if parent:IsA("BillboardGui") then
+		frame.Size = size or UDim2.new(1, 0, 1, 0)
 	else
-		frame.Size = UDim2.new(0, 300, 0, 200)
-		frame.Position = UDim2.new(0.5, -150, 0.5, -100)
+		frame.Size = size or UDim2.new(0, 300, 0, 120)
 	end
 	frame.BackgroundColor3 = Color3.fromRGB(35, 30, 25)
 	frame.BackgroundTransparency = 0.1
 	frame.BorderSizePixel = 0
-	frame.Parent = _billboard
+	frame.Parent = parent
 
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, 10)
@@ -79,34 +58,74 @@ function DialogUI.show(npcName: string, greeting: string, choices: { { text: str
 	stroke.Thickness = 2
 	stroke.Parent = frame
 
-	-- NPC name
-	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(1, -10, 0, 20)
-	nameLabel.Position = UDim2.new(0, 5, 0, 5)
-	nameLabel.BackgroundTransparency = 1
-	nameLabel.TextColor3 = Color3.fromRGB(255, 220, 130)
-	nameLabel.TextSize = 14
-	nameLabel.Font = Enum.Font.GothamBold
-	nameLabel.Text = npcName
-	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-	nameLabel.Parent = frame
+	return frame
+end
 
-	-- Greeting text
-	local greetLabel = Instance.new("TextLabel")
-	greetLabel.Size = UDim2.new(1, -10, 0, 30)
-	greetLabel.Position = UDim2.new(0, 5, 0, 26)
-	greetLabel.BackgroundTransparency = 1
-	greetLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	greetLabel.TextSize = 11
-	greetLabel.Font = Enum.Font.Gotham
-	greetLabel.Text = greeting
-	greetLabel.TextWrapped = true
-	greetLabel.TextXAlignment = Enum.TextXAlignment.Left
-	greetLabel.TextYAlignment = Enum.TextYAlignment.Top
-	greetLabel.Parent = frame
+function DialogUI.show(npcName: string, greeting: string, choices: { { text: string, id: string } }, onChoice: (string) -> (), npcAdornee: BasePart?)
+	DialogUI.hide()
+	_visible = true
+	_onChoice = onChoice
+	_choices = choices
+
+	-- Player head
+	local playerHead = nil
+	local character = player.Character
+	if character then
+		playerHead = character:FindFirstChild("Head") or character:FindFirstChild("HumanoidRootPart")
+	end
+
+	-- === NPC speech bubble (greeting) ===
+	if npcAdornee then
+		_npcBillboard = createBubble(npcAdornee, Vector3.new(0, 1.5, 0), UDim2.new(0, 250, 0, 70))
+		local npcFrame = createFrame(_npcBillboard)
+		npcFrame.BackgroundTransparency = 1
+		-- Remove stroke on NPC bubble
+		local npcStroke = npcFrame:FindFirstChildWhichIsA("UIStroke")
+		if npcStroke then npcStroke:Destroy() end
+
+		-- NPC name
+		local nameLabel = Instance.new("TextLabel")
+		nameLabel.Size = UDim2.new(1, -10, 0, 18)
+		nameLabel.Position = UDim2.new(0, 5, 0, 5)
+		nameLabel.BackgroundTransparency = 1
+		nameLabel.TextColor3 = Color3.fromRGB(255, 220, 130)
+		nameLabel.TextSize = 13
+		nameLabel.Font = Enum.Font.GothamBold
+		nameLabel.Text = npcName
+		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+		nameLabel.Parent = npcFrame
+
+		-- Greeting text
+		local greetLabel = Instance.new("TextLabel")
+		greetLabel.Size = UDim2.new(1, -10, 0, 36)
+		greetLabel.Position = UDim2.new(0, 5, 0, 24)
+		greetLabel.BackgroundTransparency = 1
+		greetLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+		greetLabel.TextSize = 11
+		greetLabel.Font = Enum.Font.Gotham
+		greetLabel.Text = greeting
+		greetLabel.TextWrapped = true
+		greetLabel.TextXAlignment = Enum.TextXAlignment.Left
+		greetLabel.TextYAlignment = Enum.TextYAlignment.Top
+		greetLabel.Parent = npcFrame
+	end
+
+	-- === Player choices bubble (right side) ===
+	local choiceHeight = 10 + #choices * 28
+	if playerHead then
+		_playerBillboard = createBubble(playerHead, Vector3.new(6, 1, 0), UDim2.new(0, 260, 0, choiceHeight))
+	else
+		-- Fallback: screen center
+		_playerBillboard = Instance.new("ScreenGui")
+		_playerBillboard.Name = "DialogFallback"
+		_playerBillboard.DisplayOrder = 45
+		_playerBillboard.Parent = playerGui
+	end
+
+	local playerFrame = createFrame(_playerBillboard)
 
 	-- Choice buttons
-	local y = 60
+	local y = 5
 	for i, choice in choices do
 		local btn = Instance.new("TextButton")
 		btn.Size = UDim2.new(1, -10, 0, 24)
@@ -118,7 +137,7 @@ function DialogUI.show(npcName: string, greeting: string, choices: { { text: str
 		btn.Text = "#" .. i .. " " .. choice.text
 		btn.TextXAlignment = Enum.TextXAlignment.Left
 		btn.AutoButtonColor = true
-		btn.Parent = frame
+		btn.Parent = playerFrame
 
 		local btnCorner = Instance.new("UICorner")
 		btnCorner.CornerRadius = UDim.new(0, 5)
@@ -136,27 +155,52 @@ function DialogUI.show(npcName: string, greeting: string, choices: { { text: str
 
 		y = y + 28
 	end
+
+	-- Keyboard number selection (1-4) + Escape to cancel
+	_keyConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if gameProcessed then return end
+		if not _visible then return end
+
+		local keyMap = {
+			[Enum.KeyCode.One] = 1,
+			[Enum.KeyCode.Two] = 2,
+			[Enum.KeyCode.Three] = 3,
+			[Enum.KeyCode.Four] = 4,
+		}
+
+		if input.KeyCode == Enum.KeyCode.Escape then
+			DialogUI.hide()
+			return
+		end
+
+		local index = keyMap[input.KeyCode]
+		if index and _choices[index] and _onChoice then
+			_onChoice(_choices[index].id)
+		end
+	end)
 end
 
 function DialogUI.showResponse(text: string, duration: number?)
-	if not _billboard then return end
-
-	local frame = _billboard:FindFirstChild("DialogFrame")
-	if not frame then return end
-
-	-- Hide choices, update text
-	for _, child in frame:GetChildren() do
-		if child:IsA("TextButton") then
-			child:Destroy()
-		end
+	-- Hide player choices
+	if _playerBillboard then
+		_playerBillboard:Destroy()
+		_playerBillboard = nil
+	end
+	if _keyConnection then
+		_keyConnection:Disconnect()
+		_keyConnection = nil
 	end
 
-	local greetLabel = frame:FindFirstChild("TextLabel")
-	-- Find the greeting label (second TextLabel)
-	for _, child in frame:GetChildren() do
-		if child:IsA("TextLabel") and child.Position.Y.Offset > 20 then
-			child.Text = text
-			break
+	-- Update NPC bubble text
+	if _npcBillboard then
+		local frame = _npcBillboard:FindFirstChild("DialogFrame")
+		if frame then
+			for _, child in frame:GetChildren() do
+				if child:IsA("TextLabel") and child.Position.Y.Offset > 20 then
+					child.Text = text
+					break
+				end
+			end
 		end
 	end
 
@@ -167,9 +211,19 @@ end
 
 function DialogUI.hide()
 	_visible = false
-	if _billboard then
-		_billboard:Destroy()
-		_billboard = nil
+	_choices = {}
+	_onChoice = nil
+	if _keyConnection then
+		_keyConnection:Disconnect()
+		_keyConnection = nil
+	end
+	if _npcBillboard then
+		_npcBillboard:Destroy()
+		_npcBillboard = nil
+	end
+	if _playerBillboard then
+		_playerBillboard:Destroy()
+		_playerBillboard = nil
 	end
 end
 

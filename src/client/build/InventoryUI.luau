@@ -238,7 +238,15 @@ end
 function InventoryUI.show()
 	if _visible or not ownedFrame then return end
 	_visible = true
+
+	-- Slide in from right
+	local origPos = ownedFrame.Position
+	ownedFrame.Position = UDim2.new(origPos.X.Scale + 0.3, origPos.X.Offset, origPos.Y.Scale, origPos.Y.Offset)
 	ownedFrame.Visible = true
+	TweenService:Create(ownedFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+		Position = origPos,
+	}):Play()
+
 	InventoryUI._renderSlots()
 end
 
