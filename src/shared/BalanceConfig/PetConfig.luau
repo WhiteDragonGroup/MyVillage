@@ -57,7 +57,7 @@ PetConfig.LEVEL_EFFICIENCY = {
 -- 기본 지급 펫 (플레이어 최초 접속 시)
 PetConfig.DEFAULT_PETS = {
 	{ petName = "FarmerNewbie", petType = "Farming", rarity = "Common",
-	  size = "Small", race = "Human", traits = {"Insomnia"} },
+	  size = "Small", race = "Human", traits = {} },
 }
 
 -- 펫 카탈로그 (petType별 작업 효율 배율)

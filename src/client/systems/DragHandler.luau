@@ -83,6 +83,13 @@ function DragHandler.rotate(direction: number) -- direction: 1 (오른쪽) / -1 
 	local stepRad = math.rad(require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Constants")).ROTATION_STEP)
 	_currentRotationY = _currentRotationY + (stepRad * direction)
 	_currentRotationY = _gridSnap.snapRotation(_currentRotationY)
+
+	-- If paused, apply rotation in place
+	if _paused and _targetPart and _buildZone and _onPositionUpdate then
+		local pos = _targetPart.CFrame.Position
+		local newCFrame = CFrame.new(pos) * CFrame.Angles(0, _currentRotationY, 0)
+		_onPositionUpdate(newCFrame)
+	end
 end
 
 -- 현재 회전값 반환

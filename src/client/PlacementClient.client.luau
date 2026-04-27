@@ -85,6 +85,9 @@ local function closeAllPopups()
 	DialogUI.hide()
 end
 
+-- NPC interaction distance
+local NPC_MAX_DISTANCE = 15
+
 -- 상태
 local BuildState = Constants.BuildState
 local currentState = BuildState.Idle
@@ -1014,7 +1017,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessed then
 		if currentState == BuildState.PlacingNew or currentState == BuildState.Moving then
 			if _dragPaused then
-				-- Paused: click the building to resume drag
+				-- Fixed: click the building to resume
 				local target = mouse.Target
 				if target and previewPart then
 					local previewModel = getParentModel(previewPart)
@@ -1028,7 +1031,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 					end
 				end
 			else
-				-- Moving: click anywhere to pause
+				-- Moving: click anywhere to fix in place
 				_dragPaused = true
 				DragHandler.pause()
 				updateCollisionState()
@@ -1045,8 +1048,101 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 				PetDetailUI.hide()
 			end
 
-			-- Idle 상태에서 펫/알 클릭
+			-- NPC 클릭 감지
 			local target = mouse.Target
+			if target then
+				local npcFolder = workspace:FindFirstChild("NPC")
+				if npcFolder then
+					local current = target
+					while current and current ~= workspace do
+						if current.Parent == npcFolder then
+							-- NPC 클릭됨 → OpenShop 이벤트와 동일 처리
+							local npcName = current.Name
+							local shopType = if npcName == "BuildingDealer" then "buildings" else "eggs"
+							local openShopEvent = remotes:FindFirstChild("OpenShop")
+							if openShopEvent then
+								openShopEvent:FireServer(shopType, npcName)
+							end
+							-- 거리 체크
+							local npcPart = current:FindFirstChild("HumanoidRootPart")
+								or current:FindFirstChildWhichIsA("BasePart", true)
+							local character = player.Character
+							local hrp = character and character:FindFirstChild("HumanoidRootPart")
+							if hrp and npcPart then
+								local dist = (hrp.Position - npcPart.Position).Magnitude
+								if dist > NPC_MAX_DISTANCE then
+									return -- too far
+								end
+							end
+							-- Trigger same as ProximityPrompt
+							if shopType == "buildings" then
+								closeAllPopups()
+								local npcHead = current:FindFirstChild("Head")
+								local greeting = PIERRE_GREETINGS[math.random(#PIERRE_GREETINGS)]
+								DialogUI.show("Pierre", greeting, {}, function() end, npcHead or npcPart)
+								task.delay(1.5, function() DialogUI.hide() end)
+								ShopUI.showBuildingsShop()
+								if npcPart then startNpcDistanceCheck(npcPart) end
+							elseif shopType == "eggs" then
+								local npcHead = current:FindFirstChild("Head")
+								local greeting = HAILEY_GREETINGS[math.random(#HAILEY_GREETINGS)]
+								DialogUI.show("Hailey", greeting, HAILEY_CHOICES, function(choiceId)
+									if choiceId == "sellpet" then
+										DialogUI.hide()
+										PetSellUI.show()
+									elseif choiceId == "petworth" then
+										local ch = player.Character
+										local hrp2 = ch and ch:FindFirstChild("HumanoidRootPart")
+										if hrp2 then
+											local nearestPetId = nil
+											local nearestDist = 10
+											local plotsFolder = workspace:FindFirstChild("Plots")
+											if plotsFolder then
+												for _, plot in plotsFolder:GetChildren() do
+													if plot:GetAttribute("Owner") == player.Name then
+														for _, desc in plot:GetDescendants() do
+															if desc:GetAttribute("PetId") and desc:IsA("BasePart") then
+																local d = (hrp2.Position - desc.Position).Magnitude
+																if d < nearestDist then
+																	nearestDist = d
+																	nearestPetId = desc:GetAttribute("PetId")
+																end
+															end
+														end
+														break
+													end
+												end
+											end
+											if nearestPetId then
+												local getPriceFunc = remotes:FindFirstChild("GetPetSellPrice")
+												if getPriceFunc then
+													local price = getPriceFunc:InvokeServer(nearestPetId)
+													DialogUI.showResponse("This one's worth $" .. price .. ".", 3)
+												end
+											else
+												DialogUI.showResponse("I can't see anything...", 2)
+											end
+										else
+											DialogUI.showResponse("I can't see anything...", 2)
+										end
+									elseif choiceId == "petinfo" then
+										DialogUI.hide()
+										EggInfoUI.show()
+									elseif choiceId == "nevermind" then
+										DialogUI.showResponse("Goodbye!", 1)
+									end
+								end, npcHead or npcPart)
+								if npcPart then startNpcDistanceCheck(npcPart) end
+							end
+							return
+						end
+						current = current.Parent
+					end
+				end
+			end
+
+			-- Idle 상태에서 펫/알 클릭
+			target = mouse.Target
 			-- 클릭한 파트 또는 조상에서 PetId/IsEgg 찾기
 			local petTarget = nil
 			local eggTarget = nil
@@ -1336,11 +1432,16 @@ task.spawn(function()
 				-- 프로필 아이콘
 				local profileIcon = plotSign:FindFirstChild("ProfileIcon")
 				if profileIcon then
-					if owner ~= "" then
-						profileIcon.Visible = true
+					local isVisible = owner ~= ""
+					-- SurfaceGui uses Enabled, GuiObject uses Visible
+					if profileIcon:IsA("SurfaceGui") or profileIcon:IsA("BillboardGui") then
+						profileIcon.Enabled = isVisible
+					elseif profileIcon:IsA("GuiObject") then
+						profileIcon.Visible = isVisible
+					end
+					if isVisible then
 						local imageLabel = profileIcon:FindFirstChildWhichIsA("ImageLabel")
 						if imageLabel then
-							local Players = game:GetService("Players")
 							local success, result = pcall(function()
 								return Players:GetUserThumbnailAsync(
 									Players:GetUserIdFromNameAsync(owner),
@@ -1352,8 +1453,6 @@ task.spawn(function()
 								imageLabel.Image = result
 							end
 						end
-					else
-						profileIcon.Visible = false
 					end
 				end
 			end
@@ -1437,8 +1536,11 @@ ShopUI.init({
 		buyItemEvent:FireServer(itemName)
 	end,
 	onBuyGem = function(itemName)
-		-- TODO: 보석 구매 (보석 시스템 구현 후 연결)
-		buyItemEvent:FireServer(itemName)
+		-- Robux purchase via Developer Product
+		local buyRobuxEvent = remotes:FindFirstChild("BuyRobux")
+		if buyRobuxEvent then
+			buyRobuxEvent:FireServer("building", itemName)
+		end
 	end,
 	onGift = function(itemName)
 		GiftUI.show(itemName)
@@ -1552,53 +1654,44 @@ shopUpdateEvent.OnClientEvent:Connect(function(shopData, restockTime)
 	ShopUI.updateShop(shopData, restockTime)
 end)
 
+-- 구매 결과 알림
+local buyResultEvent = remotes:FindFirstChild("BuyResult")
+if buyResultEvent then
+	buyResultEvent.OnClientEvent:Connect(function(success, message)
+		if success then
+			MainHUD.showMessage(message, 3)
+		else
+			-- Error messages
+			if message == "Not enough coins" then
+				MainHUD.showMessage("Not enough coins!", 2)
+			elseif message == "Out of stock" then
+				MainHUD.showMessage("Out of stock!", 2)
+			else
+				MainHUD.showMessage(message or "Purchase failed", 2)
+			end
+		end
+		loadShopData()
+	end)
+end
+
 -- 선물 수신 알림
 giftReceivedEvent.OnClientEvent:Connect(function(senderName, itemDisplayName)
-	-- 간단한 알림 (2초 표시)
-	local notifGui = Instance.new("ScreenGui")
-	notifGui.Name = "GiftNotification"
-	notifGui.ResetOnSpawn = false
-	notifGui.DisplayOrder = 40
-	notifGui.Parent = playerGui
-
-	local notifFrame = Instance.new("Frame")
-	notifFrame.Size = UDim2.new(0, 280, 0, 50)
-	notifFrame.Position = UDim2.new(0.5, -140, 0, -60)
-	notifFrame.BackgroundColor3 = Color3.fromRGB(180, 80, 150)
-	notifFrame.BorderSizePixel = 0
-	notifFrame.Parent = notifGui
-
-	local nCorner = Instance.new("UICorner")
-	nCorner.CornerRadius = UDim.new(0, 12)
-	nCorner.Parent = notifFrame
-
-	local nLabel = Instance.new("TextLabel")
-	nLabel.Size = UDim2.new(1, -16, 1, 0)
-	nLabel.Position = UDim2.new(0, 8, 0, 0)
-	nLabel.BackgroundTransparency = 1
-	nLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	nLabel.TextSize = 13
-	nLabel.Font = Enum.Font.GothamBold
-	nLabel.Text = senderName .. " sent you " .. itemDisplayName .. "!"
-	nLabel.TextWrapped = true
-	nLabel.Parent = notifFrame
-
-	-- 슬라이드 인
-	TweenService:Create(notifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
-		Position = UDim2.new(0.5, -140, 0, 20)
-	}):Play()
-
-	-- 2초 후 슬라이드 아웃 + 제거
-	task.delay(2.5, function()
-		local tween = TweenService:Create(notifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-			Position = UDim2.new(0.5, -140, 0, -60)
-		})
-		tween:Play()
-		tween.Completed:Connect(function()
-			notifGui:Destroy()
-		end)
-	end)
+	MainHUD.showMessage(senderName .. " sent you " .. itemDisplayName .. "!", 3)
 end)
+
+-- Robux 구매 완료 알림
+local purchaseNotifyEvent = remotes:FindFirstChild("PurchaseNotify")
+if purchaseNotifyEvent then
+	purchaseNotifyEvent.OnClientEvent:Connect(function(purchaseType, data)
+		if purchaseType == "building" then
+			MainHUD.showMessage(data.itemName .. " added to inventory!", 3)
+		elseif purchaseType == "egg" then
+			MainHUD.showMessage("Egg added to inventory!", 3)
+		elseif purchaseType == "gift" then
+			MainHUD.showMessage(data.buyer .. " gifted " .. data.itemName .. " to " .. data.receiver .. "!", 3)
+		end
+	end)
+end
 
 -- 초기 상점 데이터 로드
 loadShopData()
@@ -1745,6 +1838,15 @@ local openShopEvent = remotes:FindFirstChild("OpenShop")
 if not openShopEvent then
 	openShopEvent = remotes:WaitForChild("OpenShop", 5)
 end
+-- Pierre (BuildingDealer) greetings
+local PIERRE_GREETINGS = {
+	"Welcome! Looking for any structures?",
+	"Ready to upgrade your village?",
+	"I've got the best structures for you!",
+	"Feel free to look around!",
+	"Fresh structures just arrived!",
+}
+
 -- Hailey (PetDealer) greetings
 local HAILEY_GREETINGS = {
 	"Hi there! Need any help?",
@@ -1766,7 +1868,6 @@ PetSellUI.init()
 EggInfoUI.init()
 
 local _npcDistanceConn = nil
-local NPC_MAX_DISTANCE = 15
 
 local function stopNpcDistanceCheck()
 	if _npcDistanceConn then
@@ -1814,6 +1915,12 @@ if openShopEvent then
 
 		if shopType == "buildings" then
 			closeAllPopups()
+			-- Pierre greeting on NPC head
+			local greeting = PIERRE_GREETINGS[math.random(#PIERRE_GREETINGS)]
+			DialogUI.show("Pierre", greeting, {}, function() end, npcHead or npcPart)
+			task.delay(1.5, function()
+				DialogUI.hide()
+			end)
 			ShopUI.showBuildingsShop()
 			if npcPart then startNpcDistanceCheck(npcPart) end
 		elseif shopType == "eggs" then

@@ -13,6 +13,14 @@ local giftReceivedEvent = remotes:WaitForChild("GiftReceived")
 
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
 
+-- Buy result notification
+local buyResultEvent = remotes:FindFirstChild("BuyResult")
+if not buyResultEvent then
+	buyResultEvent = Instance.new("RemoteEvent")
+	buyResultEvent.Name = "BuyResult"
+	buyResultEvent.Parent = remotes
+end
+
 local serverScript = script.Parent
 local ShopManager = require(serverScript:WaitForChild("ShopManager"))
 local InventoryManager = require(serverScript:WaitForChild("InventoryManager"))
@@ -48,9 +56,11 @@ buyItemEvent.OnServerEvent:Connect(function(player, itemName)
 
 	local success, msg = ShopManager.buyItem(player, itemName)
 	if success then
-		print(player.Name .. " - 상점 구매: " .. itemName)
+		local building = Constants.BUILDINGS[itemName]
+		local displayName = building and building.name or itemName
+		buyResultEvent:FireClient(player, true, displayName .. " purchased!")
 	else
-		warn(player.Name .. " - 구매 실패: " .. msg)
+		buyResultEvent:FireClient(player, false, msg)
 	end
 
 	notifyShopUpdate(player)
@@ -85,12 +95,19 @@ sendGiftEvent.OnServerEvent:Connect(function(buyer, itemName, receiverName)
 	if success then
 		local building = Constants.BUILDINGS[itemName]
 		local displayName = building and building.name or itemName
-		print(buyer.Name .. " → " .. receiver.Name .. " 선물: " .. itemName)
 
 		-- 수신자에게 알림
 		giftReceivedEvent:FireClient(receiver, buyer.Name, displayName)
+
+		-- 서버 전체에 선물 알림
+		buyResultEvent:FireClient(buyer, true, "Gifted " .. displayName .. " to " .. receiver.DisplayName .. "!")
+		for _, p in Players:GetPlayers() do
+			if p ~= buyer and p ~= receiver then
+				buyResultEvent:FireClient(p, true, buyer.DisplayName .. " gifted " .. displayName .. " to " .. receiver.DisplayName .. "!")
+			end
+		end
 	else
-		warn(buyer.Name .. " - 선물 실패: " .. msg)
+		buyResultEvent:FireClient(buyer, false, msg)
 	end
 
 	notifyShopUpdate(buyer)

@@ -8,6 +8,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
+local ProductConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ProductConfig"))
+
+local remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -81,6 +84,7 @@ end
 function ShopUI.updateShop(shopData: { any }, restockTime: number)
 	_shopData = shopData
 	_restockTime = restockTime
+	print("[ShopUI] received " .. #shopData .. " items, restock in " .. math.floor(restockTime) .. "s")
 	if _visible then
 		ShopUI._renderItems()
 		ShopUI._startTimer()
@@ -88,6 +92,7 @@ function ShopUI.updateShop(shopData: { any }, restockTime: number)
 end
 
 local _shopSlotTemplate = nil
+local _shopSlotHeight = nil
 
 function ShopUI._renderItems()
 	if not buildingsShopFrame then return end
@@ -95,24 +100,40 @@ function ShopUI._renderItems()
 	local scrollFrame = buildingsShopFrame:FindFirstChild("ScrollingFrame")
 	if not scrollFrame then return end
 
-	-- 슬롯 템플릿 저장 (최초 1회)
+	-- 슬롯 템플릿 저장 (최초 1회) + 원본 높이 기록
 	if not _shopSlotTemplate then
 		for _, child in scrollFrame:GetChildren() do
-			if child.Name == "Frame" and child:IsA("GuiObject") then
-				_shopSlotTemplate = child:Clone()
-				break
+			if child:IsA("Frame") or child:IsA("ImageLabel") or child:IsA("TextButton") then
+				if child.Name ~= "UIListLayout" and child.Name ~= "UIPadding" then
+					_shopSlotHeight = child.AbsoluteSize.Y
+					_shopSlotTemplate = child:Clone()
+					break
+				end
 			end
 		end
 	end
 
-	-- 기존 슬롯 모두 제거
+	-- 기존 슬롯 모두 제거 (레이아웃 객체 보존)
 	for _, child in scrollFrame:GetChildren() do
-		if child:IsA("GuiObject") then
+		if child:IsA("GuiObject") and not child:IsA("UIListLayout") and not child:IsA("UIPadding") and not child:IsA("UIGridLayout") then
 			child:Destroy()
 		end
 	end
 
-	if not _shopSlotTemplate then return end
+	if not _shopSlotTemplate then
+		warn("[ShopUI] No slot template found in ScrollingFrame")
+		return
+	end
+
+	print("[ShopUI] rendering " .. #_shopData .. " items")
+
+	-- Ensure layout exists
+	if not scrollFrame:FindFirstChildWhichIsA("UIListLayout") and not scrollFrame:FindFirstChildWhichIsA("UIGridLayout") then
+		local layout = Instance.new("UIListLayout")
+		layout.Padding = UDim.new(0, 4)
+		layout.SortOrder = Enum.SortOrder.LayoutOrder
+		layout.Parent = scrollFrame
+	end
 
 	for i, item in _shopData do
 		local building = Constants.BUILDINGS[item.itemName]
@@ -162,21 +183,42 @@ function ShopUI._renderItems()
 			end
 		end
 
-		-- BuyRobux
+		-- BuyRobux (Developer Product)
 		local buyRobux = slot:FindFirstChild("BuyRobux")
 		if buyRobux and buyRobux:IsA("GuiButton") then
 			local btnText = buyRobux:FindFirstChild("TextLabel") or buyRobux:FindFirstChildWhichIsA("TextLabel")
-			if btnText then btnText.Text = math.floor(item.price * 0.2) end
-			if item.stock > 0 then
+			local productId = ProductConfig.getProductId("building", item.itemName)
+			if productId > 0 then
+				-- Fetch localized price async
+				task.spawn(function()
+					local getPriceFunc = remotes:FindFirstChild("GetProductPrice")
+					if getPriceFunc then
+						local info = getPriceFunc:InvokeServer("building", item.itemName)
+						if info and info.price and btnText then
+							btnText.Text = "R$" .. info.price
+						end
+					end
+				end)
 				buyRobux.MouseButton1Click:Connect(function()
 					if _callbacks.onBuyGem then _callbacks.onBuyGem(item.itemName) end
 				end)
 			else
-				buyRobux.Active = false
-				buyRobux.BackgroundTransparency = 0.5
+				-- No product configured: hide button
+				buyRobux.Visible = false
 			end
 		end
 	end
+
+	-- Fix slot heights to original pixel size, then auto-expand canvas
+	if _shopSlotHeight and _shopSlotHeight > 0 then
+		for _, child in scrollFrame:GetChildren() do
+			if child:IsA("GuiObject") and not child:IsA("UIListLayout") and not child:IsA("UIPadding") and not child:IsA("UIGridLayout") then
+				child.Size = UDim2.new(child.Size.X.Scale, child.Size.X.Offset, 0, _shopSlotHeight)
+			end
+		end
+	end
+	scrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 end
 
 function ShopUI._renderItems_disabled()
