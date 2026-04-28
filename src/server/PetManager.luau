@@ -452,8 +452,8 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 			-- 불면 특성 체크
 			local hasSleepless = false
 			if petData.traits then
-				for _, trait in petData.traits do
-					if trait == "Insomnia" then
+				for k, v in petData.traits do
+					if v == "Insomnia" or k == "Insomnia" or (typeof(v) == "boolean" and v and k == "Insomnia") then
 						hasSleepless = true
 						break
 					end
@@ -462,6 +462,7 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 
 			-- 밤이고 불면 아닌 경우 → 수면
 			if not TimeState.isDay() and not hasSleepless then
+				print("[Pet] " .. petData.petName .. " sleeping (isDay=" .. tostring(TimeState.isDay()) .. ", insomnia=" .. tostring(hasSleepless) .. ")")
 				setPetState(petData, "Sleeping")
 
 				-- 쉼터로 이동 (있으면)
@@ -686,6 +687,16 @@ function PetManager.initPlayer(player: Player, savedPets: { any }?)
 				targetBuildingId = "",
 				previousWorkId = "",
 			}
+
+			-- Ensure FarmerNewbie always has Insomnia
+			if petData.petName == "FarmerNewbie" then
+				local hasIns = false
+				for _, t in petData.traits do
+					if t == "Insomnia" then hasIns = true; break end
+				end
+				if not hasIns then table.insert(petData.traits, "Insomnia") end
+			end
+
 			_playerPets[player][petId] = petData
 		end
 	else

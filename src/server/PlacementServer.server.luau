@@ -12,7 +12,10 @@ local storeBuildingEvent = remotes:WaitForChild("StoreBuilding")
 local getInventoryFunc = remotes:WaitForChild("GetInventory")
 
 local itemsFolder = ReplicatedStorage:FindFirstChild("Items") -- 폴백용 (없어도 됨)
-local buildingsFolder = ReplicatedStorage:FindFirstChild("Buildings")
+local buildingsFolder = ReplicatedStorage:WaitForChild("Buildings", 10)
+if not buildingsFolder then
+	warn("[PlacementServer] Buildings folder not found, using Items only")
+end
 local plotsFolder = workspace:WaitForChild("Plots")
 
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
@@ -171,6 +174,8 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 		warn("아이템 없음:", itemName)
 		return
 	end
+	print("[Place] " .. itemName .. " Lv" .. level .. " → " .. template:GetFullName() .. " (" .. template.ClassName .. ")")
+	print("[PlacementServer] " .. itemName .. " Lv" .. level .. " → template: " .. template:GetFullName())
 
 	-- 3. 플레이어 플롯 찾기
 	local plot = getPlayerPlot(player)
@@ -229,23 +234,44 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 				end
 			end
 		end
+		-- PrimaryPart가 없으면 설정 (GetBoundingBox 정확도 향상)
+		if mainPart and not item.PrimaryPart then
+			item.PrimaryPart = mainPart
+		end
 		if not mainPart then
 			warn(player.Name .. " - 모델에 BasePart 없음: " .. itemName)
 			item:Destroy()
 			InventoryManager.addItem(player, itemName, 1, level) -- 인벤토리 복구
 			return
 		end
-		-- 위치 + Y축 회전만 적용 (눕힘 방지)
+		-- 위치 이동 + Y축 회전만 적용 (모델 내부 방향 보존)
 		local targetCFrame = pivotCFrame or cframe
 		local pos = targetCFrame.Position
 		local _, yRot, _ = targetCFrame:ToEulerAnglesYXZ()
+
 		item:PivotTo(CFrame.new(pos) * CFrame.Angles(0, yRot, 0))
 		item.Parent = plot
-		mainPart.Anchored = true
 
-		-- 바닥 보정: 모델 하단을 BuildZone 상단에 맞춤
+		-- Anchor all parts in the model
+		for _, desc in item:GetDescendants() do
+			if desc:IsA("BasePart") then
+				desc.Anchored = true
+			end
+		end
+
+		-- 바닥 보정: 모델 하단을 BuildZone 상단에 맞춤 (CollisionBox 제외)
 		local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
+		local removedParts = {}
+		for _, part in item:GetDescendants() do
+			if part:IsA("BasePart") and part:GetAttribute("IsCollisionBox") then
+				table.insert(removedParts, { part = part, parent = part.Parent })
+				part.Parent = nil
+			end
+		end
 		local bbCF, bbSize = item:GetBoundingBox()
+		for _, info in removedParts do
+			info.part.Parent = info.parent
+		end
 		local modelBottom = bbCF.Position.Y - bbSize.Y / 2
 		local yAdjust = buildZoneTop - modelBottom
 		if math.abs(yAdjust) > 0.01 then

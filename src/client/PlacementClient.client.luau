@@ -1010,8 +1010,8 @@ MoveHandleUI.init({
 
 -- 마우스/키보드 입력 (gameProcessed로 UI 클릭과 구분)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	-- 다이얼로그가 열려 있으면 입력 무시
-	if UpgradeUI.isVisible() or PetListUI.isVisible() or PetDetailUI.isVisible() then return end
+	-- 다이얼로그가 열려 있으면 입력 무시 (PetDetail은 클릭으로 닫을 수 있게 제외)
+	if UpgradeUI.isVisible() or PetListUI.isVisible() then return end
 
 	-- 마우스 클릭: 배치 확정 / BuildMode에서 건물 선택 / 펫 클릭
 	if input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessed then
@@ -1043,11 +1043,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 				toSelected(mainPart)
 			end
 		elseif currentState == BuildState.Idle then
-			-- PetDetail 열려있으면 닫기 (펫 아닌 곳 클릭 시)
-			if PetDetailUI.isVisible() then
-				PetDetailUI.hide()
-			end
-
 			-- NPC 클릭 감지
 			local target = mouse.Target
 			if target then
@@ -1088,8 +1083,11 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 								local greeting = HAILEY_GREETINGS[math.random(#HAILEY_GREETINGS)]
 								DialogUI.show("Hailey", greeting, HAILEY_CHOICES, function(choiceId)
 									if choiceId == "sellpet" then
-										DialogUI.hide()
-										PetSellUI.show()
+										DialogUI.showResponse("Let me see what you've got!", 1.5)
+										task.delay(1.5, function()
+											DialogUI.hide()
+											PetSellUI.show()
+										end)
 									elseif choiceId == "petworth" then
 										local ch = player.Character
 										local hrp2 = ch and ch:FindFirstChild("HumanoidRootPart")
@@ -1117,7 +1115,10 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 												local getPriceFunc = remotes:FindFirstChild("GetPetSellPrice")
 												if getPriceFunc then
 													local price = getPriceFunc:InvokeServer(nearestPetId)
-													DialogUI.showResponse("This one's worth $" .. price .. ".", 3)
+													DialogUI.showResponse("Hmm, let me take a look...", 1)
+													task.delay(1, function()
+														DialogUI.showResponse("This one's worth $" .. price .. ".", 3)
+													end)
 												end
 											else
 												DialogUI.showResponse("I can't see anything...", 2)
@@ -1126,10 +1127,13 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 											DialogUI.showResponse("I can't see anything...", 2)
 										end
 									elseif choiceId == "petinfo" then
-										DialogUI.hide()
-										EggInfoUI.show()
+										DialogUI.showResponse("Here's what we have!", 1)
+										task.delay(1, function()
+											DialogUI.hide()
+											EggInfoUI.show()
+										end)
 									elseif choiceId == "nevermind" then
-										DialogUI.showResponse("Goodbye!", 1)
+										DialogUI.showResponse("See you around!", 1.5)
 									end
 								end, npcHead or npcPart)
 								if npcPart then startNpcDistanceCheck(npcPart) end
@@ -1161,18 +1165,23 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			end
 
 			if petTarget then
-				task.spawn(function()
-					local pets = getPetsFunc:InvokeServer()
-					if pets then
-						local petId = petTarget:GetAttribute("PetId")
-						for _, pet in pets do
-							if pet.petId == petId then
-								PetDetailUI.show(pet)
-								break
+				-- Toggle pet detail
+				if PetDetailUI.isVisible() then
+					PetDetailUI.hide()
+				else
+					task.spawn(function()
+						local pets = getPetsFunc:InvokeServer()
+						if pets then
+							local petId = petTarget:GetAttribute("PetId")
+							for _, pet in pets do
+								if pet.petId == petId then
+									PetDetailUI.show(pet)
+									break
+								end
 							end
 						end
-					end
-				end)
+					end)
+				end
 			elseif eggTarget then
 				local eggId = eggTarget:GetAttribute("EggId")
 				local readyToHatch = eggTarget:GetAttribute("ReadyToHatch")
@@ -1180,44 +1189,50 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 					hatchEggEvent:FireServer(eggId)
 				end
 			elseif target then
-				-- 근처 펫 자동 감지 (10 stud 이내)
-				local clickPos = mouse.Hit.Position
-				local plotsFolder = workspace:FindFirstChild("Plots")
-				if plotsFolder then
-					for _, plot in plotsFolder:GetChildren() do
-						if plot:GetAttribute("Owner") == player.Name then
-							local closestPet = nil
-							local closestDist = 10
-							for _, desc in plot:GetDescendants() do
-								if desc:IsA("BasePart") and desc:GetAttribute("PetId") then
-									local dist = (desc.Position - clickPos).Magnitude
-									if dist < closestDist then
-										closestDist = dist
-										closestPet = desc
-									end
-								end
-							end
-							if closestPet then
-								task.spawn(function()
-									local pets = getPetsFunc:InvokeServer()
-									if pets then
-										local petId = closestPet:GetAttribute("PetId")
-										for _, pet in pets do
-											if pet.petId == petId then
-												PetDetailUI.show(pet)
-												break
-											end
+				-- 펫 아닌 곳 클릭 → PetDetail 닫기
+				if PetDetailUI.isVisible() then
+					PetDetailUI.hide()
+					-- 근처 펫 감지 건너뜀
+				else
+					-- 근처 펫 자동 감지 (10 stud 이내)
+					local clickPos = mouse.Hit.Position
+					local plotsFolder = workspace:FindFirstChild("Plots")
+					if plotsFolder then
+						for _, plot in plotsFolder:GetChildren() do
+							if plot:GetAttribute("Owner") == player.Name then
+								local closestPet = nil
+								local closestDist = 10
+								for _, desc in plot:GetDescendants() do
+									if desc:IsA("BasePart") and desc:GetAttribute("PetId") then
+										local dist = (desc.Position - clickPos).Magnitude
+										if dist < closestDist then
+											closestDist = dist
+											closestPet = desc
 										end
 									end
-								end)
+								end
+								if closestPet then
+									task.spawn(function()
+										local pets = getPetsFunc:InvokeServer()
+										if pets then
+											local petId = closestPet:GetAttribute("PetId")
+											for _, pet in pets do
+												if pet.petId == petId then
+													PetDetailUI.show(pet)
+													break
+												end
+											end
+										end
+									end)
+								end
+								break
 							end
-							break
 						end
 					end
-				end
-			end
-		end
-	end
+				end -- else
+			end -- elseif target
+		end -- elseif Idle
+	end -- MouseButton1
 
 	if gameProcessed then return end
 
@@ -1926,12 +1941,12 @@ if openShopEvent then
 		elseif shopType == "eggs" then
 			local greeting = HAILEY_GREETINGS[math.random(#HAILEY_GREETINGS)]
 			DialogUI.show("Hailey", greeting, HAILEY_CHOICES, function(choiceId)
-				if choiceId == "eggshop" then
-					DialogUI.hide()
-					ShopUI.show()
-				elseif choiceId == "sellpet" then
-					DialogUI.hide()
-					PetSellUI.show()
+				if choiceId == "sellpet" then
+					DialogUI.showResponse("Let me see what you've got!", 1.5)
+					task.delay(1.5, function()
+						DialogUI.hide()
+						PetSellUI.show()
+					end)
 				elseif choiceId == "petworth" then
 					-- Find player's nearby pet (within 10 studs)
 					local character = player.Character
@@ -1961,7 +1976,10 @@ if openShopEvent then
 							local getPriceFunc = remotes:FindFirstChild("GetPetSellPrice")
 							if getPriceFunc then
 								local price = getPriceFunc:InvokeServer(nearestPetId)
-								DialogUI.showResponse("This one's worth $" .. price .. ".", 3)
+								DialogUI.showResponse("Hmm, let me take a look...", 1)
+								task.delay(1, function()
+									DialogUI.showResponse("This one's worth $" .. price .. ".", 3)
+								end)
 							end
 						else
 							DialogUI.showResponse("I can't see anything...", 2)
@@ -1970,10 +1988,13 @@ if openShopEvent then
 						DialogUI.showResponse("I can't see anything...", 2)
 					end
 				elseif choiceId == "petinfo" then
-					DialogUI.hide()
-					EggInfoUI.show()
+					DialogUI.showResponse("Here's what we have!", 1)
+					task.delay(1, function()
+						DialogUI.hide()
+						EggInfoUI.show()
+					end)
 				elseif choiceId == "nevermind" then
-					DialogUI.showResponse("Goodbye!", 1)
+					DialogUI.showResponse("See you around!", 1.5)
 				end
 			end, npcHead or npcPart)
 			if npcPart then startNpcDistanceCheck(npcPart) end

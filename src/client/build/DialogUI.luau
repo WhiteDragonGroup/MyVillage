@@ -3,6 +3,7 @@
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -14,7 +15,9 @@ local _playerBillboard = nil -- Player choices bubble
 local _visible = false
 local _onChoice = nil
 local _choices = {}
+local _choiceButtons = {}   -- index → TextButton
 local _keyConnection = nil
+local _selecting = false    -- prevent double selection
 
 function DialogUI.init()
 	-- Nothing to init - billboards created per show()
@@ -27,6 +30,7 @@ local function createBubble(targetPart: BasePart, studsOffset: Vector3, size: UD
 	billboard.StudsOffset = studsOffset
 	billboard.AlwaysOnTop = true
 	billboard.MaxDistance = 30
+	billboard.Active = true
 	billboard.Parent = playerGui
 
 	if targetPart then
@@ -124,6 +128,56 @@ function DialogUI.show(npcName: string, greeting: string, choices: { { text: str
 
 	local playerFrame = createFrame(_playerBillboard)
 
+	-- Select choice with animation
+	_selecting = false
+	_choiceButtons = {}
+
+	local function selectChoice(index)
+		if _selecting then return end
+		if not _choices[index] or not _onChoice then return end
+		_selecting = true
+
+		local btn = _choiceButtons[index]
+
+		-- Button press animation
+		if btn then
+			-- Highlight selected
+			TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {
+				BackgroundColor3 = Color3.fromRGB(180, 140, 80),
+			}):Play()
+
+			-- Shrink then restore
+			local origSize = btn.Size
+			TweenService:Create(btn, TweenInfo.new(0.05, Enum.EasingStyle.Quad), {
+				Size = UDim2.new(origSize.X.Scale, origSize.X.Offset - 4, origSize.Y.Scale, origSize.Y.Offset - 2),
+			}):Play()
+			task.delay(0.05, function()
+				if btn.Parent then
+					TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+						Size = origSize,
+					}):Play()
+				end
+			end)
+		end
+
+		-- Fade out other buttons
+		for j, otherBtn in _choiceButtons do
+			if j ~= index and otherBtn.Parent then
+				TweenService:Create(otherBtn, TweenInfo.new(0.2), {
+					BackgroundTransparency = 0.7,
+					TextTransparency = 0.5,
+				}):Play()
+			end
+		end
+
+		-- After short delay, fire callback
+		task.delay(0.3, function()
+			if _onChoice then
+				_onChoice(_choices[index].id)
+			end
+		end)
+	end
+
 	-- Choice buttons
 	local y = 5
 	for i, choice in choices do
@@ -147,10 +201,10 @@ function DialogUI.show(npcName: string, greeting: string, choices: { { text: str
 		btnPad.PaddingLeft = UDim.new(0, 8)
 		btnPad.Parent = btn
 
+		_choiceButtons[i] = btn
+
 		btn.MouseButton1Click:Connect(function()
-			if _onChoice then
-				_onChoice(choice.id)
-			end
+			selectChoice(i)
 		end)
 
 		y = y + 28
@@ -174,8 +228,8 @@ function DialogUI.show(npcName: string, greeting: string, choices: { { text: str
 		end
 
 		local index = keyMap[input.KeyCode]
-		if index and _choices[index] and _onChoice then
-			_onChoice(_choices[index].id)
+		if index then
+			selectChoice(index)
 		end
 	end)
 end

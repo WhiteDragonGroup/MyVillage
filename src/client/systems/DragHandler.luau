@@ -84,7 +84,7 @@ function DragHandler.rotate(direction: number) -- direction: 1 (오른쪽) / -1 
 	_currentRotationY = _currentRotationY + (stepRad * direction)
 	_currentRotationY = _gridSnap.snapRotation(_currentRotationY)
 
-	-- If paused, apply rotation in place
+	-- If paused, apply rotation in place (keep position, only change rotation)
 	if _paused and _targetPart and _buildZone and _onPositionUpdate then
 		local pos = _targetPart.CFrame.Position
 		local newCFrame = CFrame.new(pos) * CFrame.Angles(0, _currentRotationY, 0)

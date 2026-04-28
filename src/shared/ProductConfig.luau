@@ -8,28 +8,16 @@ local ProductConfig = {}
 -- Building → Developer Product ID
 -- TODO: Replace 0 with actual Developer Product IDs from Creator Dashboard
 ProductConfig.BUILDING_PRODUCTS = {
-	Garden          = 0,
-	Mine            = 0,
-	Inn             = 0,
-	Fountain        = 0,
-	Market          = 0,
-	Blacksmith      = 0,
-	HotSpring       = 0,
-	Library         = 0,
-	Lab             = 0,
-	Brewery         = 0,
-	Pavilion        = 0,
-	MagicTower      = 0,
-	Temple          = 0,
-	WorldTree       = 0,
-	Campfire        = 0,
-	PotionCafe      = 0,
 	AltarOfBlessing = 0,
-	Farm            = 0,
-	Laboratory      = 0,
-	GiantFurnace    = 0,
-	TreeOfGrowth    = 0,
+	Campfire        = 0,
 	ClockTower      = 0,
+	Farm            = 0,
+	GiantFurnace    = 0,
+	HotSpring       = 0,
+	Laboratory      = 0,
+	Mine            = 0,
+	PotionCafe      = 0,
+	TreeOfGrowth    = 0,
 }
 
 -- Egg → Developer Product ID

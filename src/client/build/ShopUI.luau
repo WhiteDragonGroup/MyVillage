@@ -78,7 +78,65 @@ function ShopUI.init(callbacks: { onBuy: (string) -> (), onBuyGem: ((string) -> 
 				end)
 			end
 		end
+
+		-- Connect egg buy/gift buttons in ShopFrame
+		ShopUI._connectEggShop(shopFrame)
 	end
+end
+
+-- Connect buttons inside egg/diamond shop items
+function ShopUI._connectEggShop(frame)
+	for _, child in frame:GetDescendants() do
+		-- Find Gift buttons (ImageButton named "Gift" or with gift icon)
+		if child.Name == "Gift" and child:IsA("GuiButton") then
+			-- Find which egg/item this belongs to
+			local parent = child.Parent
+			while parent and parent ~= frame do
+				local eggType = ShopUI._matchEggType(parent)
+				if eggType then
+					child.MouseButton1Click:Connect(function()
+						if _callbacks.onGift then _callbacks.onGift(eggType) end
+					end)
+					break
+				end
+				parent = parent.Parent
+			end
+		end
+
+		-- Find Buy buttons for eggs
+		if (child.Name == "Buy" or child.Name == "BuyButton") and child:IsA("GuiButton") then
+			local parent = child.Parent
+			while parent and parent ~= frame do
+				local eggType = ShopUI._matchEggType(parent)
+				if eggType then
+					child.MouseButton1Click:Connect(function()
+						if _callbacks.onBuyEgg then _callbacks.onBuyEgg(eggType) end
+					end)
+					break
+				end
+				parent = parent.Parent
+			end
+		end
+	end
+end
+
+function ShopUI._matchEggType(element): string?
+	local name = element.Name:lower()
+	local textLabel = element:FindFirstChildWhichIsA("TextLabel", true)
+	local text = textLabel and textLabel.Text:lower() or ""
+
+	if name:find("legendary") or text:find("legendary") then return "Egg_Legendary" end
+	if name:find("epic") or text:find("epic") then return "Egg_Epic" end
+	if name:find("rare") or text:find("rare") then return "Egg_Rare" end
+	if name:find("common") or text:find("common") then return "Egg_Common" end
+
+	-- Match by price text
+	if text:find("1240") or name:find("4") then return "Egg_Legendary" end
+	if text:find("429") or name:find("3") then return "Egg_Epic" end
+	if text:find("140") or name:find("2") then return "Egg_Rare" end
+	if text:find("31") or name:find("1") then return "Egg_Common" end
+
+	return nil
 end
 
 function ShopUI.updateShop(shopData: { any }, restockTime: number)
@@ -183,7 +241,7 @@ function ShopUI._renderItems()
 			end
 		end
 
-		-- BuyRobux (Developer Product)
+		-- BuyRobux
 		local buyRobux = slot:FindFirstChild("BuyRobux")
 		if buyRobux and buyRobux:IsA("GuiButton") then
 			local btnText = buyRobux:FindFirstChild("TextLabel") or buyRobux:FindFirstChildWhichIsA("TextLabel")
@@ -199,12 +257,27 @@ function ShopUI._renderItems()
 						end
 					end
 				end)
+			end
+			if item.stock > 0 then
 				buyRobux.MouseButton1Click:Connect(function()
 					if _callbacks.onBuyGem then _callbacks.onBuyGem(item.itemName) end
 				end)
 			else
-				-- No product configured: hide button
-				buyRobux.Visible = false
+				buyRobux.Active = false
+				buyRobux.BackgroundTransparency = 0.5
+			end
+		end
+
+		-- Gift button
+		local giftBtn = slot:FindFirstChild("Gift")
+		if giftBtn and giftBtn:IsA("GuiButton") then
+			if item.stock > 0 then
+				giftBtn.MouseButton1Click:Connect(function()
+					if _callbacks.onGift then _callbacks.onGift(item.itemName) end
+				end)
+			else
+				giftBtn.Active = false
+				giftBtn.BackgroundTransparency = 0.5
 			end
 		end
 	end

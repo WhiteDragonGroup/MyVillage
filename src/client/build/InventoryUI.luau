@@ -185,6 +185,30 @@ function InventoryUI._renderSlots()
 			iconLabel.Image = building.icon
 		end
 
+		-- Count 표시 (2개 이상일 때)
+		local count = item.count or 1
+		if count > 1 then
+			local countLabel = slot:FindFirstChild("CountText")
+			if not countLabel then
+				countLabel = Instance.new("TextLabel")
+				countLabel.Name = "CountText"
+				countLabel.Size = UDim2.new(0, 28, 0, 18)
+				countLabel.Position = UDim2.new(1, -30, 0, 2)
+				countLabel.BackgroundColor3 = Color3.fromRGB(30, 25, 20)
+				countLabel.BackgroundTransparency = 0.3
+				countLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+				countLabel.TextSize = 11
+				countLabel.Font = Enum.Font.GothamBold
+				countLabel.ZIndex = 5
+				countLabel.Parent = slot
+
+				local cCorner = Instance.new("UICorner")
+				cCorner.CornerRadius = UDim.new(0, 4)
+				cCorner.Parent = countLabel
+			end
+			countLabel.Text = "x" .. count
+		end
+
 		-- 클릭 이벤트 (투명 버튼 추가)
 		local clickBtn = Instance.new("TextButton")
 		clickBtn.Name = "ClickArea"

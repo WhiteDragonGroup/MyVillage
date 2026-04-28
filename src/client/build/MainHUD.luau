@@ -361,15 +361,23 @@ local _messageContainer = nil
 
 local function ensureMessageContainer()
 	if _messageContainer and _messageContainer.Parent then return _messageContainer end
-	if not normalGui then return nil end
+
+	-- Create a top-level ScreenGui so messages are never hidden by other UIs
+	local msgGui = playerGui:FindFirstChild("_MessageGui")
+	if not msgGui then
+		msgGui = Instance.new("ScreenGui")
+		msgGui.Name = "_MessageGui"
+		msgGui.DisplayOrder = 999
+		msgGui.ResetOnSpawn = false
+		msgGui.Parent = playerGui
+	end
 
 	_messageContainer = Instance.new("Frame")
 	_messageContainer.Name = "_MessageContainer"
 	_messageContainer.Size = UDim2.new(1, 0, 0.5, 0)
 	_messageContainer.Position = UDim2.new(0, 0, 0.3, 0)
 	_messageContainer.BackgroundTransparency = 1
-	_messageContainer.ZIndex = 100
-	_messageContainer.Parent = normalGui
+	_messageContainer.Parent = msgGui
 
 	local layout = Instance.new("UIListLayout")
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -382,12 +390,42 @@ local function ensureMessageContainer()
 end
 
 local _messageOrder = 0
+local _activeMessages = {} -- { [text] = { label, count, cancelDelay } }
 
 function MainHUD.showMessage(text: string, duration: number?)
 	if not normalGui then return end
 
 	local container = ensureMessageContainer()
 	if not container then return end
+
+	-- Check if same message already visible → stack count
+	local existing = _activeMessages[text]
+	if existing and existing.label and existing.label.Parent then
+		existing.count = existing.count + 1
+		existing.label.Text = text .. " x" .. existing.count
+		-- Reset fade timer
+		if existing.cancelDelay then
+			task.cancel(existing.cancelDelay)
+		end
+		local holdTime = duration or 2
+		existing.cancelDelay = task.delay(holdTime, function()
+			if not existing.label or not existing.label.Parent then return end
+			local stroke = existing.label:FindFirstChildWhichIsA("UIStroke")
+			local fadeOut = TweenService:Create(existing.label, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+				TextTransparency = 1,
+				BackgroundTransparency = 1,
+			})
+			if stroke then
+				TweenService:Create(stroke, TweenInfo.new(0.6), { Transparency = 1 }):Play()
+			end
+			fadeOut:Play()
+			fadeOut.Completed:Connect(function()
+				if existing.label then existing.label:Destroy() end
+				_activeMessages[text] = nil
+			end)
+		end)
+		return
+	end
 
 	_messageOrder = _messageOrder + 1
 
@@ -402,7 +440,6 @@ function MainHUD.showMessage(text: string, duration: number?)
 	label.Text = text
 	label.TextWrapped = true
 	label.LayoutOrder = -_messageOrder
-	label.ZIndex = 101
 	label.Parent = container
 
 	local corner = Instance.new("UICorner")
@@ -426,15 +463,18 @@ function MainHUD.showMessage(text: string, duration: number?)
 	})
 	fadeIn:Play()
 
+	-- Track active message
+	local entry = { label = label, count = 1, cancelDelay = nil }
+	_activeMessages[text] = entry
+
 	-- Hold, then fade out
 	local holdTime = duration or 2
-	task.delay(holdTime, function()
+	entry.cancelDelay = task.delay(holdTime, function()
 		if not label.Parent then return end
 		local fadeOut = TweenService:Create(label, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 			TextTransparency = 1,
 			BackgroundTransparency = 1,
 		})
-		-- Also fade stroke
 		if stroke and stroke.Parent then
 			TweenService:Create(stroke, TweenInfo.new(0.6), {
 				Transparency = 1,
@@ -443,6 +483,7 @@ function MainHUD.showMessage(text: string, duration: number?)
 		fadeOut:Play()
 		fadeOut.Completed:Connect(function()
 			label:Destroy()
+			_activeMessages[text] = nil
 		end)
 	end)
 end
@@ -460,13 +501,28 @@ function MainHUD.hideShadow()
 	if shadow then shadow.Visible = false end
 end
 
--- 빌드모드: 모든 다른 UI 숨김 (메시지 컨테이너 제외)
+-- 빌드모드: 다른 UI 숨김 (빌드 버튼만 유지 + 메시지)
 function MainHUD.hideBuildModeUI()
 	if not normalGui then return end
+	local buildBtn = _sideButtons["build"]
+	local sideFrame = buildBtn and buildBtn.Parent
+
 	for _, child in normalGui:GetChildren() do
 		if child:IsA("GuiObject") and child.Name ~= "_MessageContainer" and child.Visible then
 			child:SetAttribute("_wasHidden", true)
 			child.Visible = false
+		end
+	end
+
+	-- 빌드 버튼만 다시 보이기
+	if sideFrame then
+		sideFrame.Visible = true
+		-- 사이드 Frame 안의 다른 버튼 숨기기
+		for _, btn in sideFrame:GetChildren() do
+			if btn:IsA("GuiObject") and btn ~= buildBtn then
+				btn:SetAttribute("_sideHidden", true)
+				btn.Visible = false
+			end
 		end
 	end
 end
@@ -478,6 +534,17 @@ function MainHUD.restoreBuildModeUI()
 		if child:IsA("GuiObject") and child:GetAttribute("_wasHidden") then
 			child.Visible = true
 			child:SetAttribute("_wasHidden", nil)
+		end
+	end
+	-- 사이드 버튼 복원
+	local buildBtn = _sideButtons["build"]
+	local sideFrame = buildBtn and buildBtn.Parent
+	if sideFrame then
+		for _, btn in sideFrame:GetChildren() do
+			if btn:IsA("GuiObject") and btn:GetAttribute("_sideHidden") then
+				btn.Visible = true
+				btn:SetAttribute("_sideHidden", nil)
+			end
 		end
 	end
 end

@@ -364,9 +364,28 @@ Players.PlayerAdded:Connect(function(player)
 		-- 5. 플레이어가 스폰되면 자기 땅으로 이동
 		local function teleportToPlot(character)
 			task.wait(BalanceConfig.Spawn.DELAY)
+			local hrp = character:FindFirstChild("HumanoidRootPart")
+			if not hrp then return end
+
+			-- Try to spawn at village entrance (Sign/VillageSign)
+			local sign = plot:FindFirstChild("Sign")
+			if sign then
+				local vs = sign:FindFirstChild("VillageSign")
+				if vs then sign = vs end
+				local signPart = if sign:IsA("BasePart") then sign
+					else sign:FindFirstChildWhichIsA("BasePart", true)
+				if signPart then
+					local buildZone = plot:FindFirstChild("BuildZone", true)
+					local groundY = if buildZone then buildZone.Position.Y + buildZone.Size.Y / 2 + 3 else signPart.Position.Y
+					hrp.CFrame = CFrame.new(signPart.Position.X, groundY, signPart.Position.Z)
+					return
+				end
+			end
+
+			-- Fallback: BuildZone center
 			local buildZone = plot:FindFirstChild("BuildZone", true)
-			if buildZone and character:FindFirstChild("HumanoidRootPart") then
-				character.HumanoidRootPart.CFrame = buildZone.CFrame + Vector3.new(0, BalanceConfig.Spawn.HEIGHT_OFFSET, 0)
+			if buildZone then
+				hrp.CFrame = buildZone.CFrame + Vector3.new(0, BalanceConfig.Spawn.HEIGHT_OFFSET, 0)
 			end
 		end
 
