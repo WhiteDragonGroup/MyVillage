@@ -244,39 +244,17 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 			InventoryManager.addItem(player, itemName, 1, level) -- 인벤토리 복구
 			return
 		end
-		-- 위치 이동 + Y축 회전만 적용 (모델 내부 방향 보존)
-		local targetCFrame = pivotCFrame or cframe
-		local pos = targetCFrame.Position
-		local _, yRot, _ = targetCFrame:ToEulerAnglesYXZ()
-
-		item:PivotTo(CFrame.new(pos) * CFrame.Angles(0, yRot, 0))
-		item.Parent = plot
-
-		-- Anchor all parts in the model
+		-- mainPart CFrame 매칭
+		local delta = cframe * mainPart.CFrame:Inverse()
 		for _, desc in item:GetDescendants() do
 			if desc:IsA("BasePart") then
+				desc.CFrame = delta * desc.CFrame
 				desc.Anchored = true
 			end
 		end
+		item.Parent = plot
 
-		-- 바닥 보정: 모델 하단을 BuildZone 상단에 맞춤 (CollisionBox 제외)
-		local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
-		local removedParts = {}
-		for _, part in item:GetDescendants() do
-			if part:IsA("BasePart") and part:GetAttribute("IsCollisionBox") then
-				table.insert(removedParts, { part = part, parent = part.Parent })
-				part.Parent = nil
-			end
-		end
-		local bbCF, bbSize = item:GetBoundingBox()
-		for _, info in removedParts do
-			info.part.Parent = info.parent
-		end
-		local modelBottom = bbCF.Position.Y - bbSize.Y / 2
-		local yAdjust = buildZoneTop - modelBottom
-		if math.abs(yAdjust) > 0.01 then
-			item:PivotTo(item:GetPivot() + Vector3.new(0, yAdjust, 0))
-		end
+		-- 바닥 보정 불필요: delta가 클라이언트 위치를 그대로 복사
 	end
 
 	-- 9. 건물 속성 설정 (mainPart에 부여)

@@ -40,6 +40,10 @@ Constants.RARITY_COLORS = {
 -- collisionSize: 충돌 판정용 고정 사이즈 (모델 실제 크기와 무관, 레벨 변경에도 불변)
 -- icon: 빌드모드 인벤토리 아이콘 이미지 (rbxassetid://숫자)
 -- TODO: 각 건물별 아이콘 이미지 Asset ID를 icon 필드에 입력해주세요
+-- ============================================================
+-- BUILDING ICONS: Replace "" with "rbxassetid://NUMBER"
+-- Upload image in Studio (Game Explorer > Images) or Creator Dashboard
+-- ============================================================
 Constants.BUILDINGS = {
 	ClockTower   = { name = "Clock Tower",       types = {"Decoration"}, rarity = "Common",    collisionSize = Vector3.new(6, 10, 6), icon = "" },
 	Farm         = { name = "Farm",              types = {"Work"},       rarity = "Common",    collisionSize = Vector3.new(8, 3, 8), workTypes = {"Farming"}, icon = "" },
@@ -94,27 +98,30 @@ Constants.UpgradeState = {
 	Upgrading = "Upgrading",  -- 수리중
 }
 
--- 펫 카탈로그
+-- ============================================================
+-- PET ICONS: Replace "" with "rbxassetid://NUMBER"
+-- Used in: PetDetailUI, PetSellUI, EggInfoUI
+-- ============================================================
 Constants.PETS = {
-	-- 일반
-	["FarmerNewbie"]  = { name = "Farmer Newbie",      petTypes = {"Farming", "Construction"},  rarity = "Common", size = "Small" },
-	["Skeleton"]      = { name = "Skeleton",        petTypes = {"Mining", "Construction"},   rarity = "Common", size = "Small" },
-	["Ghost"]         = { name = "Ghost",            petTypes = {"Farming", "Buff"},          rarity = "Common", size = "Small" },
-	["SnowMole"]      = { name = "Snow Mole",       petTypes = {"Mining"},                   rarity = "Common", size = "Small" },
-	["Firewood"]      = { name = "Firewood",       petTypes = {"Buff"},                     rarity = "Common" },
-	-- 레어
-	["Imp"]           = { name = "Imp",            petTypes = {"Mining", "Construction", "Buff"}, rarity = "Rare", size = "Medium" },
-	["Sunflowie"]     = { name = "Sunflowie",        petTypes = {"Farming", "Buff"},          rarity = "Rare", size = "Medium" },
-	["ZombieNewbie"]  = { name = "Zombie Newbie",       petTypes = {"Farming", "Construction"},  rarity = "Rare", size = "Small" },
-	["Yeti"]          = { name = "Yeti",            petTypes = {"Farming", "Construction"},  rarity = "Rare", size = "Big" },
-	-- 에픽
-	["Zipbit"]        = { name = "Zipbit",          petTypes = {"Construction", "Buff"},     rarity = "Epic", size = "Small" },
-	["CrystalGolem"]  = { name = "Crystal Golem",   petTypes = {"Mining", "Construction"},   rarity = "Epic", size = "Medium" },
-	["IceGolem"]      = { name = "Ice Golem",     petTypes = {"Mining", "Construction"},   rarity = "Epic", size = "Medium" },
-	-- 전설
-	["BabyDragon"]    = { name = "Baby Dragon",   petTypes = {"Mining", "Construction", "Buff"}, rarity = "Legendary", size = "Medium" },
-	["Witch"]         = { name = "Witch",            petTypes = {"Farming"},                  rarity = "Legendary", size = "Medium" },
-	["Lumini"]        = { name = "Lumini",          petTypes = {"Farming", "Buff"},          rarity = "Legendary", size = "Small" },
+	-- Common
+	["FarmerNewbie"]  = { name = "Farmer Newbie",  petTypes = {"Farming", "Construction"},  rarity = "Common", size = "Small", icon = "" },
+	["Skeleton"]      = { name = "Skeleton",       petTypes = {"Mining", "Construction"},   rarity = "Common", size = "Small", icon = "" },
+	["Ghost"]         = { name = "Ghost",          petTypes = {"Farming", "Buff"},          rarity = "Common", size = "Small", icon = "" },
+	["SnowMole"]      = { name = "Snow Mole",     petTypes = {"Mining"},                   rarity = "Common", size = "Small", icon = "" },
+	["Firewood"]      = { name = "Firewood",       petTypes = {"Buff"},                     rarity = "Common", icon = "" },
+	-- Rare
+	["Imp"]           = { name = "Imp",            petTypes = {"Mining", "Construction", "Buff"}, rarity = "Rare", size = "Medium", icon = "" },
+	["Sunflowie"]     = { name = "Sunflowie",      petTypes = {"Farming", "Buff"},          rarity = "Rare", size = "Medium", icon = "" },
+	["ZombieNewbie"]  = { name = "Zombie Newbie",  petTypes = {"Farming", "Construction"},  rarity = "Rare", size = "Small", icon = "" },
+	["Yeti"]          = { name = "Yeti",           petTypes = {"Farming", "Construction"},  rarity = "Rare", size = "Big", icon = "" },
+	-- Epic
+	["Zipbit"]        = { name = "Zipbit",         petTypes = {"Construction", "Buff"},     rarity = "Epic", size = "Small", icon = "" },
+	["CrystalGolem"]  = { name = "Crystal Golem",  petTypes = {"Mining", "Construction"},   rarity = "Epic", size = "Medium", icon = "" },
+	["IceGolem"]      = { name = "Ice Golem",      petTypes = {"Mining", "Construction"},   rarity = "Epic", size = "Medium", icon = "" },
+	-- Legendary
+	["BabyDragon"]    = { name = "Baby Dragon",    petTypes = {"Mining", "Construction", "Buff"}, rarity = "Legendary", size = "Medium", icon = "" },
+	["Witch"]         = { name = "Witch",          petTypes = {"Farming"},                  rarity = "Legendary", size = "Medium", icon = "" },
+	["Lumini"]        = { name = "Lumini",         petTypes = {"Farming", "Buff"},          rarity = "Legendary", size = "Small", icon = "" },
 }
 
 -- 돌연변이 타입
@@ -145,6 +152,30 @@ Constants.MUTATION_COLORS = {
 	Celestial = Color3.fromRGB(200, 230, 255),
 	Charged = Color3.fromRGB(255, 255, 100),
 	Potential = Color3.fromRGB(100, 255, 150),
+}
+
+-- ============================================================
+-- MUTATION ICONS: Replace "" with "rbxassetid://NUMBER"
+-- Used in: PetDetailUI (mutations display)
+-- ============================================================
+Constants.MUTATION_ICONS = {
+	Shocked = "",
+	Gold = "",
+	Inverted = "",
+	Celestial = "",
+	Charged = "",
+	Potential = "",
+}
+
+-- ============================================================
+-- PET TYPE ICONS: Replace "" with "rbxassetid://NUMBER"
+-- Used in: PetDetailUI (Jobs section), InventoryUI
+-- ============================================================
+Constants.PET_TYPE_ICONS = {
+	Construction = "",
+	Farming = "",
+	Mining = "",
+	Buff = "",
 }
 
 -- 하이라이트 색상

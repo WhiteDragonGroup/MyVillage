@@ -20,13 +20,15 @@ local _callbacks = {}
 local _activeTab = nil
 local _sideButtons = {}
 
--- Weather icon image IDs: add rbxassetid:// to imageId field
--- TODO: Replace empty imageId with actual asset IDs
+-- ============================================================
+-- WEATHER ICONS: Replace "" with "rbxassetid://NUMBER"
+-- Upload image in Studio or Creator Dashboard
+-- ============================================================
 local WEATHER_INFO = {
-	Sunny        = { icon = "☀️", name = "Sunny",  desc = "It's a sunny day.", imageId = "" },
-	Rain         = { icon = "🌧️", name = "Rain",    desc = "It's raining.", imageId = "" },
-	Frost        = { icon = "❄️", name = "Frost",  desc = "A cold frost has settled.", imageId = "" },
-	ThunderStorm = { icon = "⛈️", name = "Thunderstorm", desc = "Watch out for lightning!", imageId = "" },
+	Sunny        = { name = "Sunny",        desc = "It's a sunny day.",           imageId = "" },
+	Rain         = { name = "Rain",         desc = "It's raining.",               imageId = "" },
+	Frost        = { name = "Frost",        desc = "A cold frost has settled.",   imageId = "" },
+	ThunderStorm = { name = "Thunderstorm", desc = "Watch out for lightning!",    imageId = "" },
 }
 
 function MainHUD.init(callbacks: {
@@ -344,6 +346,12 @@ function MainHUD.updateWeather(weatherType: string)
 		if info.imageId and info.imageId ~= "" then
 			weatherFrame.Image = info.imageId
 		end
+	end
+
+	-- Weather 직속 TextLabel 업데이트 (날씨 이름 표시)
+	local weatherText = weatherFrame:FindFirstChild("TextLabel")
+	if weatherText and weatherText:IsA("TextLabel") then
+		weatherText.Text = info.name
 	end
 
 	-- Weather Info 프레임에 텍스트 업데이트

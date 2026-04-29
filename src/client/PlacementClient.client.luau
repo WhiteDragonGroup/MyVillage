@@ -101,12 +101,14 @@ local previewLevel = 1             -- 배치 중인 아이템 레벨
 local currentRotationY = 0         -- 현재 Y 회전 (라디안)
 local originalCFrame = nil         -- 이동 전 원래 CFrame (Cancel 복원용)
 local hoveredPart = nil            -- 현재 호버 중인 파트
+local _previewRelatives = {}       -- { [BasePart] = CFrame } mainPart 기준 상대 CFrame
 local currentBuildZone = nil       -- 현재 드래그 중인 BuildZone
 local hasCollision = false         -- 현재 충돌 상태
 local _lastCollisionDebug = nil    -- 디버그 출력 쓰로틀
 local inventory = {}               -- 로컬 인벤토리 캐시
 local _dragPaused = false          -- 드래그 일시 정지 (클릭으로 토글)
 
+local _lastDragLog = nil
 -- 렌더 연결
 local renderConnection = nil
 
@@ -286,6 +288,8 @@ local function createPreview(itemName: string, level: number?): BasePart?
 			end
 		end
 		mainPart:SetAttribute("ItemName", itemName)
+		-- WorldPivot: mainPart 위치, 회전 없음 (PivotTo Y회전이 모델 원래 방향 위에 추가됨)
+		item.WorldPivot = CFrame.new(mainPart.Position)
 	end
 
 	return mainPart
@@ -319,6 +323,7 @@ local function removePreview()
 		end
 		toDestroy:Destroy()
 		previewPart = nil
+		_previewRelatives = {}
 	end
 end
 
@@ -519,8 +524,17 @@ local function toMoving(building: BasePart)
 
 	selectedBuilding = building
 	selectedBuildingId = building:GetAttribute("BuildingId")
-	originalCFrame = building.CFrame
 	previewItemName = building:GetAttribute("ItemName")
+
+	-- Save original CFrame (Model pivot for Models, CFrame for Parts)
+	local bModel = getParentModel(building)
+	if bModel then
+		originalCFrame = bModel:GetPivot()
+		print("[Move] start: model pivot = " .. tostring(originalCFrame))
+	else
+		originalCFrame = building.CFrame
+		print("[Move] start: part CFrame = " .. tostring(originalCFrame))
+	end
 
 	-- 건물을 투명하게 (이동 프리뷰로 전환)
 	local bModel = getParentModel(building)
@@ -566,10 +580,43 @@ local function toMoving(building: BasePart)
 				-- 최상위 건물 Model 찾기
 				local moveParent = getParentModel(previewPart)
 				if moveParent then
-					local pos = newCFrame.Position
+					-- 상대 CFrame 저장 (최초 1회)
+					if not next(_previewRelatives) then
+						for _, desc in moveParent:GetDescendants() do
+							if desc:IsA("BasePart") and desc ~= previewPart then
+								_previewRelatives[desc] = previewPart.CFrame:Inverse() * desc.CFrame
+							end
+						end
+					end
+
+					-- XZ + 회전만 사용, Y는 바닥 기준 계산
+					local bzCF = currentBuildZone.CFrame
+					local groundY = (bzCF * CFrame.new(0, currentBuildZone.Size.Y / 2, 0)).Position.Y
 					local _, yRot, _ = newCFrame:ToEulerAnglesYXZ()
-					moveParent:PivotTo(CFrame.new(pos) * CFrame.Angles(0, yRot, 0))
-					GridSnap.adjustModelY(moveParent, previewPart, currentBuildZone)
+					local flatCFrame = CFrame.new(newCFrame.Position.X, 0, newCFrame.Position.Z) * CFrame.Angles(0, yRot, 0)
+
+					previewPart.CFrame = flatCFrame
+					for desc, rel in _previewRelatives do
+						if desc.Parent then
+							desc.CFrame = flatCFrame * rel
+						end
+					end
+
+					-- 바닥 맞춤: 최저점을 groundY에
+					local lowestY = previewPart.Position.Y - previewPart.Size.Y / 2
+					for desc, _ in _previewRelatives do
+						if desc.Parent and desc:IsA("BasePart") then
+							local b = desc.Position.Y - desc.Size.Y / 2
+							if b < lowestY then lowestY = b end
+						end
+					end
+					local yAdj = groundY - lowestY
+					previewPart.CFrame = previewPart.CFrame + Vector3.new(0, yAdj, 0)
+					for desc, _ in _previewRelatives do
+						if desc.Parent then
+							desc.CFrame = desc.CFrame + Vector3.new(0, yAdj, 0)
+						end
+					end
 				else
 					-- 단순 Part: Y를 BuildZone 상단 + Part 높이 절반으로 보정
 					local bzTop = currentBuildZone.Position.Y + currentBuildZone.Size.Y / 2
@@ -642,11 +689,43 @@ local function toPlacingNew(itemName: string, level: number?)
 			-- Model이면 PivotTo 보정 (mainPart가 정확히 newCFrame에 오도록)
 			local parentModel = getPreviewModel(previewPart)
 			if parentModel then
-				-- 위치 + Y축 회전만 적용 (눕힘 방지)
-				local pos = newCFrame.Position
+				-- 상대 CFrame 저장 (최초 1회)
+				if not next(_previewRelatives) then
+					for _, desc in parentModel:GetDescendants() do
+						if desc:IsA("BasePart") and desc ~= previewPart then
+							_previewRelatives[desc] = previewPart.CFrame:Inverse() * desc.CFrame
+						end
+					end
+				end
+
+				-- XZ + 회전만 사용, Y는 바닥 기준 계산
+				local bzCF = currentBuildZone.CFrame
+				local groundY = (bzCF * CFrame.new(0, currentBuildZone.Size.Y / 2, 0)).Position.Y
 				local _, yRot, _ = newCFrame:ToEulerAnglesYXZ()
-				parentModel:PivotTo(CFrame.new(pos) * CFrame.Angles(0, yRot, 0))
-				GridSnap.adjustModelY(parentModel, previewPart, currentBuildZone)
+				local flatCFrame = CFrame.new(newCFrame.Position.X, 0, newCFrame.Position.Z) * CFrame.Angles(0, yRot, 0)
+
+				previewPart.CFrame = flatCFrame
+				for desc, rel in _previewRelatives do
+					if desc.Parent then
+						desc.CFrame = flatCFrame * rel
+					end
+				end
+
+				-- 바닥 맞춤
+				local lowestY = previewPart.Position.Y - previewPart.Size.Y / 2
+				for desc, _ in _previewRelatives do
+					if desc.Parent and desc:IsA("BasePart") then
+						local b = desc.Position.Y - desc.Size.Y / 2
+						if b < lowestY then lowestY = b end
+					end
+				end
+				local yAdj = groundY - lowestY
+				previewPart.CFrame = previewPart.CFrame + Vector3.new(0, yAdj, 0)
+				for desc, _ in _previewRelatives do
+					if desc.Parent then
+						desc.CFrame = desc.CFrame + Vector3.new(0, yAdj, 0)
+					end
+				end
 			else
 				-- 단순 Part: Y를 BuildZone 상단 + Part 높이 절반으로 보정
 				local bzTop = currentBuildZone.Position.Y + currentBuildZone.Size.Y / 2
@@ -918,20 +997,25 @@ local function confirmPlace()
 
 	if currentState == BuildState.PlacingNew and previewPart then
 		local isEggPreview = previewPart:GetAttribute("IsEggPreview") == true
-		local pModel = previewPart.Parent
+		local pModel = getParentModel(previewPart)
 		local mainCFrame = previewPart.CFrame
 		local pivotCFrame = nil
 		if pModel then
 			pivotCFrame = pModel:GetPivot()
 		end
+		print("[CLI] === " .. (previewItemName or "?") .. " 배치 확정 ===")
+		print("[CLI] mainPart.CFrame: " .. tostring(mainCFrame))
+		print("[CLI] mainPart.Position: " .. tostring(previewPart.Position))
+		print("[CLI] model pivot: " .. tostring(pivotCFrame))
+		if pModel then
+			print("[CLI] model WorldPivot: " .. tostring(pModel.WorldPivot))
+		end
 		DragHandler.stopDrag()
 		removePreview()
 
 		if isEggPreview then
-			-- 알 배치
 			placeEggEvent:FireServer(previewItemName, mainCFrame.Position)
 		else
-			-- 건물 배치
 			placeBuildingEvent:FireServer(previewItemName, mainCFrame, previewLevel, pivotCFrame)
 		end
 		toBuildMode()
@@ -980,6 +1064,8 @@ MoveHandleUI.init({
 
 	onCancel = function()
 		if currentState == BuildState.Moving and selectedBuilding and originalCFrame then
+			_dragPaused = false
+			print("[Cancel] Moving: restoring to " .. tostring(originalCFrame))
 			local rpModel = getParentModel(selectedBuilding)
 			if rpModel then
 				rpModel:PivotTo(originalCFrame)
@@ -997,6 +1083,8 @@ MoveHandleUI.init({
 			previewPart = nil
 			toBuildMode()
 		elseif currentState == BuildState.PlacingNew then
+			print("[Cancel] PlacingNew: removing preview")
+			_dragPaused = false
 			DragHandler.stopDrag()
 			removePreview()
 			toBuildMode()
@@ -1237,6 +1325,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
 
 	if input.KeyCode == Enum.KeyCode.Escape then
+		_dragPaused = false
 		if currentState == BuildState.PlacingNew then
 			DragHandler.stopDrag()
 			removePreview()
