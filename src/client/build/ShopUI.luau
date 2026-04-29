@@ -86,17 +86,37 @@ end
 
 -- Connect buttons inside egg/diamond shop items
 function ShopUI._connectEggShop(frame)
+	-- Debug: print all Gift elements
 	for _, child in frame:GetDescendants() do
-		-- Find Gift buttons (ImageButton named "Gift" or with gift icon)
-		if child.Name == "Gift" and child:IsA("GuiButton") then
+		if child.Name == "Gift" then
+			print("[EggShop] Gift found: " .. child.ClassName .. " parent: " .. child.Parent.Name)
+		end
+	end
+
+	for _, child in frame:GetDescendants() do
+		-- Find Gift buttons (any GuiObject named "Gift")
+		if child.Name == "Gift" then
+			local clickTarget = child
+			-- If not a button, add transparent click area
+			if not child:IsA("GuiButton") then
+				local clickBtn = Instance.new("TextButton")
+				clickBtn.Name = "_GiftClick"
+				clickBtn.Size = UDim2.new(1, 0, 1, 0)
+				clickBtn.BackgroundTransparency = 1
+				clickBtn.Text = ""
+				clickBtn.ZIndex = 10
+				clickBtn.Parent = child
+				clickTarget = clickBtn
+			end
 			-- Find which egg/item this belongs to
 			local parent = child.Parent
 			while parent and parent ~= frame do
 				local eggType = ShopUI._matchEggType(parent)
 				if eggType then
-					child.MouseButton1Click:Connect(function()
+					clickTarget.MouseButton1Click:Connect(function()
 						if _callbacks.onGift then _callbacks.onGift(eggType) end
 					end)
+					print("[EggShop] Gift connected: " .. eggType)
 					break
 				end
 				parent = parent.Parent
@@ -122,19 +142,19 @@ end
 
 function ShopUI._matchEggType(element): string?
 	local name = element.Name:lower()
-	local textLabel = element:FindFirstChildWhichIsA("TextLabel", true)
-	local text = textLabel and textLabel.Text:lower() or ""
 
-	if name:find("legendary") or text:find("legendary") then return "Egg_Legendary" end
-	if name:find("epic") or text:find("epic") then return "Egg_Epic" end
-	if name:find("rare") or text:find("rare") then return "Egg_Rare" end
-	if name:find("common") or text:find("common") then return "Egg_Common" end
+	-- Search all TextLabels in descendants for egg name
+	local allText = ""
+	for _, desc in element:GetDescendants() do
+		if desc:IsA("TextLabel") then
+			allText = allText .. " " .. desc.Text:lower()
+		end
+	end
 
-	-- Match by price text
-	if text:find("1240") or name:find("4") then return "Egg_Legendary" end
-	if text:find("429") or name:find("3") then return "Egg_Epic" end
-	if text:find("140") or name:find("2") then return "Egg_Rare" end
-	if text:find("31") or name:find("1") then return "Egg_Common" end
+	if name:find("legendary") or allText:find("legendary") then return "Egg_Legendary" end
+	if name:find("epic") or allText:find("epic") then return "Egg_Epic" end
+	if name:find("rare") or allText:find("rare") then return "Egg_Rare" end
+	if name:find("common") or allText:find("common") then return "Egg_Common" end
 
 	return nil
 end
@@ -203,6 +223,13 @@ function ShopUI._renderItems()
 		slot.LayoutOrder = i
 		slot.Parent = scrollFrame
 
+		-- Debug: print ALL descendants (first item only)
+		if i == 1 then
+			for _, desc in slot:GetDescendants() do
+				print("[ShopSlot] " .. desc:GetFullName():sub(#slot:GetFullName() + 2) .. " (" .. desc.ClassName .. ")")
+			end
+		end
+
 		-- NameText
 		local nameText = slot:FindFirstChild("NameText")
 		if nameText then nameText.Text = building.name end
@@ -268,16 +295,32 @@ function ShopUI._renderItems()
 			end
 		end
 
-		-- Gift button
-		local giftBtn = slot:FindFirstChild("Gift")
-		if giftBtn and giftBtn:IsA("GuiButton") then
-			if item.stock > 0 then
-				giftBtn.MouseButton1Click:Connect(function()
-					if _callbacks.onGift then _callbacks.onGift(item.itemName) end
-				end)
+		-- Gift button (BuyRobux > Gift)
+		local giftBtn = slot:FindFirstChild("Gift", true)
+		if giftBtn then
+			if giftBtn:IsA("GuiButton") then
+				if item.stock > 0 then
+					giftBtn.MouseButton1Click:Connect(function()
+						if _callbacks.onGift then _callbacks.onGift(item.itemName) end
+					end)
+				else
+					giftBtn.Active = false
+					giftBtn.BackgroundTransparency = 0.5
+				end
 			else
-				giftBtn.Active = false
-				giftBtn.BackgroundTransparency = 0.5
+				-- ImageLabel: add transparent click button
+				local clickBtn = Instance.new("TextButton")
+				clickBtn.Name = "_GiftClick"
+				clickBtn.Size = UDim2.new(1, 0, 1, 0)
+				clickBtn.BackgroundTransparency = 1
+				clickBtn.Text = ""
+				clickBtn.ZIndex = 10
+				clickBtn.Parent = giftBtn
+				if item.stock > 0 then
+					clickBtn.MouseButton1Click:Connect(function()
+						if _callbacks.onGift then _callbacks.onGift(item.itemName) end
+					end)
+				end
 			end
 		end
 	end
@@ -433,6 +476,10 @@ end
 
 function ShopUI.isVisible(): boolean
 	return _visible
+end
+
+function ShopUI.isBuildingsShopVisible(): boolean
+	return buildingsShopFrame and buildingsShopFrame.Visible == true
 end
 
 function ShopUI.destroy()

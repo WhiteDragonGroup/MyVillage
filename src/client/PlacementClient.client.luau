@@ -1534,14 +1534,28 @@ end
 CollectionUI.init()
 
 -- 선물 UI 초기화
+local _giftFromShop = nil -- "buildings" or "eggs"
+
 GiftUI.init({
 	onSelectPlayer = function(itemName, targetPlayer)
 		sendGiftEvent:FireServer(itemName, targetPlayer.Name)
 		GiftUI.hide()
-		loadShopData() -- 재고 갱신
+		if _giftFromShop == "buildings" then
+			ShopUI.showBuildingsShop()
+		elseif _giftFromShop == "eggs" then
+			ShopUI.show()
+		end
+		_giftFromShop = nil
+		loadShopData()
 	end,
 	onClose = function()
 		GiftUI.hide()
+		if _giftFromShop == "buildings" then
+			ShopUI.showBuildingsShop()
+		elseif _giftFromShop == "eggs" then
+			ShopUI.show()
+		end
+		_giftFromShop = nil
 	end,
 })
 
@@ -1558,9 +1572,50 @@ ShopUI.init({
 		end
 	end,
 	onGift = function(itemName)
+		-- 어떤 상점에서 열었는지 저장
+		if ShopUI.isBuildingsShopVisible() then
+			_giftFromShop = "buildings"
+		else
+			_giftFromShop = "eggs"
+		end
+		ShopUI.hide()
 		GiftUI.show(itemName)
 	end,
 	onBuyEgg = function(eggType)
+		-- NPC DialogUI와 동일 스타일: 캐릭터 머리 위 말풍선
+		local eggCfg = BalanceConfig.Egg and BalanceConfig.Egg.EGGS[eggType]
+		local eggName = eggCfg and eggCfg.name or eggType
+		local character = player.Character
+		local head = character and character:FindFirstChild("Head")
+		if head then
+			-- 기존 말풍선 제거
+			local old = playerGui:FindFirstChild("_PlayerBubble")
+			if old then old:Destroy() end
+
+			local bubble = Instance.new("BillboardGui")
+			bubble.Name = "_PlayerBubble"
+			bubble.Size = UDim2.new(0, 200, 0, 40)
+			bubble.StudsOffset = Vector3.new(0, 1.5, 0)
+			bubble.AlwaysOnTop = true
+			bubble.Adornee = head
+			bubble.Parent = playerGui
+
+			local label = Instance.new("TextLabel")
+			label.Size = UDim2.new(1, 0, 1, 0)
+			label.BackgroundTransparency = 1
+			label.TextColor3 = Color3.fromRGB(255, 255, 255)
+			label.TextSize = 13
+			label.Font = Enum.Font.GothamBold
+			label.Text = "I'll take a " .. eggName .. "!"
+			label.TextWrapped = true
+			label.TextStrokeTransparency = 0.5
+			label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+			label.Parent = bubble
+
+			task.delay(2, function()
+				if bubble.Parent then bubble:Destroy() end
+			end)
+		end
 		buyEggEvent:FireServer(eggType)
 	end,
 })
@@ -1748,8 +1803,8 @@ PetDetailUI.init({
 -- PetListUI에 펫 상세 보기 연동 (PetUpdate 이벤트로 mutation 표시)
 petUpdateEvent.OnClientEvent:Connect(function(eventType, data)
 	if eventType == "xpUpdate" or eventType == "levelup" then
-		-- PetDetailUI가 열려있으면 실시간 업데이트
-		if PetDetailUI.isVisible() and data and data.petId then
+		-- PetDetailUI가 열려있고, 같은 펫을 보고 있을 때만 갱신
+		if PetDetailUI.isVisible() and data and data.petId and PetDetailUI.getCurrentPetId() == data.petId then
 			task.spawn(function()
 				local pets = getPetsFunc:InvokeServer()
 				if pets then

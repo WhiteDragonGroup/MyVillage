@@ -117,35 +117,102 @@ Constants.PETS = {
 	["Lumini"]        = { name = "Lumini",          petTypes = {"Farming", "Buff"},          rarity = "Legendary", size = "Small" },
 }
 
--- 돌연변이 타입
-Constants.MutationType = {
-	Shocked = "Shocked",     -- 충전된
-	Gold = "Gold",           -- 골드
-	Inverted = "Inverted",   -- 반전된
-	Celestial = "Celestial", -- 셀레스티얼
-	Charged = "Charged",     -- 차지드
-	Potential = "Potential",  -- 포텐셜
+-- ============================================================
+-- BUFF TYPES: Pet buffs (replaces old Mutation system)
+-- Common buffs (above X line) + Unique buffs (below X line)
+-- ============================================================
+Constants.BuffType = {
+	-- Common buffs
+	Vitality = "Vitality",
+	Haste = "Haste",
+	Blessing = "Blessing",
+	Fortune = "Fortune",
+	Satiation = "Satiation",
+	Energy = "Energy",
+	Serenity = "Serenity",
+	-- Unique buffs (specific pets only)
+	AllysEncouragement = "AllysEncouragement",
+	GhostsSong = "GhostsSong",
+	Charge = "Charge",
+	DemonicPower = "DemonicPower",
+	DragonsPower = "DragonsPower",
+	BurningHeart = "BurningHeart",
 }
 
--- 돌연변이 표시명
-Constants.MUTATION_NAMES = {
-	Shocked = "Shocked",
-	Gold = "Gold",
-	Inverted = "Inverted",
-	Celestial = "Celestial",
-	Charged = "Charged",
-	Potential = "Potential",
+Constants.BUFF_NAMES = {
+	Vitality = "Vitality",
+	Haste = "Haste",
+	Blessing = "Blessing",
+	Fortune = "Fortune",
+	Satiation = "Satiation",
+	Energy = "Energy",
+	Serenity = "Serenity",
+	AllysEncouragement = "Ally's Encouragement",
+	GhostsSong = "Ghost's Song",
+	Charge = "Charge",
+	DemonicPower = "Demonic Power",
+	DragonsPower = "Dragon's Power",
+	BurningHeart = "Burning Heart",
 }
 
--- 돌연변이 색상 (UI/VFX 참조)
-Constants.MUTATION_COLORS = {
-	Shocked = Color3.fromRGB(100, 200, 255),
-	Gold = Color3.fromRGB(255, 215, 0),
-	Inverted = Color3.fromRGB(180, 50, 255),
-	Celestial = Color3.fromRGB(200, 230, 255),
-	Charged = Color3.fromRGB(255, 255, 100),
-	Potential = Color3.fromRGB(100, 255, 150),
+Constants.BUFF_DESCRIPTIONS = {
+	Vitality = "Your pet is overflowing with vitality! Work efficiency increases by n%.",
+	Haste = "Pet's steps feel lighter! Reach your destination n% faster.",
+	Blessing = "A powerful blessing has taken hold! Work efficiency increases by n%.",
+	Fortune = "Luck has increased! Pet is n% more likely to discover gems while mining.",
+	Satiation = "Well-fed and ready to go! Work efficiency increases by n%.",
+	Energy = "Energy is overflowing! Your pet can keep working without sleep.",
+	Serenity = "Your pet feels at peace. The pet can work longer before rest.",
+	AllysEncouragement = "Your allies are cheering you on! You feel energized! Work efficiency increases by n%!",
+	GhostsSong = "A mysterious song echoes from somewhere... your focus sharpens! Work efficiency increases by n%!",
+	Charge = "Fully charged and ready to go! You feel unstoppable! Work efficiency increases by n%!",
+	DemonicPower = "A forbidden power surges through you... overwhelming strength fills your body! Work efficiency increases by n%!",
+	DragonsPower = "The mighty power of a dragon surrounds you! Work efficiency increases by n%!",
+	BurningHeart = "Your heart burns with passion! Energy overflows within you! Work efficiency increases by n%!",
 }
+
+-- ============================================================
+-- BUFF COLORS: Replace with desired colors
+-- ============================================================
+Constants.BUFF_COLORS = {
+	Vitality = Color3.fromRGB(255, 100, 100),
+	Haste = Color3.fromRGB(100, 200, 255),
+	Blessing = Color3.fromRGB(255, 215, 0),
+	Fortune = Color3.fromRGB(100, 255, 150),
+	Satiation = Color3.fromRGB(200, 150, 100),
+	Energy = Color3.fromRGB(255, 255, 100),
+	Serenity = Color3.fromRGB(150, 200, 255),
+	AllysEncouragement = Color3.fromRGB(255, 180, 100),
+	GhostsSong = Color3.fromRGB(180, 200, 255),
+	Charge = Color3.fromRGB(255, 255, 100),
+	DemonicPower = Color3.fromRGB(180, 50, 255),
+	DragonsPower = Color3.fromRGB(255, 100, 50),
+	BurningHeart = Color3.fromRGB(255, 50, 50),
+}
+
+-- ============================================================
+-- BUFF ICONS: Replace "" with "rbxassetid://NUMBER"
+-- ============================================================
+Constants.BUFF_ICONS = {
+	Vitality = "",
+	Haste = "",
+	Blessing = "",
+	Fortune = "",
+	Satiation = "",
+	Energy = "",
+	Serenity = "",
+	AllysEncouragement = "",
+	GhostsSong = "",
+	Charge = "",
+	DemonicPower = "",
+	DragonsPower = "",
+	BurningHeart = "",
+}
+
+-- Legacy compatibility (old mutation references)
+Constants.MutationType = Constants.BuffType
+Constants.MUTATION_NAMES = Constants.BUFF_NAMES
+Constants.MUTATION_COLORS = Constants.BUFF_COLORS
 
 -- 하이라이트 색상
 Constants.HIGHLIGHT_COLORS = {

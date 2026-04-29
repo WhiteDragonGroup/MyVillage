@@ -176,13 +176,27 @@ function PetDetailUI.show(petData: { [string]: any })
 		local function setJobTransparency(jobFrame, enabled)
 			if not jobFrame then return end
 			jobFrame.Visible = true
+			local t = if enabled then 0 else 0.8
+			-- jobFrame 자체가 ImageLabel일 수 있음
+			if jobFrame:IsA("ImageLabel") or jobFrame:IsA("ImageButton") then
+				jobFrame.ImageTransparency = t
+			end
+			if jobFrame:IsA("TextLabel") then
+				jobFrame.Visible = enabled
+			end
+			-- 자식도 처리
 			for _, desc in jobFrame:GetDescendants() do
 				if desc:IsA("ImageLabel") or desc:IsA("ImageButton") then
-					desc.ImageTransparency = if enabled then 0 else 0.8
+					desc.ImageTransparency = t
 				elseif desc:IsA("TextLabel") then
 					desc.Visible = enabled
 				end
 			end
+		end
+
+		-- Debug: print job frame children
+		for _, child in jobsFrame:GetChildren() do
+			print("[PetDetail] Job child: " .. child.Name .. " (" .. child.ClassName .. ")")
 		end
 
 		setJobTransparency(jobsFrame:FindFirstChild("Farming"), petTypes["Farming"] == true)
@@ -282,9 +296,14 @@ function PetDetailUI.show(petData: { [string]: any })
 	petInfoFrame.Visible = true
 end
 
+function PetDetailUI.getCurrentPetId(): string?
+	return _currentPetId
+end
+
 function PetDetailUI.hide()
 	if not petInfoFrame then return end
 	_visible = false
+	_currentPetId = nil
 	petInfoFrame.Visible = false
 end
 
