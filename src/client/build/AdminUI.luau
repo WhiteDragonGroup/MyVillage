@@ -27,6 +27,10 @@ local BUTTONS = {
 	{ label = "상점 재고 리필", cmd = "restock" },
 	{ label = "낮으로 변경", cmd = "settime", arg1 = 14 },
 	{ label = "밤으로 변경", cmd = "settime", arg1 = 2 },
+	{ label = "Weather: Sunny", cmd = "weather", arg1 = "Sunny" },
+	{ label = "Weather: Rain", cmd = "weather", arg1 = "Rain" },
+	{ label = "Weather: Frost", cmd = "weather", arg1 = "Frost" },
+	{ label = "Weather: ThunderStorm", cmd = "weather", arg1 = "ThunderStorm" },
 }
 
 local _toggleStates = {}
@@ -87,19 +91,32 @@ function AdminUI.init()
 		AdminUI.hide()
 	end)
 
+	-- Scroll area
+	local scrollFrame = Instance.new("ScrollingFrame")
+	scrollFrame.Size = UDim2.new(1, -10, 1, -40)
+	scrollFrame.Position = UDim2.new(0, 5, 0, 34)
+	scrollFrame.BackgroundTransparency = 1
+	scrollFrame.ScrollBarThickness = 3
+	scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 100, 100)
+	scrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+	scrollFrame.Parent = mainFrame
+
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 4)
+	layout.Parent = scrollFrame
+
 	-- Buttons
-	local y = 36
 	for _, btn in BUTTONS do
 		local button = Instance.new("TextButton")
-		button.Size = UDim2.new(1, -20, 0, 30)
-		button.Position = UDim2.new(0, 10, 0, y)
+		button.Size = UDim2.new(1, -10, 0, 30)
 		button.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
 		button.TextColor3 = Color3.fromRGB(255, 255, 255)
 		button.TextSize = 12
 		button.Font = Enum.Font.GothamBold
 		button.Text = btn.label
 		button.AutoButtonColor = true
-		button.Parent = mainFrame
+		button.Parent = scrollFrame
 
 		local btnCorner = Instance.new("UICorner")
 		btnCorner.CornerRadius = UDim.new(0, 6)
@@ -125,7 +142,7 @@ function AdminUI.init()
 			end
 		end)
 
-		y = y + 34
+		-- UIListLayout handles positioning
 	end
 
 	-- /admin wd 로 열기 (비번: wd)

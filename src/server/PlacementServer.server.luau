@@ -19,6 +19,7 @@ end
 local plotsFolder = workspace:WaitForChild("Plots")
 
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
+local PetManager = require(script.Parent:WaitForChild("PetManager"))
 
 local serverScript = script.Parent
 local InventoryManager = require(serverScript:WaitForChild("InventoryManager"))
@@ -140,9 +141,9 @@ end
 ----------------------------------------------------------------
 -- PlaceBuilding: 인벤토리에서 새 건물 배치
 ----------------------------------------------------------------
-placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, level, pivotCFrame)
+placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, localCFrame, level)
 	-- 1. 타입 검증
-	if typeof(itemName) ~= "string" or typeof(cframe) ~= "CFrame" then
+	if typeof(itemName) ~= "string" or typeof(localCFrame) ~= "CFrame" then
 		warn(player.Name .. " - 잘못된 요청 형식")
 		return
 	end
@@ -190,6 +191,9 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 		warn(player.Name .. " - BuildZone 없음")
 		return
 	end
+
+	-- BuildZone 로컬 → 월드 좌표 변환
+	local cframe = buildZone.CFrame:ToWorldSpace(localCFrame)
 
 	if not isInsideBuildZone(buildZone, cframe.Position) then
 		warn(player.Name .. " - BuildZone 밖에 배치 시도")
@@ -244,12 +248,9 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, cframe, leve
 			InventoryManager.addItem(player, itemName, 1, level) -- 인벤토리 복구
 			return
 		end
-		-- 위치 이동 + Y축 회전만 적용 (모델 내부 방향 보존)
-		local targetCFrame = pivotCFrame or cframe
-		local pos = targetCFrame.Position
-		local _, yRot, _ = targetCFrame:ToEulerAnglesYXZ()
-
-		item:PivotTo(CFrame.new(pos) * CFrame.Angles(0, yRot, 0))
+		-- mainPart가 정확히 cframe에 오도록 모델 배치 (PlotManager 복원과 동일)
+		local mainToPivot = mainPart.CFrame:ToObjectSpace(item:GetPivot())
+		item:PivotTo(cframe * mainToPivot)
 		item.Parent = plot
 
 		-- Anchor all parts in the model
@@ -444,14 +445,22 @@ storeBuildingEvent.OnServerEvent:Connect(function(player, buildingId)
 		return
 	end
 
-	-- 5. 인벤토리에 추가 (레벨 보존)
+	-- 5. 해당 건물에 배치된 펫 해제
+	local pets = PetManager.getPets(player)
+	for _, pet in pets do
+		if pet.assignedBuildingId == buildingId then
+			PetManager.unassignPet(player, pet.petId)
+		end
+	end
+
+	-- 6. 인벤토리에 추가 (레벨 보존)
 	local itemName = building:GetAttribute("ItemName")
 	local level = building:GetAttribute("Level") or 1
 	if itemName then
 		InventoryManager.addItem(player, itemName, 1, level)
 	end
 
-	-- 6. 건물 제거 (Model이면 전체 제거)
+	-- 7. 건물 제거 (Model이면 전체 제거)
 	destroyBuilding(building)
 
 	print(player.Name .. " - " .. (itemName or "?") .. " 저장 완료")

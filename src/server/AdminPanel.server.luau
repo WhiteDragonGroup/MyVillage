@@ -15,8 +15,11 @@ local ShopManager = require(serverScript:WaitForChild("ShopManager"))
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
 
+local WeatherState = require(serverScript:WaitForChild("WeatherState"))
+
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local adminEvent = remotes:WaitForChild("AdminCommand")
+local weatherChangedEvent = remotes:WaitForChild("WeatherChanged")
 local PetCfg = BalanceConfig.Pet
 
 -- Allow all players (test mode)
@@ -157,6 +160,17 @@ adminEvent.OnServerEvent:Connect(function(player, cmd, arg1, arg2)
 	elseif cmd == "restock" then
 		ShopManager.initPlayer(player)
 		notify(player, "Shop restocked")
+
+	elseif cmd == "weather" then
+		local validWeathers = { Sunny = true, Rain = true, Frost = true, ThunderStorm = true }
+		local weather = arg1 or "Sunny"
+		if validWeathers[weather] then
+			WeatherState.set(weather)
+			weatherChangedEvent:FireAllClients(weather, "")
+			notify(player, "Weather changed to: " .. weather)
+		else
+			notify(player, "Invalid weather. Use: Sunny, Rain, Frost, ThunderStorm")
+		end
 	end
 end)
 

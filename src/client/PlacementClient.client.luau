@@ -642,7 +642,6 @@ local function toPlacingNew(itemName: string, level: number?)
 			-- Model이면 PivotTo 보정 (mainPart가 정확히 newCFrame에 오도록)
 			local parentModel = getPreviewModel(previewPart)
 			if parentModel then
-				-- 위치 + Y축 회전만 적용 (눕힘 방지)
 				local pos = newCFrame.Position
 				local _, yRot, _ = newCFrame:ToEulerAnglesYXZ()
 				parentModel:PivotTo(CFrame.new(pos) * CFrame.Angles(0, yRot, 0))
@@ -918,21 +917,20 @@ local function confirmPlace()
 
 	if currentState == BuildState.PlacingNew and previewPart then
 		local isEggPreview = previewPart:GetAttribute("IsEggPreview") == true
-		local pModel = previewPart.Parent
 		local mainCFrame = previewPart.CFrame
-		local pivotCFrame = nil
-		if pModel then
-			pivotCFrame = pModel:GetPivot()
+		-- BuildZone 로컬 좌표로 변환 (PlotManager 저장과 동일)
+		local localCFrame = mainCFrame
+		if currentBuildZone then
+			localCFrame = currentBuildZone.CFrame:ToObjectSpace(mainCFrame)
 		end
 		DragHandler.stopDrag()
 		removePreview()
 
 		if isEggPreview then
-			-- 알 배치
 			placeEggEvent:FireServer(previewItemName, mainCFrame.Position)
 		else
-			-- 건물 배치
-			placeBuildingEvent:FireServer(previewItemName, mainCFrame, previewLevel, pivotCFrame)
+			-- BuildZone 로컬 CFrame으로 전송
+			placeBuildingEvent:FireServer(previewItemName, localCFrame, previewLevel)
 		end
 		toBuildMode()
 
@@ -979,6 +977,7 @@ MoveHandleUI.init({
 	end,
 
 	onCancel = function()
+		_dragPaused = false
 		if currentState == BuildState.Moving and selectedBuilding and originalCFrame then
 			local rpModel = getParentModel(selectedBuilding)
 			if rpModel then
@@ -1237,6 +1236,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
 
 	if input.KeyCode == Enum.KeyCode.Escape then
+		_dragPaused = false
 		if currentState == BuildState.PlacingNew then
 			DragHandler.stopDrag()
 			removePreview()
@@ -1736,11 +1736,36 @@ SettingsUI.init({
 		end
 	end,
 })
-PetDetailUI.init()
+PetDetailUI.init({
+	onHold = function(petId)
+		local holdPetEvent = remotes:FindFirstChild("HoldPet")
+		if holdPetEvent then
+			holdPetEvent:FireServer(petId)
+		end
+	end,
+})
 
 -- PetListUI에 펫 상세 보기 연동 (PetUpdate 이벤트로 mutation 표시)
 petUpdateEvent.OnClientEvent:Connect(function(eventType, data)
-	if eventType == "mutation" then
+	if eventType == "xpUpdate" or eventType == "levelup" then
+		-- PetDetailUI가 열려있으면 실시간 업데이트
+		if PetDetailUI.isVisible() and data and data.petId then
+			task.spawn(function()
+				local pets = getPetsFunc:InvokeServer()
+				if pets then
+					for _, pet in pets do
+						if pet.petId == data.petId then
+							PetDetailUI.show(pet)
+							break
+						end
+					end
+				end
+			end)
+		end
+		if eventType == "levelup" then
+			MainHUD.showMessage("Pet leveled up! Lv." .. (data.level or "?"), 3)
+		end
+	elseif eventType == "mutation" then
 		-- 돌연변이 추가 시 알림
 		local mutName = Constants.MUTATION_NAMES[data.mutationType] or data.mutationType
 		local notifGui = Instance.new("ScreenGui")

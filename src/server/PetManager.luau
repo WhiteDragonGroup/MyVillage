@@ -1097,6 +1097,40 @@ function PetManager.removePet(player: Player, petId: string): (boolean, string?)
 end
 
 ----------------------------------------------------------------
+-- Return held pet to world (re-spawn and restart behavior)
+----------------------------------------------------------------
+function PetManager.returnPetToWorld(player: Player, petId: string)
+	local pets = _playerPets[player]
+	if not pets or not pets[petId] then return end
+
+	local petData = pets[petId]
+	petData.state = "Idle"
+
+	local plot = getPlayerPlot(player)
+	if not plot then return end
+
+	local buildZone = plot:FindFirstChild("BuildZone", true)
+	if not buildZone then return end
+
+	-- Re-create model
+	if not petData.model or not petData.model.Parent then
+		local pet = createPetModel(petData, buildZone.Position)
+		if petData._petModel then
+			petData._petModel.Parent = plot
+			petData.model = pet
+		else
+			pet.Parent = plot
+			petData.model = pet
+		end
+	end
+
+	-- Restart behavior
+	if petData.assignedBuildingId == "" then
+		PetManager._startBehaviorLoop(player, petData, plot)
+	end
+end
+
+----------------------------------------------------------------
 -- 정리
 ----------------------------------------------------------------
 function PetManager.removePlayer(player: Player)

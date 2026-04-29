@@ -14,8 +14,12 @@ local PetDetailUI = {}
 
 local petInfoFrame = nil
 local _visible = false
+local _currentPetId = nil
+local _onHold = nil
 
-function PetDetailUI.init()
+function PetDetailUI.init(callbacks: { onHold: ((string) -> ())? }?)
+	_onHold = callbacks and callbacks.onHold or nil
+
 	local featuresGui = playerGui:WaitForChild("Features", 10)
 	if not featuresGui then return end
 
@@ -35,11 +39,27 @@ function PetDetailUI.init()
 			end)
 		end
 	end
+
+	-- PopUp (Hold button) - Features > PopUp
+	local popUp = featuresGui:FindFirstChild("PopUp")
+	if popUp then
+		local holdBtn = popUp:FindFirstChildWhichIsA("TextButton", true)
+			or popUp:FindFirstChildWhichIsA("ImageButton", true)
+		if holdBtn then
+			holdBtn.MouseButton1Click:Connect(function()
+				if _currentPetId and _onHold then
+					_onHold(_currentPetId)
+					PetDetailUI.hide()
+				end
+			end)
+		end
+	end
 end
 
 function PetDetailUI.show(petData: { [string]: any })
 	if not petInfoFrame then return end
 	_visible = true
+	_currentPetId = petData.petId
 
 	local petInfo = Constants.PETS[petData.petName]
 	local level = petData.level or 1
@@ -153,14 +173,21 @@ function PetDetailUI.show(petData: { [string]: any })
 			petTypes[petData.petType or "Construction"] = true
 		end
 
-		local farming = jobsFrame:FindFirstChild("Farming")
-		if farming then farming.Visible = petTypes["Farming"] == true end
+		local function setJobTransparency(jobFrame, enabled)
+			if not jobFrame then return end
+			jobFrame.Visible = true
+			for _, desc in jobFrame:GetDescendants() do
+				if desc:IsA("ImageLabel") or desc:IsA("ImageButton") then
+					desc.ImageTransparency = if enabled then 0 else 0.8
+				elseif desc:IsA("TextLabel") then
+					desc.Visible = enabled
+				end
+			end
+		end
 
-		local mining = jobsFrame:FindFirstChild("Mining")
-		if mining then mining.Visible = petTypes["Mining"] == true end
-
-		local building = jobsFrame:FindFirstChild("Building")
-		if building then building.Visible = (petTypes["Construction"] == true) end
+		setJobTransparency(jobsFrame:FindFirstChild("Farming"), petTypes["Farming"] == true)
+		setJobTransparency(jobsFrame:FindFirstChild("Mining"), petTypes["Mining"] == true)
+		setJobTransparency(jobsFrame:FindFirstChild("Building"), petTypes["Construction"] == true)
 	end
 
 	-- Icon: ViewportFrame으로 3D 펫 모델 표시
