@@ -42,7 +42,7 @@ Constants.RARITY_COLORS = {
 -- TODO: 각 건물별 아이콘 이미지 Asset ID를 icon 필드에 입력해주세요
 Constants.BUILDINGS = {
 	ClockTower   = { name = "Clock Tower",       types = {"Decoration"}, rarity = "Common",    collisionSize = Vector3.new(6, 10, 6), icon = "" },
-	Farm         = { name = "Farm",              types = {"Work"},       rarity = "Common",    collisionSize = Vector3.new(8, 3, 8), workTypes = {"Farming"}, icon = "" },
+	Farm         = { name = "Farm",              types = {"Work"},       rarity = "Common",    collisionSize = Vector3.new(6, 3, 6), workTypes = {"Farming"}, icon = "" },
 	Mine         = { name = "Mine",              types = {"Work"},       rarity = "Common",    collisionSize = Vector3.new(6, 4, 6), workTypes = {"Mining"}, icon = "" },
 	Campfire     = { name = "Campfire",          types = {"Rest"},       rarity = "Rare",      collisionSize = Vector3.new(4, 3, 4), icon = "" },
 	PotionCafe   = { name = "Potion Cafe",       types = {"Rest"},       rarity = "Epic",      collisionSize = Vector3.new(6, 5, 6), icon = "" },

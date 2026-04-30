@@ -287,8 +287,10 @@ local function createPreview(itemName: string, level: number?): BasePart?
 			end
 		end
 		mainPart:SetAttribute("ItemName", itemName)
-		-- mainPart→Pivot 오프셋 저장 (회전 시 mainPart 중심으로 회전하기 위해)
-		_mainToPivotOffset = mainPart.CFrame:ToObjectSpace(item:GetPivot())
+		-- mainPart→Pivot 위치 오프셋만 저장 (회전 제외)
+		local pivotPos = item:GetPivot().Position
+		local mainPos = mainPart.Position
+		_mainToPivotOffset = CFrame.new(pivotPos - mainPos)
 	end
 
 	return mainPart

@@ -248,9 +248,18 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, localCFrame,
 			InventoryManager.addItem(player, itemName, 1, level) -- 인벤토리 복구
 			return
 		end
-		-- mainPart가 정확히 cframe에 오도록 모델 배치 (PlotManager 복원과 동일)
+		-- PlotManager 복원과 동일 (이것이 restart 시 잘 되는 방식)
 		local mainToPivot = mainPart.CFrame:ToObjectSpace(item:GetPivot())
 		item:PivotTo(cframe * mainToPivot)
+
+		-- 바닥 보정
+		local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
+		local bbCF, bbSize = item:GetBoundingBox()
+		local modelBottom = bbCF.Position.Y - bbSize.Y / 2
+		local yAdjust = buildZoneTop - modelBottom
+		if math.abs(yAdjust) > 0.01 then
+			item:PivotTo(item:GetPivot() + Vector3.new(0, yAdjust, 0))
+		end
 		item.Parent = plot
 
 		-- Anchor all parts in the model
