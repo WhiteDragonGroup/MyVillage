@@ -106,6 +106,7 @@ local hasCollision = false         -- 현재 충돌 상태
 local _lastCollisionDebug = nil    -- 디버그 출력 쓰로틀
 local inventory = {}               -- 로컬 인벤토리 캐시
 local _dragPaused = false          -- 드래그 일시 정지 (클릭으로 토글)
+local _mainToPivotOffset = CFrame.new() -- mainPart→Pivot 오프셋 (createPreview에서 저장)
 
 -- 렌더 연결
 local renderConnection = nil
@@ -286,6 +287,8 @@ local function createPreview(itemName: string, level: number?): BasePart?
 			end
 		end
 		mainPart:SetAttribute("ItemName", itemName)
+		-- mainPart→Pivot 오프셋 저장 (회전 시 mainPart 중심으로 회전하기 위해)
+		_mainToPivotOffset = mainPart.CFrame:ToObjectSpace(item:GetPivot())
 	end
 
 	return mainPart
@@ -319,6 +322,7 @@ local function removePreview()
 		end
 		toDestroy:Destroy()
 		previewPart = nil
+		_mainToPivotOffset = CFrame.new()
 	end
 end
 
@@ -566,8 +570,8 @@ local function toMoving(building: BasePart)
 				-- 최상위 건물 Model 찾기
 				local moveParent = getParentModel(previewPart)
 				if moveParent then
-					-- snapToGrid가 BuildZone 회전 + 유저 회전을 포함한 CFrame 반환
-					moveParent:PivotTo(newCFrame)
+					-- newCFrame = mainPart가 있어야 할 위치+회전 → Pivot 위치로 변환
+					moveParent:PivotTo(newCFrame * _mainToPivotOffset)
 					GridSnap.adjustModelY(moveParent, previewPart, currentBuildZone)
 				else
 					-- 단순 Part: Y를 BuildZone 상단 + Part 높이 절반으로 보정
@@ -641,7 +645,7 @@ local function toPlacingNew(itemName: string, level: number?)
 			-- Model이면 PivotTo 보정 (mainPart가 정확히 newCFrame에 오도록)
 			local parentModel = getPreviewModel(previewPart)
 			if parentModel then
-				parentModel:PivotTo(newCFrame)
+				parentModel:PivotTo(newCFrame * _mainToPivotOffset)
 				GridSnap.adjustModelY(parentModel, previewPart, currentBuildZone)
 			else
 				-- 단순 Part: Y를 BuildZone 상단 + Part 높이 절반으로 보정
