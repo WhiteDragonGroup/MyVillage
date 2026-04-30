@@ -346,6 +346,12 @@ function MainHUD.updateWeather(weatherType: string)
 		end
 	end
 
+	-- Weather 직속 TextLabel 업데이트 (날씨 이름)
+	local weatherText = weatherFrame:FindFirstChild("TextLabel")
+	if weatherText and weatherText:IsA("TextLabel") then
+		weatherText.Text = info.name
+	end
+
 	-- Weather Info 프레임에 텍스트 업데이트
 	local infoFrame = weatherFrame:FindFirstChild("Info")
 	if infoFrame then

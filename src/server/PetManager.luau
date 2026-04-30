@@ -99,6 +99,10 @@ local function createPetModel(petData, position: Vector3): BasePart
 
 	-- 1. ServerStorage/Pets에서 찾기
 	-- 구조: Pets > {펫이름} > Model(Folder) > {실제Model}
+	if not serverPetsFolder then
+		serverPetsFolder = game:GetService("ServerStorage"):FindFirstChild("Pets")
+			or workspace:FindFirstChild("Pets")
+	end
 	if serverPetsFolder then
 		local petFolder = serverPetsFolder:FindFirstChild(petName)
 		if petFolder then
@@ -130,8 +134,23 @@ local function createPetModel(petData, position: Vector3): BasePart
 	local pet
 	if template then
 		pet = template:Clone()
+		print("[PetModel] " .. petName .. " → " .. template:GetFullName() .. " (" .. template.ClassName .. ")")
 	else
 		-- 최종 폴백: 기본 Ball
+		warn("[PetModel] " .. petName .. " → FALLBACK (no template found)")
+		if serverPetsFolder then
+			local pf = serverPetsFolder:FindFirstChild(petName)
+			if pf then
+				warn("[PetModel] Folder found, children:")
+				for _, c in pf:GetChildren() do
+					warn("  " .. c.Name .. " (" .. c.ClassName .. ")")
+				end
+			else
+				warn("[PetModel] No folder: " .. petName)
+			end
+		else
+			warn("[PetModel] serverPetsFolder is nil!")
+		end
 		pet = Instance.new("Part")
 		pet.Size = PetCfg.PET_SIZE
 		pet.Material = PetCfg.PET_MATERIAL
@@ -770,7 +789,7 @@ function PetManager._spawnAllPets(player: Player)
 				prompt.ActionText = "Hold"
 				prompt.ObjectText = petData.petName
 				prompt.MaxActivationDistance = 8
-				prompt.HoldDuration = 3
+				prompt.HoldDuration = 2
 				prompt.RequiresLineOfSight = false
 				prompt.Parent = promptPart
 
@@ -881,7 +900,11 @@ function PetManager.assignPet(player: Player, petId: string, buildingId: string)
 	-- 펫 모델을 건물 옆으로 이동
 	if petData.model and petData.model.Parent then
 		local targetPos = building.Position + Vector3.new(building.Size.X / 2 + 1.5, PetCfg.PET_HEIGHT, 0)
-		petData.model.Position = targetPos
+		if petData._petModel and petData._petModel:IsA("Model") then
+			petData._petModel:PivotTo(CFrame.new(targetPos))
+		else
+			petData.model.Position = targetPos
+		end
 		petData.model:SetAttribute("AssignedBuildingId", buildingId)
 	end
 
@@ -1175,14 +1198,15 @@ function PetManager.returnPetToWorld(player: Player, petId: string)
 		petData.model = pet
 	end
 
-	-- ProximityPrompt 다시 붙이기
+	-- ProximityPrompt 다시 붙이기 (쿨다운 2초 후)
+	task.delay(2, function()
 	local promptPart = petData.model
 	if promptPart and not promptPart:FindFirstChildWhichIsA("ProximityPrompt") then
 		local prompt = Instance.new("ProximityPrompt")
 		prompt.ActionText = "Hold"
 		prompt.ObjectText = petData.petName
 		prompt.MaxActivationDistance = 8
-		prompt.HoldDuration = 0
+		prompt.HoldDuration = 2
 		prompt.RequiresLineOfSight = false
 		prompt.Parent = promptPart
 
@@ -1195,6 +1219,7 @@ function PetManager.returnPetToWorld(player: Player, petId: string)
 			end
 		end)
 	end
+	end) -- task.delay end
 
 	-- Restart behavior
 	if petData.assignedBuildingId == "" then

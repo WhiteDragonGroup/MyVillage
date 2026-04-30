@@ -255,20 +255,58 @@ function UpgradeManager._swapModel(oldBuilding: BasePart, template: Instance): B
 		newBuilding = newModel
 		newBuilding.CFrame = cframe
 	elseif newModel:IsA("Model") then
-		-- Model 템플릿: PivotTo로 위치 설정, PrimaryPart에 속성 부여
-		newModel:PivotTo(cframe)
-		newBuilding = newModel.PrimaryPart or newModel:FindFirstChildWhichIsA("BasePart")
+		newBuilding = newModel.PrimaryPart or newModel:FindFirstChildWhichIsA("BasePart", true)
 		if not newBuilding then
-			warn("Model swap failed: PrimaryPart not found - " .. itemName)
+			-- 자손에서도 찾기
+			for _, desc in newModel:GetDescendants() do
+				if desc:IsA("BasePart") then
+					newBuilding = desc
+					break
+				end
+			end
+		end
+		if not newBuilding then
+			warn("Model swap failed: no BasePart found - " .. itemName)
 			newModel:Destroy()
 			return nil
 		end
+		-- PrimaryPart 자동 설정
+		if not newModel.PrimaryPart then
+			newModel.PrimaryPart = newBuilding
+		end
+		-- mainPart→Pivot 오프셋으로 배치 (PlotManager와 동일)
+		local mainToPivot = newBuilding.CFrame:ToObjectSpace(newModel:GetPivot())
+		newModel:PivotTo(cframe * mainToPivot)
 	else
 		newModel:Destroy()
 		return nil
 	end
 
-	newBuilding.Anchored = true
+	-- Anchor all parts
+	if newModel:IsA("Model") then
+		for _, desc in newModel:GetDescendants() do
+			if desc:IsA("BasePart") then
+				desc.Anchored = true
+			end
+		end
+	else
+		newBuilding.Anchored = true
+	end
+
+	-- 바닥 보정 (BuildZone 찾기)
+	if newModel:IsA("Model") and parent then
+		local plot = parent
+		local buildZone = plot:FindFirstChild("BuildZone", true)
+		if buildZone then
+			local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
+			local bbCF, bbSize = newModel:GetBoundingBox()
+			local modelBottom = bbCF.Position.Y - bbSize.Y / 2
+			local yAdjust = buildZoneTop - modelBottom
+			if math.abs(yAdjust) > 0.01 then
+				newModel:PivotTo(newModel:GetPivot() + Vector3.new(0, yAdjust, 0))
+			end
+		end
+	end
 
 	-- 속성 적용
 	for key, value in attrs do
