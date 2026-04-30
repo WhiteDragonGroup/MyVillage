@@ -38,7 +38,7 @@ function GridSnap.snapToGrid(buildZone: BasePart, worldPosition: Vector3, object
 		math.clamp(snappedLocal.Z, -maxGridZ, maxGridZ)
 	)
 
-	-- 로컬 → 월드 변환 (BuildZone 위치 + 회전 포함)
+	-- 로컬 → 월드 변환 (BuildZone 위치 + 회전 포함, 유저 회전은 별도)
 	return bzCFrame * CFrame.new(snappedLocal)
 end
 

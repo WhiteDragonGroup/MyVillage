@@ -566,9 +566,8 @@ local function toMoving(building: BasePart)
 				-- 최상위 건물 Model 찾기
 				local moveParent = getParentModel(previewPart)
 				if moveParent then
-					local pos = newCFrame.Position
-					local _, yRot, _ = newCFrame:ToEulerAnglesYXZ()
-					moveParent:PivotTo(CFrame.new(pos) * CFrame.Angles(0, yRot, 0))
+					-- snapToGrid가 BuildZone 회전 + 유저 회전을 포함한 CFrame 반환
+					moveParent:PivotTo(newCFrame)
 					GridSnap.adjustModelY(moveParent, previewPart, currentBuildZone)
 				else
 					-- 단순 Part: Y를 BuildZone 상단 + Part 높이 절반으로 보정
@@ -642,9 +641,7 @@ local function toPlacingNew(itemName: string, level: number?)
 			-- Model이면 PivotTo 보정 (mainPart가 정확히 newCFrame에 오도록)
 			local parentModel = getPreviewModel(previewPart)
 			if parentModel then
-				local pos = newCFrame.Position
-				local _, yRot, _ = newCFrame:ToEulerAnglesYXZ()
-				parentModel:PivotTo(CFrame.new(pos) * CFrame.Angles(0, yRot, 0))
+				parentModel:PivotTo(newCFrame)
 				GridSnap.adjustModelY(parentModel, previewPart, currentBuildZone)
 			else
 				-- 단순 Part: Y를 BuildZone 상단 + Part 높이 절반으로 보정

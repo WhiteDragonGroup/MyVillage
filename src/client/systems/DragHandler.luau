@@ -65,9 +65,10 @@ function DragHandler.startDrag(
 		local result = workspace:Raycast(unitRay.Origin, unitRay.Direction * 1000, rayParams)
 
 		if result then
-			-- 그리드 스냅에 collisionSize 사용 (바운딩 박스 클램핑용)
 			local snappedCFrame = _gridSnap.snapToGrid(_buildZone, result.Position, _collisionSize, _currentRotationY)
-			local finalCFrame = _gridSnap.applyRotation(snappedCFrame, _currentRotationY)
+			-- BuildZone 회전 유지 + 유저 Y 회전 추가
+			local bzRot = _buildZone.CFrame - _buildZone.CFrame.Position
+			local finalCFrame = CFrame.new(snappedCFrame.Position) * bzRot * CFrame.Angles(0, _currentRotationY, 0)
 
 			if _onPositionUpdate then
 				_onPositionUpdate(finalCFrame)
@@ -84,10 +85,11 @@ function DragHandler.rotate(direction: number) -- direction: 1 (오른쪽) / -1 
 	_currentRotationY = _currentRotationY + (stepRad * direction)
 	_currentRotationY = _gridSnap.snapRotation(_currentRotationY)
 
-	-- If paused, apply rotation in place (keep position, only change rotation)
+	-- If paused, apply rotation in place (BuildZone 기준)
 	if _paused and _targetPart and _buildZone and _onPositionUpdate then
 		local pos = _targetPart.CFrame.Position
-		local newCFrame = CFrame.new(pos) * CFrame.Angles(0, _currentRotationY, 0)
+		local bzRot = _buildZone.CFrame - _buildZone.CFrame.Position
+		local newCFrame = CFrame.new(pos) * bzRot * CFrame.Angles(0, _currentRotationY, 0)
 		_onPositionUpdate(newCFrame)
 	end
 end
