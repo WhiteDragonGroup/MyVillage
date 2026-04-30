@@ -763,6 +763,31 @@ function PetManager._spawnAllPets(player: Player)
 				petData.model = pet
 			end
 
+			-- ProximityPrompt for holding pet (E key)
+			local promptPart = petData.model
+			if promptPart and not promptPart:FindFirstChildWhichIsA("ProximityPrompt") then
+				local prompt = Instance.new("ProximityPrompt")
+				prompt.ActionText = "Hold"
+				prompt.ObjectText = petData.petName
+				prompt.MaxActivationDistance = 8
+				prompt.HoldDuration = 3
+				prompt.RequiresLineOfSight = false
+				prompt.Parent = promptPart
+
+				prompt.Triggered:Connect(function(triggerPlayer)
+					if triggerPlayer == player then
+						print("[PetPrompt] " .. player.Name .. " Hold " .. petData.petName)
+						local holdPrompt = remotes:FindFirstChild("PetHoldPrompt")
+						if not holdPrompt then
+							holdPrompt = Instance.new("RemoteEvent")
+							holdPrompt.Name = "PetHoldPrompt"
+							holdPrompt.Parent = remotes
+						end
+						holdPrompt:FireClient(player, petData.petId)
+					end
+				end)
+			end
+
 			-- 건물에 배치되지 않은 펫은 행동 AI 시작
 			if petData.assignedBuildingId == "" then
 				PetManager._startBehaviorLoop(player, petData, plot)
@@ -1101,33 +1126,81 @@ end
 ----------------------------------------------------------------
 function PetManager.returnPetToWorld(player: Player, petId: string)
 	local pets = _playerPets[player]
-	if not pets or not pets[petId] then return end
+	if not pets or not pets[petId] then
+		warn("[ReturnPet] Pet not found: " .. tostring(petId))
+		return
+	end
 
 	local petData = pets[petId]
+	print("[ReturnPet] Returning: " .. petData.petName)
 	petData.state = "Idle"
 
 	local plot = getPlayerPlot(player)
-	if not plot then return end
+	if not plot then
+		warn("[ReturnPet] No plot")
+		return
+	end
 
 	local buildZone = plot:FindFirstChild("BuildZone", true)
-	if not buildZone then return end
+	if not buildZone then
+		warn("[ReturnPet] No BuildZone")
+		return
+	end
 
-	-- Re-create model
-	if not petData.model or not petData.model.Parent then
-		local pet = createPetModel(petData, buildZone.Position)
-		if petData._petModel then
-			petData._petModel.Parent = plot
-			petData.model = pet
-		else
-			pet.Parent = plot
-			petData.model = pet
+	-- Clear old model refs
+	petData.model = nil
+	petData._petModel = nil
+
+	-- Spawn at BuildZone surface near player
+	local bzTop = buildZone.Position.Y + buildZone.Size.Y / 2
+	local spawnPos = Vector3.new(buildZone.Position.X, bzTop, buildZone.Position.Z)
+	local character = player.Character
+	if character then
+		local hrp = character:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			spawnPos = Vector3.new(
+				hrp.Position.X + math.random(-3, 3),
+				bzTop,
+				hrp.Position.Z + math.random(-3, 3)
+			)
 		end
+	end
+
+	local pet = createPetModel(petData, spawnPos)
+	if petData._petModel then
+		petData._petModel.Parent = plot
+		petData.model = pet
+	else
+		pet.Parent = plot
+		petData.model = pet
+	end
+
+	-- ProximityPrompt 다시 붙이기
+	local promptPart = petData.model
+	if promptPart and not promptPart:FindFirstChildWhichIsA("ProximityPrompt") then
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.ActionText = "Hold"
+		prompt.ObjectText = petData.petName
+		prompt.MaxActivationDistance = 8
+		prompt.HoldDuration = 0
+		prompt.RequiresLineOfSight = false
+		prompt.Parent = promptPart
+
+		prompt.Triggered:Connect(function(triggerPlayer)
+			if triggerPlayer == player then
+				local holdPrompt = remotes:FindFirstChild("PetHoldPrompt")
+				if holdPrompt then
+					holdPrompt:FireClient(player, petData.petId)
+				end
+			end
+		end)
 	end
 
 	-- Restart behavior
 	if petData.assignedBuildingId == "" then
 		PetManager._startBehaviorLoop(player, petData, plot)
 	end
+	print("[ReturnPet] " .. petData.petName .. " returned")
 end
 
 ----------------------------------------------------------------

@@ -1088,39 +1088,32 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 											PetSellUI.show()
 										end)
 									elseif choiceId == "petworth" then
+										local heldId = nil
 										local ch = player.Character
-										local hrp2 = ch and ch:FindFirstChild("HumanoidRootPart")
-										if hrp2 then
-											local nearestPetId = nil
-											local nearestDist = 10
-											local plotsFolder = workspace:FindFirstChild("Plots")
-											if plotsFolder then
-												for _, plot in plotsFolder:GetChildren() do
-													if plot:GetAttribute("Owner") == player.Name then
-														for _, desc in plot:GetDescendants() do
-															if desc:GetAttribute("PetId") and desc:IsA("BasePart") then
-																local d = (hrp2.Position - desc.Position).Magnitude
-																if d < nearestDist then
-																	nearestDist = d
-																	nearestPetId = desc:GetAttribute("PetId")
-																end
-															end
-														end
-														break
-													end
+										if ch then
+											for _, c in ch:GetChildren() do
+												if c:IsA("Tool") and c:GetAttribute("PetId") then
+													heldId = c:GetAttribute("PetId")
+													break
 												end
 											end
-											if nearestPetId then
-												local getPriceFunc = remotes:FindFirstChild("GetPetSellPrice")
-												if getPriceFunc then
-													local price = getPriceFunc:InvokeServer(nearestPetId)
-													DialogUI.showResponse("Hmm, let me take a look...", 1)
-													task.delay(1, function()
-														DialogUI.showResponse("This one's worth $" .. price .. ".", 3)
-													end)
+										end
+										if not heldId then
+											for _, c in player.Backpack:GetChildren() do
+												if c:IsA("Tool") and c:GetAttribute("PetId") then
+													heldId = c:GetAttribute("PetId")
+													break
 												end
-											else
-												DialogUI.showResponse("I can't see anything...", 2)
+											end
+										end
+										if heldId then
+											local getPriceFunc = remotes:FindFirstChild("GetPetSellPrice")
+											if getPriceFunc then
+												local price = getPriceFunc:InvokeServer(heldId)
+												DialogUI.showResponse("Hmm, let me take a look...", 1)
+												task.delay(1, function()
+													DialogUI.showResponse("This one's worth $" .. price .. ".", 3)
+												end)
 											end
 										else
 											DialogUI.showResponse("I can't see anything...", 2)
@@ -1233,6 +1226,38 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		end -- elseif Idle
 	end -- MouseButton1
 
+	-- E키: 펫 내려놓기 (3초 홀드)
+	if input.KeyCode == Enum.KeyCode.E then
+		local character = player.Character
+		if character then
+			local hasPetTool = false
+			for _, child in character:GetChildren() do
+				if child:IsA("Tool") and child:GetAttribute("PetId") then
+					hasPetTool = true
+					break
+				end
+			end
+			if hasPetTool then
+				MainHUD.showMessage("Hold E to drop pet...", 3)
+				local startTime = tick()
+				local dropConn
+				dropConn = UserInputService.InputEnded:Connect(function(endInput)
+					if endInput.KeyCode == Enum.KeyCode.E then
+						dropConn:Disconnect()
+						if tick() - startTime >= 3 then
+							local dropEvent = remotes:FindFirstChild("DropPet")
+							if dropEvent then
+								dropEvent:FireServer()
+								MainHUD.showMessage("Pet dropped!", 1)
+							end
+						end
+					end
+				end)
+				return
+			end
+		end
+	end
+
 	if gameProcessed then return end
 
 	if input.KeyCode == Enum.KeyCode.Escape then
@@ -1312,6 +1337,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		if index and currentState == BuildState.BuildMode then
 			InventoryUI.selectByIndex(index)
 		end
+
 	end
 end)
 
@@ -1744,6 +1770,29 @@ if buyResultEvent then
 	end)
 end
 
+-- 펫 Hold ProximityPrompt → HoldPet 서버 전송
+local function connectPetHoldPrompt()
+	local evt = remotes:FindFirstChild("PetHoldPrompt")
+	if evt then
+		evt.OnClientEvent:Connect(function(petId)
+			print("[Client] PetHoldPrompt received: " .. petId)
+			local holdPetEvent = remotes:FindFirstChild("HoldPet")
+			if holdPetEvent then
+				holdPetEvent:FireServer(petId)
+			end
+		end)
+		return true
+	end
+	return false
+end
+if not connectPetHoldPrompt() then
+	remotes.ChildAdded:Connect(function(child)
+		if child.Name == "PetHoldPrompt" then
+			connectPetHoldPrompt()
+		end
+	end)
+end
+
 -- 선물 수신 알림
 giftReceivedEvent.OnClientEvent:Connect(function(senderName, itemDisplayName)
 	MainHUD.showMessage(senderName .. " sent you " .. itemDisplayName .. "!", 3)
@@ -2028,41 +2077,34 @@ if openShopEvent then
 						PetSellUI.show()
 					end)
 				elseif choiceId == "petworth" then
-					-- Find player's nearby pet (within 10 studs)
+					-- 들고 있는 펫 체크 (Character + Backpack)
+					local heldPetId = nil
 					local character = player.Character
-					local hrp = character and character:FindFirstChild("HumanoidRootPart")
-					if hrp then
-						local nearestPetId = nil
-						local nearestDist = 10
-						local plotsFolder = workspace:FindFirstChild("Plots")
-						if plotsFolder then
-							for _, plot in plotsFolder:GetChildren() do
-								if plot:GetAttribute("Owner") == player.Name then
-									for _, desc in plot:GetDescendants() do
-										if desc:GetAttribute("PetId") and desc:IsA("BasePart") then
-											local dist = (hrp.Position - desc.Position).Magnitude
-											if dist < nearestDist then
-												nearestDist = dist
-												nearestPetId = desc:GetAttribute("PetId")
-											end
-										end
-									end
-									break
-								end
+					if character then
+						for _, child in character:GetChildren() do
+							if child:IsA("Tool") and child:GetAttribute("PetId") then
+								heldPetId = child:GetAttribute("PetId")
+								break
 							end
 						end
-
-						if nearestPetId then
-							local getPriceFunc = remotes:FindFirstChild("GetPetSellPrice")
-							if getPriceFunc then
-								local price = getPriceFunc:InvokeServer(nearestPetId)
-								DialogUI.showResponse("Hmm, let me take a look...", 1)
-								task.delay(1, function()
-									DialogUI.showResponse("This one's worth $" .. price .. ".", 3)
-								end)
+					end
+					if not heldPetId then
+						for _, child in player.Backpack:GetChildren() do
+							if child:IsA("Tool") and child:GetAttribute("PetId") then
+								heldPetId = child:GetAttribute("PetId")
+								break
 							end
-						else
-							DialogUI.showResponse("I can't see anything...", 2)
+						end
+					end
+
+					if heldPetId then
+						local getPriceFunc = remotes:FindFirstChild("GetPetSellPrice")
+						if getPriceFunc then
+							local price = getPriceFunc:InvokeServer(heldPetId)
+							DialogUI.showResponse("Hmm, let me take a look...", 1)
+							task.delay(1, function()
+								DialogUI.showResponse("This one's worth $" .. price .. ".", 3)
+							end)
 						end
 					else
 						DialogUI.showResponse("I can't see anything...", 2)

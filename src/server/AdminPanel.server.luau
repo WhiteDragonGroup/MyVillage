@@ -154,8 +154,16 @@ adminEvent.OnServerEvent:Connect(function(player, cmd, arg1, arg2)
 
 	elseif cmd == "settime" then
 		local hour = tonumber(arg1) or 14
-		Lighting.ClockTime = math.clamp(hour, 0, 24)
-		notify(player, "Time set to: " .. hour)
+		local TimeState = require(serverScript:WaitForChild("TimeState"))
+		local isDay = (hour >= 6 and hour < 18)
+		Lighting.ClockTime = hour
+		TimeState.setOverride(isDay)
+		notify(player, "Time set to: " .. hour .. " (" .. (if isDay then "Day" else "Night") .. ")")
+
+	elseif cmd == "cleartime" then
+		local TimeState = require(serverScript:WaitForChild("TimeState"))
+		TimeState.clearOverride()
+		notify(player, "Time override cleared")
 
 	elseif cmd == "restock" then
 		ShopManager.initPlayer(player)

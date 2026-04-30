@@ -170,42 +170,39 @@ function DialogUI.show(npcName: string, greeting: string, choices: { { text: str
 			end
 		end
 
-		-- Show player's choice as speech bubble on player head
+		-- Show player's choice as speech bubble above player head
+		-- Destroy old player bubble and create new one above head
 		if _playerBillboard then
-			-- Hide choice buttons
-			for _, cb in _choiceButtons do
-				if cb.Parent then cb.Visible = false end
-			end
-			-- Show selected text in player bubble (NPC style: transparent bg)
-			local playerFrame = _playerBillboard:FindFirstChild("DialogFrame")
-			if playerFrame then
-				-- Make frame transparent
-				playerFrame.BackgroundTransparency = 1
-				local frameStroke = playerFrame:FindFirstChildWhichIsA("UIStroke")
-				if frameStroke then frameStroke.Transparency = 1 end
-				-- Clear existing
-				for _, child in playerFrame:GetChildren() do
-					if child:IsA("TextLabel") or child:IsA("TextButton") then
-						child:Destroy()
-					end
-				end
-				local sayLabel = Instance.new("TextLabel")
-				sayLabel.Size = UDim2.new(1, 0, 1, 0)
-				sayLabel.Position = UDim2.new(0, 0, 0, 0)
-				sayLabel.BackgroundTransparency = 1
-				sayLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-				sayLabel.TextSize = 13
-				sayLabel.Font = Enum.Font.GothamBold
-				sayLabel.TextStrokeTransparency = 0.5
-				sayLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-				sayLabel.Text = _choices[index].text
-				sayLabel.TextWrapped = true
-				sayLabel.Parent = playerFrame
-			end
+			_playerBillboard:Destroy()
+			_playerBillboard = nil
+		end
+
+		local character = player.Character
+		local head = character and character:FindFirstChild("Head")
+		if head then
+			_playerBillboard = Instance.new("BillboardGui")
+			_playerBillboard.Name = "PlayerSayBubble"
+			_playerBillboard.Size = UDim2.new(0, 200, 0, 40)
+			_playerBillboard.StudsOffset = Vector3.new(0, 1.5, 0)
+			_playerBillboard.AlwaysOnTop = true
+			_playerBillboard.Adornee = head
+			_playerBillboard.Parent = playerGui
+
+			local sayLabel = Instance.new("TextLabel")
+			sayLabel.Size = UDim2.new(1, 0, 1, 0)
+			sayLabel.BackgroundTransparency = 1
+			sayLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+			sayLabel.TextSize = 13
+			sayLabel.Font = Enum.Font.GothamBold
+			sayLabel.TextStrokeTransparency = 0.5
+			sayLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+			sayLabel.Text = _choices[index].text
+			sayLabel.TextWrapped = true
+			sayLabel.Parent = _playerBillboard
 		end
 
 		-- After delay, fire callback
-		task.delay(1, function()
+		task.delay(2, function()
 			if _onChoice then
 				_onChoice(_choices[index].id)
 			end

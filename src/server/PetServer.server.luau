@@ -154,14 +154,27 @@ holdPetEvent.OnServerEvent:Connect(function(player, petId)
 
 	-- Already holding a pet? Drop it first
 	if _heldPets[player] then
-		dropPetEvent:FireServer()
+		local held = _heldPets[player]
+		if held.tool and held.tool.Parent then
+			held.tool:Destroy()
+		end
+		PetManager.returnPetToWorld(player, held.petId)
+		_heldPets[player] = nil
 	end
 
 	local petData = PetManager.getPetData(player, petId)
-	if not petData then return end
+	if not petData then
+		warn("[HoldPet] Pet not found: " .. petId)
+		return
+	end
 
 	-- Can't hold assigned pets
-	if petData.assignedBuildingId and petData.assignedBuildingId ~= "" then return end
+	if petData.assignedBuildingId and petData.assignedBuildingId ~= "" then
+		warn("[HoldPet] Pet is assigned")
+		return
+	end
+
+	print("[HoldPet] Holding: " .. petData.petName)
 
 	-- Stop behavior loop
 	petData.state = "Held"
@@ -256,14 +269,17 @@ dropPetEvent.OnServerEvent:Connect(function(player)
 	local held = _heldPets[player]
 	if not held then return end
 
+	local petId = held.petId
+	-- Clear first to prevent AncestryChanged double trigger
+	_heldPets[player] = nil
+
 	-- Destroy tool
 	if held.tool and held.tool.Parent then
 		held.tool:Destroy()
 	end
 
 	-- Return pet to world
-	PetManager.returnPetToWorld(player, held.petId)
-	_heldPets[player] = nil
+	PetManager.returnPetToWorld(player, petId)
 end)
 
 -- Get held pet info

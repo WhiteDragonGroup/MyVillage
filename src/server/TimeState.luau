@@ -5,8 +5,10 @@
 local TimeState = {}
 local _isDay = true
 local _currentHour = 12
+local _override = nil -- { isDay: boolean } or nil
 
 function TimeState.isDay(): boolean
+	if _override then return _override.isDay end
 	return _isDay
 end
 
@@ -16,7 +18,18 @@ end
 
 function TimeState.update(hour: number, isDay: boolean)
 	_currentHour = hour
+	if not _override then
+		_isDay = isDay
+	end
+end
+
+function TimeState.setOverride(isDay: boolean)
+	_override = { isDay = isDay }
 	_isDay = isDay
+end
+
+function TimeState.clearOverride()
+	_override = nil
 end
 
 return TimeState
