@@ -248,17 +248,33 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, localCFrame,
 			InventoryManager.addItem(player, itemName, 1, level) -- 인벤토리 복구
 			return
 		end
-		-- PlotManager 복원과 동일 (이것이 restart 시 잘 되는 방식)
-		local mainToPivot = mainPart.CFrame:ToObjectSpace(item:GetPivot())
-		item:PivotTo(cframe * mainToPivot)
+		-- delta 방식: 클라이언트 mainPart CFrame을 직접 매칭
+		local delta = cframe * mainPart.CFrame:Inverse()
+		for _, desc in item:GetDescendants() do
+			if desc:IsA("BasePart") then
+				desc.CFrame = delta * desc.CFrame
+				desc.Anchored = true
+			end
+		end
 
 		-- 바닥 보정
 		local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
-		local bbCF, bbSize = item:GetBoundingBox()
-		local modelBottom = bbCF.Position.Y - bbSize.Y / 2
-		local yAdjust = buildZoneTop - modelBottom
-		if math.abs(yAdjust) > 0.01 then
-			item:PivotTo(item:GetPivot() + Vector3.new(0, yAdjust, 0))
+		local lowestY = math.huge
+		for _, desc in item:GetDescendants() do
+			if desc:IsA("BasePart") and not desc:GetAttribute("IsCollisionBox") then
+				local bottom = desc.Position.Y - desc.Size.Y / 2
+				if bottom < lowestY then lowestY = bottom end
+			end
+		end
+		if lowestY < math.huge then
+			local yAdjust = buildZoneTop - lowestY
+			if math.abs(yAdjust) > 0.01 then
+				for _, desc in item:GetDescendants() do
+					if desc:IsA("BasePart") then
+						desc.CFrame = desc.CFrame + Vector3.new(0, yAdjust, 0)
+					end
+				end
+			end
 		end
 		item.Parent = plot
 
