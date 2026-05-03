@@ -13,7 +13,8 @@ local ShopManager = {}
 -- Global shop state (shared across all players)
 local _globalShop = {
 	stocks = {},
-	lastRestock = tick(),
+	lastQuantization = 0,
+	updateResolution = 60 * 5, -- 5분 마다 업데이트
 }
 
 -- Rarity → chance of having stock (higher rarity = lower chance)
@@ -83,15 +84,17 @@ table.sort(_allShopItems, function(a, b) return a.price < b.price end)
 print("[ShopManager] " .. #_allShopItems .. " buildings in shop")
 
 -- Generate random stock based on rarity
-local function generateStock()
+local function generateStock(seed: number)
 	local stocks = {}
+	local rand = Random.new(seed)
+	
 	for _, item in _allShopItems do
 		local building = Constants.BUILDINGS[item.itemName]
 		local rarity = building and building.rarity or "Common"
 		local chance = RARITY_STOCK_CHANCE[rarity] or 1.0
 
-		if math.random() <= chance then
-			stocks[item.itemName] = math.random(1, item.maxStock)
+		if rand:NextNumber() <= chance then
+			stocks[item.itemName] = rand:NextInteger(1, item.maxStock)
 		else
 			stocks[item.itemName] = 0
 		end
@@ -101,19 +104,28 @@ end
 
 -- Initialize global shop (called once at server start)
 local function initGlobalShop()
-	_globalShop.stocks = generateStock()
-	_globalShop.lastRestock = tick()
+	_globalShop.lastQuantization = tick() // _globalShop.updateResolution
+	_globalShop.stocks = generateStock(_globalShop.lastQuantization)
 end
 
 -- Check and perform restock if needed
 function ShopManager._checkRestock()
-	local elapsed = tick() - _globalShop.lastRestock
-	if elapsed >= ShopCfg.RESTOCK_INTERVAL then
-		_globalShop.stocks = generateStock()
-		_globalShop.lastRestock = tick()
-		return true -- restocked
+	local currentQuantization = tick() // _globalShop.updateResolution
+	if currentQuantization == _globalShop.lastQuantization then
+		return false
 	end
-	return false
+
+	_globalShop.lastQuantization = currentQuantization
+	_globalShop.stocks = generateStock(_globalShop.lastQuantization)
+	return true
+
+	--local elapsed = tick() - _globalShop.lastRestock
+	--if elapsed >= ShopCfg.RESTOCK_INTERVAL then
+	--	_globalShop.stocks = generateStock()
+	--	_globalShop.lastRestock = tick()
+	--	return true -- restocked
+	--end
+	--return false
 end
 
 -- Player init/remove (no-op for global shop, kept for interface compat)
@@ -139,7 +151,8 @@ function ShopManager.getShopData(player: Player): ({ any }, number)
 		})
 	end
 
-	local restockTime = math.max(0, ShopCfg.RESTOCK_INTERVAL - (tick() - _globalShop.lastRestock))
+	--local restockTime = math.max(0, ShopCfg.RESTOCK_INTERVAL - (tick() - _globalShop.lastRestock))
+	local restockTime = _globalShop.updateResolution - (tick() % _globalShop.updateResolution)
 	return result, restockTime
 end
 

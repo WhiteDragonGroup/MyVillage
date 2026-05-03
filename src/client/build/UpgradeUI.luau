@@ -15,6 +15,8 @@ local UpgradeUI = {}
 local popUpFrame = nil
 local _callbacks = {}
 local _visible = false
+local _cancleBtn = nil
+local _confirmBtn = nil
 
 function UpgradeUI.init(callbacks: { onConfirm: () -> (), onCancel: () -> () })
 	_callbacks = callbacks
@@ -36,18 +38,22 @@ function UpgradeUI.init(callbacks: { onConfirm: () -> (), onCancel: () -> () })
 	-- Frame 내 버튼 연결
 	local frame = popUpFrame:FindFirstChild("Frame")
 	if frame then
-		local cancleBtn = frame:FindFirstChild("Cancle")
-		local confirmBtn = frame:FindFirstChild("Cinfirm") -- 오타 그대로 사용
+		_cancleBtn = frame:FindFirstChild("Cancle")
+		_confirmBtn = frame:FindFirstChild("Confirm")
 
-		if cancleBtn and cancleBtn:IsA("GuiButton") then
-			cancleBtn.MouseButton1Click:Connect(function()
-				if _callbacks.onCancel then _callbacks.onCancel() end
+		if _cancleBtn and _cancleBtn:IsA("GuiButton") then
+			_cancleBtn.MouseButton1Click:Connect(function()
+				if _callbacks.onCancel and _visible then
+					_callbacks.onCancel()
+				end
 			end)
 		end
 
-		if confirmBtn and confirmBtn:IsA("GuiButton") then
-			confirmBtn.MouseButton1Click:Connect(function()
-				if _callbacks.onConfirm then _callbacks.onConfirm() end
+		if _confirmBtn and _confirmBtn:IsA("GuiButton") then
+			_confirmBtn.MouseButton1Click:Connect(function()
+				if _callbacks.onConfirm and _visible then
+					_callbacks.onConfirm()
+				end
 			end)
 		end
 	end
@@ -66,6 +72,9 @@ function UpgradeUI.show(level: number, itemName: string)
 			table.insert(textLabels, child)
 		end
 	end
+
+	_cancleBtn.TextLabel.Text = "Cancle"
+	_confirmBtn.TextLabel.Text = "Expend"
 
 	if level >= UpgradeCfg.MAX_LEVEL then
 		-- 최대 레벨

@@ -11,6 +11,7 @@ EggConfig.MAX_PLACED_EGGS = 3
 -- price: 상점 가격 (코인)
 -- petPool: 부화 가능한 펫 목록 { {petName, petType, rarity, size, race, weight} }
 -- rarityWeights: 등급별 가중치 (합계 100)
+-- shopEmergeWeight: 상점에 등장할 확률(가중치)
 EggConfig.EGGS = {
 	-- 일반 알: Skeleton, Ghost, SnowMole, Firewood + 레어알 일부
 	Egg_Common = {
@@ -19,6 +20,7 @@ EggConfig.EGGS = {
 		hatchTime = 30,
 		price = 1000,
 		maxStock = 5,
+		shopEmergeWeight = 70,
 		rarityWeights = {
 			["Common"] = 85,
 			["Rare"] = 15,
@@ -40,6 +42,7 @@ EggConfig.EGGS = {
 		hatchTime = 60,
 		price = 5000,
 		maxStock = 3,
+		shopEmergeWeight = 30,
 		rarityWeights = {
 			["Common"] = 30,
 			["Rare"] = 55,
@@ -64,6 +67,7 @@ EggConfig.EGGS = {
 		hatchTime = 120,
 		price = 30000,
 		maxStock = 2,
+		shopEmergeWeight = 10,
 		rarityWeights = {
 			["Rare"] = 35,
 			["Epic"] = 50,
@@ -86,6 +90,7 @@ EggConfig.EGGS = {
 		hatchTime = 300,
 		price = 150000,
 		maxStock = 1,
+		shopEmergeWeight = 3,
 		rarityWeights = {
 			["Epic"] = 45,
 			["Legendary"] = 55,

@@ -106,7 +106,7 @@ function SettingsUI._connectSlider(frame, onChange)
 	clickArea.Size = UDim2.new(1, 0, 1, 0)
 	clickArea.BackgroundTransparency = 1
 	clickArea.Text = ""
-	clickArea.ZIndex = 10
+	clickArea.ZIndex = 20
 	clickArea.Parent = gaugeBar
 
 	local dragging = false
@@ -206,28 +206,39 @@ function SettingsUI._connectOnOffToggle(frame, onChange)
 	clickArea.Size = UDim2.new(1, 0, 1, 0)
 	clickArea.BackgroundTransparency = 1
 	clickArea.Text = ""
-	clickArea.ZIndex = 10
+	clickArea.ZIndex = 20
 	clickArea.Parent = gaugeBar
 
-	local function updateVisual()
+	local function updateVisual(noUseTween: boolean?)
 		if handle then
 			handle.AnchorPoint = Vector2.new(0.5, handle.AnchorPoint.Y)
+			local targetPosition: UDim2
 			if isOn then
-				TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-					Position = UDim2.new(1, 0, handle.Position.Y.Scale, handle.Position.Y.Offset),
-				}):Play()
+				targetPosition = UDim2.new(1, 0, handle.Position.Y.Scale, handle.Position.Y.Offset)
+			else
+				targetPosition = UDim2.new(0, 0, handle.Position.Y.Scale, handle.Position.Y.Offset)
+			end
+			if noUseTween then
+				handle.Position = targetPosition
 			else
 				TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-					Position = UDim2.new(0, 0, handle.Position.Y.Scale, handle.Position.Y.Offset),
+					Position = targetPosition
 				}):Play()
 			end
 		end
 		if gauge then
-			TweenService:Create(gauge, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-				Size = UDim2.new(if isOn then 1 else 0, 0, gauge.Size.Y.Scale, gauge.Size.Y.Offset),
-			}):Play()
+			local targetSize = UDim2.new(if isOn then 1 else 0, 0, gauge.Size.Y.Scale, gauge.Size.Y.Offset)
+			if noUseTween then
+				gauge.Size = targetSize
+			else
+				TweenService:Create(gauge, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+					Size = targetSize
+				}):Play()
+			end
 		end
 	end
+
+	updateVisual(true)
 
 	clickArea.MouseButton1Click:Connect(function()
 		isOn = not isOn

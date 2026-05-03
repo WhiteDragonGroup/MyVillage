@@ -4,6 +4,7 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -65,22 +66,53 @@ local function createFrame(parent: Instance, size: UDim2?): Frame
 	return frame
 end
 
-function DialogUI.show(npcName: string, greeting: string, choices: { { text: string, id: string } }, onChoice: (string) -> (), npcAdornee: BasePart?)
+local _currentAnimateId: number = 0
+function DialogUI._animateGreeting(greeting: string, greetLabel: TextLabel, callback: ()->()?, choiceDelay: number?)
+	_currentAnimateId += 1
+	local thisAnimateId = _currentAnimateId
+	local greetingLength = utf8.len(greeting)
+	
+	local startTick = tick()
+	local connection
+	connection = RunService.RenderStepped:Connect(function()
+		if _currentAnimateId ~= thisAnimateId or not _npcBillboard then
+			connection:Disconnect()
+			return
+		end
+		
+		local currentTick = tick()
+		local diff = currentTick - startTick
+		local charLength = math.floor(diff / 0.02)
+		
+		greetLabel.Text = greeting:sub(1, utf8.offset(greeting, charLength + 1) - 1)
+		
+		if charLength == greetingLength then
+			connection:Disconnect()
+			if not callback then
+				return
+			end
+			if choiceDelay then
+				task.wait(choiceDelay)
+				if _currentAnimateId ~= thisAnimateId or not _npcBillboard then
+					return
+				end
+			end
+			callback()
+		end
+	end)
+
+	-- Clear previous text
+end
+
+function DialogUI.show(npcName: string, greeting: string, choices: { { text: string, id: string } }, onChoice: (string) -> (), npcAdornee: BasePart?, choiceDelay: number?, onGreetingAnimationDone: () -> ()?)
 	DialogUI.hide()
 	_visible = true
 	_onChoice = onChoice
 	_choices = choices
 
-	-- Player head
-	local playerHead = nil
-	local character = player.Character
-	if character then
-		playerHead = character:FindFirstChild("Head") or character:FindFirstChild("HumanoidRootPart")
-	end
-
 	-- === NPC speech bubble (greeting) ===
 	if npcAdornee then
-		_npcBillboard = createBubble(npcAdornee, Vector3.new(0, 1.5, 0), UDim2.new(0, 250, 0, 70))
+		_npcBillboard = createBubble(npcAdornee, Vector3.new(0, 1.5, 0), UDim2.new(0, 350, 0, 100))
 		local npcFrame = createFrame(_npcBillboard)
 		npcFrame.BackgroundTransparency = 1
 		-- Remove stroke on NPC bubble
@@ -93,27 +125,50 @@ function DialogUI.show(npcName: string, greeting: string, choices: { { text: str
 		nameLabel.Position = UDim2.new(0, 5, 0, 5)
 		nameLabel.BackgroundTransparency = 1
 		nameLabel.TextColor3 = Color3.fromRGB(255, 220, 130)
-		nameLabel.TextSize = 13
-		nameLabel.Font = Enum.Font.GothamBold
+		nameLabel.TextSize = 22 -- 13
+		--nameLabel.Font = Enum.Font.GothamBold
+		nameLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 		nameLabel.Text = npcName
 		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 		nameLabel.Parent = npcFrame
 
 		-- Greeting text
 		local greetLabel = Instance.new("TextLabel")
-		greetLabel.Size = UDim2.new(1, -10, 0, 36)
+		greetLabel.Size = UDim2.new(1, -10, 1, -23) -- UDim2.new(1, -10, 0, 36)
 		greetLabel.Position = UDim2.new(0, 5, 0, 24)
 		greetLabel.BackgroundTransparency = 1
 		greetLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-		greetLabel.TextSize = 11
-		greetLabel.Font = Enum.Font.Gotham
-		greetLabel.Text = greeting
+		greetLabel.TextSize = 26 -- 11
+		--greetLabel.Font = Enum.Font.Gotham
+		greetLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Medium)
+		greetLabel.Text = ""
 		greetLabel.TextWrapped = true
 		greetLabel.TextXAlignment = Enum.TextXAlignment.Left
 		greetLabel.TextYAlignment = Enum.TextYAlignment.Top
 		greetLabel.Parent = npcFrame
+		
+		DialogUI._animateGreeting(greeting, greetLabel, function()
+			DialogUI.showPlayerChoice(choices, onChoice)
+			if onGreetingAnimationDone then
+				onGreetingAnimationDone()
+			end
+		end, choiceDelay)
+	else
+		DialogUI.showPlayerChoice(choices, onChoice)
+		if onGreetingAnimationDone then
+			onGreetingAnimationDone()
+		end
 	end
+end
 
+function DialogUI.showPlayerChoice(choices: { { text: string, id: string } }, onChoice: (string) -> ())
+	-- Player head
+	local playerHead = nil
+	local character = player.Character
+	if character then
+		playerHead = character:FindFirstChild("Head") or character:FindFirstChild("HumanoidRootPart")
+	end
+	
 	-- === Player choices bubble (right side) ===
 	local choiceHeight = 10 + #choices * 28
 	if playerHead then
@@ -217,8 +272,9 @@ function DialogUI.show(npcName: string, greeting: string, choices: { { text: str
 		btn.Position = UDim2.new(0, 5, 0, y)
 		btn.BackgroundColor3 = Color3.fromRGB(50, 45, 35)
 		btn.TextColor3 = Color3.fromRGB(255, 240, 200)
-		btn.TextSize = 11
-		btn.Font = Enum.Font.GothamBold
+		btn.TextSize = 22
+		--btn.Font = Enum.Font.GothamBold
+		btn.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 		btn.Text = "#" .. i .. " " .. choice.text
 		btn.TextXAlignment = Enum.TextXAlignment.Left
 		btn.AutoButtonColor = true

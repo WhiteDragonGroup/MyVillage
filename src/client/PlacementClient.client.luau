@@ -35,6 +35,7 @@ local AdminUI = require(clientScript:WaitForChild("build"):WaitForChild("AdminUI
 local DialogUI = require(clientScript:WaitForChild("build"):WaitForChild("DialogUI"))
 local PetSellUI = require(clientScript:WaitForChild("build"):WaitForChild("PetSellUI"))
 local EggInfoUI = require(clientScript:WaitForChild("build"):WaitForChild("EggInfoUI"))
+local EggShopUI = require(clientScript:WaitForChild("build"):WaitForChild("EggShopUI"))
 
 local HighlightSystem = require(clientScript:WaitForChild("systems"):WaitForChild("HighlightSystem"))
 local CollisionDetector = require(clientScript:WaitForChild("systems"):WaitForChild("CollisionDetector"))
@@ -44,6 +45,7 @@ local UpgradeDisplay = require(clientScript:WaitForChild("systems"):WaitForChild
 local PetVisuals = require(clientScript:WaitForChild("systems"):WaitForChild("PetVisuals"))
 local LevelBadge = require(clientScript:WaitForChild("systems"):WaitForChild("LevelBadge"))
 local WeatherVFX = require(clientScript:WaitForChild("systems"):WaitForChild("WeatherVFX"))
+local CameraManager = require(clientScript:WaitForChild("systems"):WaitForChild("CameraManager"))
 
 -- Remotes
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -72,6 +74,7 @@ local hatchEggEvent = remotes:WaitForChild("HatchEgg")
 local getEggsFunc = remotes:WaitForChild("GetEggs")
 local getPlacedEggsFunc = remotes:WaitForChild("GetPlacedEggs")
 local eggUpdateEvent = remotes:WaitForChild("EggUpdate")
+local showEggBuyPopup = remotes:WaitForChild("ShowEggBuyPopup")
 
 local itemsFolder = ReplicatedStorage:WaitForChild("Items")
 
@@ -83,6 +86,7 @@ local function closeAllPopups()
 	EggInfoUI.hide()
 	if PetDetailUI.isVisible() then PetDetailUI.hide() end
 	DialogUI.hide()
+	EggShopUI.hide()
 end
 
 -- NPC interaction distance
@@ -668,6 +672,7 @@ end
 BuildUI.init(function()
 	-- 상점/도감 닫기
 	ShopUI.hide()
+	EggShopUI.hide()
 	CollectionUI.hide()
 	GiftUI.hide()
 	if currentState == BuildState.Idle then
@@ -1704,7 +1709,31 @@ ShopUI.init({
 		end
 		buyEggEvent:FireServer(eggType)
 	end,
+	onOpen = function()
+		-- 열고 닫을 때 리프레시
+		loadShopData()
+	end,
+	onReloadRequest = function()
+		-- restock 시간이 0이 되면 리프레시
+		loadShopData()
+	end,
 })
+
+-- 알 상점 UI 초기화
+EggShopUI.init({
+	onConfirm = function(slotName: string, eggName: string)
+		EggShopUI.hide()
+		local msg = buyEggEvent:InvokeServer(slotName, eggName)
+		MainHUD.showMessage(msg, 4)
+	end,
+	
+	onCancel = function()
+		EggShopUI.hide()
+	end,
+})
+showEggBuyPopup.OnClientEvent:Connect(function(slotName, eggName)
+	EggShopUI.show(slotName, eggName)
+end)
 
 -- 메인 HUD 초기화 (탭 전환)
 MainHUD.init({
@@ -2121,11 +2150,12 @@ if openShopEvent then
 			closeAllPopups()
 			-- Pierre greeting on NPC head
 			local greeting = PIERRE_GREETINGS[math.random(#PIERRE_GREETINGS)]
-			DialogUI.show("Pierre", greeting, {}, function() end, npcHead or npcPart)
-			task.delay(1.5, function()
+			CameraManager.TweenFOV(TweenInfo.new(2.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), 60)
+			DialogUI.show("Pierre", greeting, {}, function() end, npcHead or npcPart, 1, function ()
 				DialogUI.hide()
+				ShopUI.showBuildingsShop()
+				CameraManager.TweenFOV(TweenInfo.new(1.8, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), 55)
 			end)
-			ShopUI.showBuildingsShop()
 			if npcPart then startNpcDistanceCheck(npcPart) end
 		elseif shopType == "eggs" then
 			local greeting = HAILEY_GREETINGS[math.random(#HAILEY_GREETINGS)]

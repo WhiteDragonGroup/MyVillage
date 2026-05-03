@@ -10,6 +10,7 @@ local hatchEggEvent = remotes:WaitForChild("HatchEgg")
 local getEggsFunc = remotes:WaitForChild("GetEggs")
 local getPlacedEggsFunc = remotes:WaitForChild("GetPlacedEggs")
 local eggUpdateEvent = remotes:WaitForChild("EggUpdate")
+local showEggBuyPopup = remotes:WaitForChild("ShowEggBuyPopup")
 
 local serverScript = script.Parent
 local EggManager = require(serverScript:WaitForChild("EggManager"))
@@ -66,24 +67,30 @@ EggManager.setPetFunction(function(player, petData)
 	PetManager.addPetDirect(player, fullPetData)
 end)
 
+EggManager.setShowEggBuyPopup(function(player, slotName, eggName)
+	showEggBuyPopup:FireClient(player, slotName, eggName)
+end)
+
 ----------------------------------------------------------------
 -- Remote 핸들러
 ----------------------------------------------------------------
 
 -- 알 구매
-buyEggEvent.OnServerEvent:Connect(function(player, eggType)
-	if typeof(eggType) ~= "string" then return end
+buyEggEvent.OnServerInvoke = function(player, slotName, eggName)
+	if typeof(slotName) ~= "string" then return end
 
-	local success, msg = EggManager.buyEgg(player, eggType)
+	local success, msg = EggManager.buyEgg(player, slotName, eggName)
 	if success then
-		print(player.Name .. " - 알 구매: " .. eggType)
+		print(player.Name .. " - 알 구매: " .. slotName)
 	else
 		warn(player.Name .. " - 알 구매 실패: " .. msg)
 	end
 
 	-- 클라이언트에 알 인벤토리 갱신
 	eggUpdateEvent:FireClient(player, "inventory", EggManager.getEggInventory(player))
-end)
+	
+	return msg
+end
 
 -- 알 배치
 placeEggEvent.OnServerEvent:Connect(function(player, eggType, position)
@@ -127,5 +134,20 @@ end
 getPlacedEggsFunc.OnServerInvoke = function(player)
 	return EggManager.getPlacedEggs(player)
 end
+
+-- 상점 판매 목록 업데이트
+local updateResolution = 60 * 5 -- 5분 마다 업데이트
+local lastQuantization = 0
+task.spawn(function ()
+	while true do
+		local currentQuantization = tick() // updateResolution
+		if currentQuantization ~= lastQuantization then
+			EggManager.updateShopEggs(currentQuantization)
+			lastQuantization = currentQuantization
+			print("EggServer 상점 목록 업데이트")
+		end
+		task.wait(1)
+	end 
+end)
 
 print("EggServer 로드됨 - 알 부화 시스템")

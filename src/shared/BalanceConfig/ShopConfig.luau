@@ -5,7 +5,7 @@
 local ShopConfig = {}
 
 -- 상점 재입고 간격 (초)
-ShopConfig.RESTOCK_INTERVAL = 300 -- 5분
+--ShopConfig.RESTOCK_INTERVAL = 300 -- 5분
 
 -- 상점 판매 목록: itemName, 가격(코인), 최대 재고
 ShopConfig.SHOP_ITEMS = {

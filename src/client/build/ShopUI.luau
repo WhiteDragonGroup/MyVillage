@@ -10,6 +10,9 @@ local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild(
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
 local ProductConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ProductConfig"))
 
+local clientScript = script.Parent.Parent
+local CameraManager = require(clientScript:WaitForChild("systems"):WaitForChild("CameraManager"))
+
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local player = Players.LocalPlayer
@@ -25,8 +28,9 @@ local _callbacks = {}
 local _shopData = {}
 local _restockTime = 0
 local _timerConnection = nil
+local _lastUpdate = 0
 
-function ShopUI.init(callbacks: { onBuy: (string) -> (), onBuyGem: ((string) -> ())?, onGift: (string) -> (), onBuyEgg: ((string) -> ())? })
+function ShopUI.init(callbacks: { onBuy: (string) -> (), onBuyGem: ((string) -> ())?, onGift: (string) -> (), onBuyEgg: ((string) -> ())?, onReloadRequest: () -> ()?, onOpen: () -> ()? })
 	_callbacks = callbacks
 
 	featuresGui = playerGui:WaitForChild("Features", 10)
@@ -160,6 +164,7 @@ function ShopUI._matchEggType(element): string?
 end
 
 function ShopUI.updateShop(shopData: { any }, restockTime: number)
+	_lastUpdate = tick()
 	_shopData = shopData
 	_restockTime = restockTime
 	print("[ShopUI] received " .. #shopData .. " items, restock in " .. math.floor(restockTime) .. "s")
@@ -208,9 +213,16 @@ function ShopUI._renderItems()
 	-- Ensure layout exists
 	if not scrollFrame:FindFirstChildWhichIsA("UIListLayout") and not scrollFrame:FindFirstChildWhichIsA("UIGridLayout") then
 		local layout = Instance.new("UIListLayout")
-		layout.Padding = UDim.new(0, 4)
+		-- layout.Padding = UDim.new(0, 4)
 		layout.SortOrder = Enum.SortOrder.LayoutOrder
+		layout.Padding = UDim.new(0, 12)
 		layout.Parent = scrollFrame
+		
+		local padding = Instance.new("UIPadding")
+		padding.PaddingTop = UDim.new(0, 15)
+		padding.PaddingBottom = UDim.new(0, 30)
+		padding.PaddingLeft = UDim.new(0.03, 0)
+		padding.Parent = scrollFrame
 	end
 
 	for i, item in _shopData do
@@ -428,9 +440,24 @@ function ShopUI._startTimer()
 		_timerConnection = nil
 	end
 
-	_timerConnection = RunService.Heartbeat:Connect(function(dt)
+	local _reloadRequested = false
+	-- TODO: Hot 폴링 대신 task.spawn, while, task.wait(1) 으로 low-priority 폴링을 하는편이
+	--       좋아보여요
+	_timerConnection = RunService.Heartbeat:Connect(function(_dt)
 		if not _visible then return end
-		_restockTime = math.max(0, _restockTime - dt)
+		local updateDiff = tick() - _lastUpdate
+		local currentRemain = math.max(0, _restockTime - updateDiff)
+		
+		if currentRemain == 0 then
+			if not _reloadRequested then
+				_reloadRequested = true
+				if _callbacks.onReloadRequest then
+					_callbacks.onReloadRequest()
+				end
+			end 
+		else
+			_reloadRequested = false
+		end
 
 		-- RestockText 업데이트
 		if buildingsShopFrame then
@@ -438,8 +465,8 @@ function ShopUI._startTimer()
 			if header then
 				local restockText = header:FindFirstChild("RestockText")
 				if restockText then
-					local mins = math.floor(_restockTime / 60)
-					local secs = math.floor(_restockTime % 60)
+					local mins = currentRemain // 60
+					local secs = math.floor(currentRemain % 60)
 					restockText.Text = string.format("Restocking in %d:%02d", mins, secs)
 				end
 			end
@@ -450,6 +477,9 @@ end
 function ShopUI.show()
 	if _visible then return end
 	_visible = true
+	if _callbacks.onOpen then
+		_callbacks.onOpen()
+	end
 	-- Shop 버튼 = 알 상점 (ShopFrame)
 	if shopFrame then shopFrame.Visible = true end
 end
@@ -466,6 +496,7 @@ end
 
 function ShopUI.hide()
 	_visible = false
+	CameraManager.ResetFOV(TweenInfo.new(1, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out))
 	if shopFrame then shopFrame.Visible = false end
 	if buildingsShopFrame then buildingsShopFrame.Visible = false end
 	if _timerConnection then
