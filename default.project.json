@@ -79,6 +79,9 @@
           "$className": "RemoteEvent"
         },
         "BuyEgg": {
+          "$className": "RemoteFunction"
+        },
+        "ShowEggBuyPopup": {
           "$className": "RemoteEvent"
         },
         "PlaceEgg": {

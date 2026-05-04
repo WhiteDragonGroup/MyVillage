@@ -283,7 +283,7 @@ function SettingsUI._connectOnOffToggle(frame, initial: boolean, onChange)
 		end
 	end
 
-	-- Sync visual to initial state (OFF) without tween
+	-- Sync visual to initial state without tween
 	updateVisual(true)
 
 	clickArea.MouseButton1Click:Connect(function()

@@ -6,6 +6,7 @@ local HttpService = game:GetService("HttpService")
 
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
+local EggModels = ReplicatedStorage:WaitForChild("Egg")
 
 local EggCfg = BalanceConfig.Egg
 local PetCfg = BalanceConfig.Pet
@@ -30,6 +31,11 @@ local _spendCoins = nil
 function EggManager.setCurrencyFunctions(hasFn, spendFn)
 	_hasCoins = hasFn
 	_spendCoins = spendFn
+end
+
+local _showEggBuyPopup = nil
+function EggManager.setShowEggBuyPopup(showFn)
+	_showEggBuyPopup = showFn
 end
 
 ----------------------------------------------------------------
@@ -120,17 +126,113 @@ function EggManager.removeEgg(player: Player, eggType: string, count: number?): 
 end
 
 ----------------------------------------------------------------
+-- 상점 판매 진열 변경
+----------------------------------------------------------------
+local _totalWeight = 0
+local _shopSlotItems = {} :: { [string]: { pickedEggName: string, model: Model } }
+local _shopEmergeTable = {} :: { eggName: string, weight: number }
+for eggName, egg in EggCfg.EGGS do
+	_totalWeight += egg.shopEmergeWeight
+	table.insert(_shopEmergeTable, {
+		eggName = eggName,
+		weight = egg.shopEmergeWeight,
+	})
+end
+table.sort(_shopEmergeTable, function(a, b) return a.weight > b.weight end)
+local eggPlaces = workspace:FindFirstChild("Map"):FindFirstChild("EggPlaces")
+function EggManager._pickShopEgg(rand: Random): string
+	local pick = rand:NextInteger(0, _totalWeight - 1)
+	local cumulative = 0
+
+	for _, emergeInfo in _shopEmergeTable do
+		cumulative += emergeInfo.weight
+		if pick < cumulative then
+			return emergeInfo.eggName
+		end
+	end
+end
+function EggManager._initShopEgg(slot: Folder, eggModel: Model, place: Model)
+	-- 이전 모델 제거
+	for _, child in slot:GetChildren() do
+		if child.Name == "EggPlace" then
+			continue
+		end
+		child:Destroy()
+	end
+
+	-- 새 모델 배치
+	eggModel = eggModel:Clone()
+	eggModel.Parent = slot
+	eggModel:PivotTo(place:GetPivot() * CFrame.new(Vector3.new(0, 0.5, 0)))
+
+	-- 프롬프트 생성
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "BuyPrompt"
+	prompt.ActionText = "Buy Egg"
+	prompt.MaxActivationDistance = 10
+	prompt.HoldDuration = 0
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = eggModel.PrimaryPart -- PrimaryPart는 항상 존재해야 함
+	prompt.Triggered:Connect(function(player)
+		_showEggBuyPopup(player, slot.Name, eggModel.Name)
+	end)
+
+	-- 모델 등록
+	_shopSlotItems[slot.Name] = {
+		pickedEggName = eggModel.Name;
+		model = eggModel;
+	}
+end
+function EggManager.updateShopEggs(seed: number)
+	local rand = Random.new(seed)
+
+	for _, slot in eggPlaces:GetChildren() do
+		local pickedEggName = EggManager._pickShopEgg(rand)
+		local eggModel = EggModels:FindFirstChild(pickedEggName)
+		local place = slot:FindFirstChild("EggPlace")
+
+		if (not eggModel) or (not place) then
+			continue
+		end
+
+		EggManager._initShopEgg(slot, eggModel, place)
+	end
+end
+
+----------------------------------------------------------------
 -- 상점 구매
 ----------------------------------------------------------------
-function EggManager.buyEgg(player: Player, eggType: string): (boolean, string)
-	local eggInfo = EggCfg.EGGS[eggType]
+function EggManager.buyEgg(player: Player, slotName: string, eggName: string): (boolean, string)
+	local item = _shopSlotItems[slotName]
+	if not item then
+		return false, "Already sold"
+	end
+	
+	if item.pickedEggName ~= eggName then
+		return false, "No longer available for purchase"
+	end
+
+	local eggInfo = EggCfg.EGGS[item.pickedEggName]
 	if not eggInfo then return false, "Egg not found" end
 
 	if not _hasCoins or not _spendCoins then return false, "Coin system not connected" end
 	if not _hasCoins(player, eggInfo.price) then return false, "Not enough coins" end
 	if not _spendCoins(player, eggInfo.price) then return false, "Coin deduction failed" end
 
-	EggManager.addEgg(player, eggType, 1)
+	EggManager.addEgg(player, item.pickedEggName, 1)
+	_shopSlotItems[slotName] = nil
+
+	local prompt = item.model:FindFirstChild("BuyPrompt")
+	if prompt then
+		prompt:Destroy()
+	end
+	for _, part in item.model:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.Transparency = math.max(0.65, part.Transparency)
+			part.CanCollide = false
+		end
+	end
+
 	return true, "Purchase complete"
 end
 
