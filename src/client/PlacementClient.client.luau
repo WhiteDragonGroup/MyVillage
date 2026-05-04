@@ -50,6 +50,20 @@ local ClockTowerVisual = require(clientScript:WaitForChild("systems"):WaitForChi
 ClockTowerVisual.init()
 local BuffUI = require(clientScript:WaitForChild("build"):WaitForChild("BuffUI"))
 BuffUI.init()
+local BagUI = require(clientScript:WaitForChild("build"):WaitForChild("BagUI"))
+BagUI.init({
+	onItemClick = function(item)
+		if item.kind == "egg" then
+			-- 알: 자동 Equip → Tool 장착
+			local equipEgg = remotes:FindFirstChild("EquipEgg")
+			if equipEgg then equipEgg:FireServer(item.itemName) end
+			BagUI.hide()
+		elseif item.kind == "building" then
+			-- 건물: 빌드모드에서 처리 (현재는 닫고 안내만)
+			MainHUD.showMessage("Press B and select from build inventory.", 3)
+		end
+	end,
+})
 
 -- Remotes
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
