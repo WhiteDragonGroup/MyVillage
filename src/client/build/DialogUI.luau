@@ -82,11 +82,11 @@ function DialogUI._animateGreeting(greeting: string, greetLabel: TextLabel, call
 		
 		local currentTick = tick()
 		local diff = currentTick - startTick
-		local charLength = math.floor(diff / 0.02)
-		
+		local charLength = math.min(math.floor(diff / 0.02), greetingLength)
+
 		greetLabel.Text = greeting:sub(1, utf8.offset(greeting, charLength + 1) - 1)
-		
-		if charLength == greetingLength then
+
+		if charLength >= greetingLength then
 			connection:Disconnect()
 			if not callback then
 				return

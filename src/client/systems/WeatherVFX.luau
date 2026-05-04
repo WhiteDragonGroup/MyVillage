@@ -60,7 +60,7 @@ local function createRainFallback(): Part
 	emitter.Speed = NumberRange.new(60, 80)
 	emitter.SpreadAngle = Vector2.new(10, 10)
 	emitter.EmissionDirection = Enum.NormalId.Bottom
-	emitter.SquashAmount = 3 -- 세로로 늘려서 빗줄기 형태
+	emitter.Squash = NumberSequence.new(3) -- 세로로 늘려서 빗줄기 형태
 	emitter.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0.3),
 		NumberSequenceKeypoint.new(0.8, 0.3),

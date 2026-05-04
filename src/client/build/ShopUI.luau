@@ -213,15 +213,9 @@ function ShopUI._renderItems()
 	-- Ensure layout exists
 	if not scrollFrame:FindFirstChildWhichIsA("UIListLayout") and not scrollFrame:FindFirstChildWhichIsA("UIGridLayout") then
 		local layout = Instance.new("UIListLayout")
+		layout.Padding = UDim.new(0, 4)
 		layout.SortOrder = Enum.SortOrder.LayoutOrder
-		layout.Padding = UDim.new(0, 12)
 		layout.Parent = scrollFrame
-
-		local padding = Instance.new("UIPadding")
-		padding.PaddingTop = UDim.new(0, 15)
-		padding.PaddingBottom = UDim.new(0, 30)
-		padding.PaddingLeft = UDim.new(0.03, 0)
-		padding.Parent = scrollFrame
 	end
 
 	for i, item in _shopData do

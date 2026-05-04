@@ -1833,9 +1833,27 @@ MainHUD.init({
 				end
 			end
 		elseif destination == "buildings" then
-			hrp.CFrame = CFrame.new(113.7, 10.8, 10.3)
+			local pos = Vector3.new(113.7, 10.8, 10.3)
+			local npcFolder = workspace:FindFirstChild("NPC")
+			local npc = npcFolder and npcFolder:FindFirstChild("BuildingDealer")
+			local npcPart = npc and (npc:FindFirstChild("HumanoidRootPart") or npc:FindFirstChildWhichIsA("BasePart", true))
+			if npcPart then
+				local target = Vector3.new(npcPart.Position.X, pos.Y, npcPart.Position.Z)
+				hrp.CFrame = CFrame.lookAt(pos, target)
+			else
+				hrp.CFrame = CFrame.new(pos)
+			end
 		elseif destination == "eggs" then
-			hrp.CFrame = CFrame.new(97.3, 11.0, 24.0)
+			local pos = Vector3.new(95.9, 11.0, 26.7)
+			local npcFolder = workspace:FindFirstChild("NPC")
+			local npc = npcFolder and npcFolder:FindFirstChild("PetDealer")
+			local npcPart = npc and (npc:FindFirstChild("HumanoidRootPart") or npc:FindFirstChildWhichIsA("BasePart", true))
+			if npcPart then
+				local target = Vector3.new(npcPart.Position.X, pos.Y, npcPart.Position.Z)
+				hrp.CFrame = CFrame.lookAt(pos, target)
+			else
+				hrp.CFrame = CFrame.new(pos)
+			end
 		end
 	end,
 
