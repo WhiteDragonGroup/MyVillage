@@ -46,6 +46,10 @@ local PetVisuals = require(clientScript:WaitForChild("systems"):WaitForChild("Pe
 local LevelBadge = require(clientScript:WaitForChild("systems"):WaitForChild("LevelBadge"))
 local WeatherVFX = require(clientScript:WaitForChild("systems"):WaitForChild("WeatherVFX"))
 local CameraManager = require(clientScript:WaitForChild("systems"):WaitForChild("CameraManager"))
+local ClockTowerVisual = require(clientScript:WaitForChild("systems"):WaitForChild("ClockTowerVisual"))
+ClockTowerVisual.init()
+local BuffUI = require(clientScript:WaitForChild("build"):WaitForChild("BuffUI"))
+BuffUI.init()
 
 -- Remotes
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -1064,6 +1068,36 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 							MainHUD.showMessage("Pet placed!", 1)
 							return
 						end
+					end
+				end
+			end
+
+			-- 알 Tool을 들고 있고 마을 안 클릭 → 그 자리에 알 배치
+			local heldEggType = nil
+			if character then
+				for _, child in character:GetChildren() do
+					if child:IsA("Tool") and child:GetAttribute("IsEggTool") then
+						heldEggType = child:GetAttribute("EggType")
+						break
+					end
+				end
+			end
+			if heldEggType then
+				local bz = getMyBuildZone()
+				if bz then
+					local clickPos = mouse.Hit.Position
+					local localPos = bz.CFrame:PointToObjectSpace(clickPos)
+					local half = bz.Size / 2
+					if math.abs(localPos.X) <= half.X and math.abs(localPos.Z) <= half.Z then
+						placeEggEvent:FireServer(heldEggType, clickPos)
+						-- Tool 정리는 서버 측 PlaceEgg 처리 후 ancestry 변경으로 자동
+						for _, child in character:GetChildren() do
+							if child:IsA("Tool") and child:GetAttribute("IsEggTool") then
+								child:Destroy()
+							end
+						end
+						MainHUD.showMessage("Egg placed!", 1)
+						return
 					end
 				end
 			end

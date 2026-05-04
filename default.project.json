@@ -107,6 +107,15 @@
         },
         "SaveSetting": {
           "$className": "RemoteEvent"
+        },
+        "EquipEgg": {
+          "$className": "RemoteEvent"
+        },
+        "BuffUpdate": {
+          "$className": "RemoteEvent"
+        },
+        "GetBuffs": {
+          "$className": "RemoteFunction"
         }
       },
       "Weather": {

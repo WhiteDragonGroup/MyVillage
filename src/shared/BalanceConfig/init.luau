@@ -16,5 +16,6 @@ BalanceConfig.Currency = require(script:WaitForChild("CurrencyConfig"))
 BalanceConfig.Weather = require(script:WaitForChild("WeatherConfig"))
 BalanceConfig.Shop = require(script:WaitForChild("ShopConfig"))
 BalanceConfig.Egg = require(script:WaitForChild("EggConfig"))
+BalanceConfig.Buff = require(script:WaitForChild("BuffConfig"))
 
 return BalanceConfig

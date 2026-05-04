@@ -540,6 +540,29 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 						break
 					end
 
+					-- 광산/농장 등 Work 건물에 코인 누적 (capacity 한도까지)
+					do
+						local itemName = workplace:GetAttribute("ItemName")
+						local buildingInfo = itemName and Constants.BUILDINGS[itemName]
+						if buildingInfo and buildingInfo.types then
+							local isWork = false
+							for _, t in buildingInfo.types do
+								if t == "Work" then isWork = true; break end
+							end
+							if isWork then
+								local BCfg = BalanceConfig.Building
+								local rate = (BCfg and BCfg.WORK_INCOME_RATE) or 1
+								local level = workplace:GetAttribute("Level") or 1
+								local caps = BCfg and BCfg.WORK_CAPACITY_BY_LEVEL or {}
+								local cap = caps[level] or caps[1] or 100
+								local stored = workplace:GetAttribute("StoredCoins") or 0
+								if stored < cap then
+									workplace:SetAttribute("StoredCoins", math.min(cap, stored + rate))
+								end
+							end
+						end
+					end
+
 					-- XP 획득
 					petData.xp = petData.xp + PetCfg.XP_PER_SECOND
 					local required = PetCfg.XP_REQUIRED[petData.level]

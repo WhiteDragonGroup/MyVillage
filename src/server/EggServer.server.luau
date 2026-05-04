@@ -71,6 +71,17 @@ EggManager.setShowEggBuyPopup(function(player, slotName, eggName)
 	showEggBuyPopup:FireClient(player, slotName, eggName)
 end)
 
+-- ProximityPrompt에서 부화 트리거 → hatchEggEvent와 동일 처리
+EggManager.setHatchTriggerHandler(function(player, eggId)
+	local success, msg, result = EggManager.hatchEgg(player, eggId)
+	if success and result then
+		eggUpdateEvent:FireClient(player, "hatched", result)
+	else
+		warn(player.Name .. " - 부화 실패: " .. (msg or ""))
+	end
+	eggUpdateEvent:FireClient(player, "inventory", EggManager.getEggInventory(player))
+end)
+
 ----------------------------------------------------------------
 -- Remote 핸들러
 ----------------------------------------------------------------
@@ -134,6 +145,104 @@ end
 getPlacedEggsFunc.OnServerInvoke = function(player)
 	return EggManager.getPlacedEggs(player)
 end
+
+-- 알을 Tool로 들기 (인벤토리에 있는 알을 들고 다닐 수 있도록)
+local equipEggEvent = remotes:WaitForChild("EquipEgg")
+local _heldEggs: { [Player]: Tool } = {}
+
+equipEggEvent.OnServerEvent:Connect(function(player, eggType)
+	if typeof(eggType) ~= "string" then return end
+
+	-- 인벤토리에 알 있는지 확인
+	local inv = EggManager.getEggInventory(player)
+	local hasEgg = false
+	for _, e in inv do
+		if e.eggType == eggType and e.count > 0 then
+			hasEgg = true
+			break
+		end
+	end
+	if not hasEgg then
+		warn(player.Name .. " - EquipEgg: no egg " .. eggType)
+		return
+	end
+
+	-- 기존에 들고 있던 알 Tool 제거
+	if _heldEggs[player] and _heldEggs[player].Parent then
+		_heldEggs[player]:Destroy()
+	end
+
+	-- Tool 생성
+	local tool = Instance.new("Tool")
+	tool.Name = "Egg_" .. eggType
+	tool.RequiresHandle = true
+	tool.CanBeDropped = false
+	tool:SetAttribute("EggType", eggType)
+	tool:SetAttribute("IsEggTool", true)
+
+	-- Handle (model from ReplicatedStorage.Egg)
+	local eggFolder = game:GetService("ReplicatedStorage"):FindFirstChild("Egg")
+	local template = eggFolder and eggFolder:FindFirstChild(eggType)
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(2, 2, 2)
+	handle.Transparency = 1
+	handle.CanCollide = false
+	handle.Massless = true
+	handle.Parent = tool
+
+	if template then
+		local clone = template:Clone()
+		if clone:IsA("Model") then
+			clone:PivotTo(CFrame.new(0, 0, 0))
+			for _, p in clone:GetDescendants() do
+				if p:IsA("BasePart") then
+					p.CanCollide = false
+					p.Massless = true
+					p.Anchored = false
+					local weld = Instance.new("WeldConstraint")
+					weld.Part0 = handle
+					weld.Part1 = p
+					weld.Parent = p
+				end
+			end
+		elseif clone:IsA("BasePart") then
+			clone.CanCollide = false
+			clone.Massless = true
+			clone.Anchored = false
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = handle
+			weld.Part1 = clone
+			weld.Parent = clone
+		end
+		clone.Parent = tool
+	end
+
+	tool.Parent = player.Backpack
+	_heldEggs[player] = tool
+
+	-- 자동 장착
+	local humanoid = player.Character and player.Character:FindFirstChildWhichIsA("Humanoid")
+	if humanoid then
+		humanoid:EquipTool(tool)
+	end
+
+	-- Tool 사라지면 트래킹 해제
+	tool.AncestryChanged:Connect(function(_, newParent)
+		if not newParent then
+			if _heldEggs[player] == tool then
+				_heldEggs[player] = nil
+			end
+		end
+	end)
+end)
+
+game:GetService("Players").PlayerRemoving:Connect(function(player)
+	if _heldEggs[player] and _heldEggs[player].Parent then
+		_heldEggs[player]:Destroy()
+	end
+	_heldEggs[player] = nil
+end)
 
 -- 상점 판매 목록 업데이트
 local updateResolution = 60 * 5 -- 5분 마다 업데이트

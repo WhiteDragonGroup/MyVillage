@@ -38,6 +38,11 @@ function EggManager.setShowEggBuyPopup(showFn)
 	_showEggBuyPopup = showFn
 end
 
+local _onHatchTrigger = nil
+function EggManager.setHatchTriggerHandler(fn)
+	_onHatchTrigger = fn
+end
+
 ----------------------------------------------------------------
 -- 초기화
 ----------------------------------------------------------------
@@ -339,6 +344,42 @@ function EggManager.placeEgg(player: Player, eggType: string, position: Vector3)
 end
 
 ----------------------------------------------------------------
+-- 부화 타이머 BillboardGui 생성
+----------------------------------------------------------------
+function EggManager._createHatchBillboard(model: Instance): TextLabel
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "HatchTimer"
+	billboard.Size = UDim2.new(0, 140, 0, 30)
+	billboard.StudsOffset = Vector3.new(0, 3, 0)
+	billboard.AlwaysOnTop = true
+	billboard.LightInfluence = 0
+	billboard.Parent = model
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, 0, 1, 0)
+	label.BackgroundTransparency = 1
+	label.TextColor3 = Color3.fromRGB(255, 255, 255)
+	label.TextStrokeTransparency = 0
+	label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 18
+	label.Text = "..."
+	label.Parent = billboard
+
+	return label
+end
+
+local function formatTime(secs: number): string
+	if secs <= 0 then return "Ready!" end
+	local m = math.floor(secs / 60)
+	local s = math.floor(secs % 60)
+	if m > 0 then
+		return string.format("%d:%02d", m, s)
+	end
+	return string.format("%ds", s)
+end
+
+----------------------------------------------------------------
 -- 부화 타이머
 ----------------------------------------------------------------
 function EggManager._startHatchTimer(player: Player, eggId: string)
@@ -348,6 +389,17 @@ function EggManager._startHatchTimer(player: Player, eggId: string)
 	local data = placed[eggId]
 	local eggInfo = EggCfg.EGGS[data.eggType]
 	if not eggInfo then return end
+
+	-- 머리 위 타이머 BillboardGui 부착
+	local timerLabel: TextLabel? = nil
+	if data.model and data.model.Parent then
+		local target = data.model
+		if target:IsA("Model") and target.PrimaryPart then
+			target = target.PrimaryPart
+		end
+		timerLabel = EggManager._createHatchBillboard(target)
+		timerLabel.Text = formatTime(eggInfo.hatchTime)
+	end
 
 	task.spawn(function()
 		local elapsed = 0
@@ -361,12 +413,42 @@ function EggManager._startHatchTimer(player: Player, eggId: string)
 
 			-- 진행도 업데이트
 			data.model:SetAttribute("HatchProgress", elapsed / eggInfo.hatchTime)
+
+			if timerLabel and timerLabel.Parent then
+				timerLabel.Text = formatTime(eggInfo.hatchTime - elapsed)
+			end
 		end
 
 		-- hatched
 		if data.model and data.model.Parent then
 			data.model:SetAttribute("HatchProgress", 1)
 			data.model:SetAttribute("ReadyToHatch", true)
+			if timerLabel and timerLabel.Parent then
+				timerLabel.Text = "Ready! [E]"
+				timerLabel.TextColor3 = Color3.fromRGB(255, 220, 100)
+			end
+
+			-- ReadyToHatch 시 ProximityPrompt 부착
+			local promptParent = data.model
+			if promptParent and not promptParent:FindFirstChildWhichIsA("ProximityPrompt") then
+				local prompt = Instance.new("ProximityPrompt")
+				prompt.Name = "HatchPrompt"
+				prompt.ActionText = "Hatch"
+				prompt.ObjectText = data.eggType
+				prompt.MaxActivationDistance = 10
+				prompt.HoldDuration = 0
+				prompt.RequiresLineOfSight = false
+				prompt.Parent = promptParent
+				prompt.Triggered:Connect(function(triggerPlayer)
+					if triggerPlayer ~= player then return end
+					if _onHatchTrigger then
+						_onHatchTrigger(player, eggId)
+					else
+						EggManager.hatchEgg(player, eggId)
+					end
+				end)
+			end
+
 			print(player.Name .. " - egg ready to hatch: " .. data.eggType)
 		end
 	end)
