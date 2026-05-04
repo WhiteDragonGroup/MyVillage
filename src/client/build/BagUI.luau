@@ -373,10 +373,10 @@ function BagUI.init(callbacks: { onItemClick: ((any) -> ())? }?)
 		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 	end)
 
-	-- ₩(Backquote) 또는 I 키로 토글
+	-- ₩(Backquote) 키로 토글
 	UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		if gameProcessed then return end
-		if input.KeyCode == Enum.KeyCode.Backquote or input.KeyCode == Enum.KeyCode.I then
+		if input.KeyCode == Enum.KeyCode.Backquote then
 			if _visible then BagUI.hide() else BagUI.show() end
 		end
 	end)
