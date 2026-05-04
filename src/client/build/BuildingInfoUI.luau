@@ -78,6 +78,21 @@ function BuildingInfoUI.init(callbacks: { onUpgrade: ((string) -> ())? }?)
 	end
 end
 
+local function getBuildingModel(building: BasePart): (Model | BasePart)
+	-- 건물의 최상위 Model 찾기 (플롯에 도달하기 전까지 가장 위 Model)
+	local topModel = nil
+	local current = building.Parent
+	while current and current ~= workspace do
+		if current:GetAttribute("Owner") ~= nil then break end
+		if current.Name == "Plots" then break end
+		if current:IsA("Model") then
+			topModel = current
+		end
+		current = current.Parent
+	end
+	return topModel or building
+end
+
 function BuildingInfoUI.show(building: BasePart)
 	if not _frame then return end
 
@@ -91,6 +106,61 @@ function BuildingInfoUI.show(building: BasePart)
 
 	_currentBuildingId = buildingId
 	_visible = true
+
+	-- Icon: ViewportFrame으로 3D 건물 모델 표시
+	local frameRoot = _frame:FindFirstChild("Frame") or _frame
+	local iconFrame = frameRoot:FindFirstChild("Icon")
+	if iconFrame then
+		if iconFrame:IsA("ImageLabel") then
+			iconFrame.Image = ""
+		end
+
+		local oldVP = iconFrame:FindFirstChild("_BuildingViewport")
+		if oldVP then oldVP:Destroy() end
+
+		local source = getBuildingModel(building)
+		local clone = source:Clone()
+		-- 앵커 처리
+		if clone:IsA("BasePart") then
+			clone.Anchored = true
+		else
+			for _, p in clone:GetDescendants() do
+				if p:IsA("BasePart") then
+					p.Anchored = true
+					p.CanCollide = false
+				end
+			end
+		end
+
+		local vpf = Instance.new("ViewportFrame")
+		vpf.Name = "_BuildingViewport"
+		vpf.Size = UDim2.new(1, 0, 1, 0)
+		vpf.BackgroundTransparency = 1
+		vpf.LightDirection = Vector3.new(-0.4, -1, -0.3).Unit
+		vpf.LightColor = Color3.fromRGB(255, 245, 220)
+		vpf.Ambient = Color3.fromRGB(120, 110, 100)
+		vpf.ZIndex = 2
+		vpf.Parent = iconFrame
+
+		clone.Parent = vpf
+
+		local camera = Instance.new("Camera")
+		vpf.CurrentCamera = camera
+		camera.Parent = vpf
+
+		local cf, size
+		if clone:IsA("Model") then
+			cf, size = clone:GetBoundingBox()
+		else
+			cf = clone.CFrame
+			size = clone.Size
+		end
+		local maxDim = math.max(size.X, size.Y, size.Z)
+		camera.CFrame = CFrame.lookAt(
+			cf.Position + Vector3.new(maxDim * 0.9, maxDim * 0.6, maxDim * 1.1),
+			cf.Position
+		)
+	end
 
 	-- 헤더 텍스트 (이름 + 레벨)
 	local header = _frame:FindFirstChild("Header")
