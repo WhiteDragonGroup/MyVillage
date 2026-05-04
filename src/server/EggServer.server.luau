@@ -87,19 +87,24 @@ end)
 ----------------------------------------------------------------
 
 -- 알 구매
+print("[EggServer] BuyEgg class=" .. buyEggEvent.ClassName .. " 핸들러 설정")
 buyEggEvent.OnServerInvoke = function(player, slotName, eggName)
-	if typeof(slotName) ~= "string" then return end
+	print("[EggServer] OnServerInvoke 호출 - player=" .. player.Name .. " slot=" .. tostring(slotName) .. " egg=" .. tostring(eggName))
+	if typeof(slotName) ~= "string" then
+		warn("[EggServer] slotName not string: " .. typeof(slotName))
+		return "Invalid slot"
+	end
 
 	local success, msg = EggManager.buyEgg(player, slotName, eggName)
 	if success then
-		print(player.Name .. " - 알 구매: " .. slotName)
+		print(player.Name .. " - 알 구매 성공: " .. slotName)
 	else
-		warn(player.Name .. " - 알 구매 실패: " .. msg)
+		warn(player.Name .. " - 알 구매 실패: " .. tostring(msg))
 	end
 
 	-- 클라이언트에 알 인벤토리 갱신
 	eggUpdateEvent:FireClient(player, "inventory", EggManager.getEggInventory(player))
-	
+
 	return msg
 end
 
