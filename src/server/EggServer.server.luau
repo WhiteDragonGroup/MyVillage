@@ -87,36 +87,62 @@ end)
 ----------------------------------------------------------------
 
 -- 알 구매
--- Remotes 폴더의 BuyEgg 인스턴스 확인 (중복 체크)
+-- 중복/잘못된 클래스 BuyEgg 인스턴스 정리 후 RemoteFunction 보장
 do
-	local count = 0
+	local desired = nil
 	for _, child in remotes:GetChildren() do
 		if child.Name == "BuyEgg" then
-			count = count + 1
-			print("[EggServer] BuyEgg 인스턴스 #" .. count .. ": " .. child:GetFullName() .. " class=" .. child.ClassName .. " same=" .. tostring(child == buyEggEvent))
+			print("[EggServer] BuyEgg 발견: " .. child.ClassName .. " same=" .. tostring(child == buyEggEvent))
+			if child:IsA("RemoteFunction") and not desired then
+				desired = child
+			elseif child ~= desired then
+				warn("[EggServer] BuyEgg 잘못된 인스턴스 제거: " .. child.ClassName)
+				child:Destroy()
+			end
 		end
 	end
+	if not desired then
+		warn("[EggServer] BuyEgg RemoteFunction 없음, 새로 생성")
+		desired = Instance.new("RemoteFunction")
+		desired.Name = "BuyEgg"
+		desired.Parent = remotes
+	end
+	buyEggEvent = desired
 end
+
+-- BuyEgg가 추후 교체될 경우 재바인딩
+local _bindBuyEgg
+remotes.ChildAdded:Connect(function(child)
+	if child.Name == "BuyEgg" and child:IsA("RemoteFunction") and child ~= buyEggEvent then
+		warn("[EggServer] BuyEgg 인스턴스 교체 감지 → 재바인딩")
+		buyEggEvent = child
+		_bindBuyEgg()
+	end
+end)
+
 print("[EggServer] BuyEgg class=" .. buyEggEvent.ClassName .. " 핸들러 설정")
-buyEggEvent.OnServerInvoke = function(player, slotName, eggName)
-	print("[EggServer] OnServerInvoke 호출 - player=" .. player.Name .. " slot=" .. tostring(slotName) .. " egg=" .. tostring(eggName))
-	if typeof(slotName) ~= "string" then
-		warn("[EggServer] slotName not string: " .. typeof(slotName))
-		return "Invalid slot"
+_bindBuyEgg = function()
+	buyEggEvent.OnServerInvoke = function(player, slotName, eggName)
+		print("[EggServer] OnServerInvoke 호출 - player=" .. player.Name .. " slot=" .. tostring(slotName) .. " egg=" .. tostring(eggName))
+		if typeof(slotName) ~= "string" then
+			warn("[EggServer] slotName not string: " .. typeof(slotName))
+			return "Invalid slot"
+		end
+
+		local success, msg = EggManager.buyEgg(player, slotName, eggName)
+		if success then
+			print(player.Name .. " - 알 구매 성공: " .. slotName)
+		else
+			warn(player.Name .. " - 알 구매 실패: " .. tostring(msg))
+		end
+
+		-- 클라이언트에 알 인벤토리 갱신
+		eggUpdateEvent:FireClient(player, "inventory", EggManager.getEggInventory(player))
+
+		return msg
 	end
-
-	local success, msg = EggManager.buyEgg(player, slotName, eggName)
-	if success then
-		print(player.Name .. " - 알 구매 성공: " .. slotName)
-	else
-		warn(player.Name .. " - 알 구매 실패: " .. tostring(msg))
-	end
-
-	-- 클라이언트에 알 인벤토리 갱신
-	eggUpdateEvent:FireClient(player, "inventory", EggManager.getEggInventory(player))
-
-	return msg
 end
+_bindBuyEgg()
 
 -- 알 배치
 placeEggEvent.OnServerEvent:Connect(function(player, eggType, position)
