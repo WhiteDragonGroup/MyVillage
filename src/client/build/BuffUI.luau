@@ -133,7 +133,7 @@ local function createSlot(buffId: string): typeof(_slots[""])
 	timeLabel.BackgroundTransparency = 1
 	timeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	timeLabel.TextStrokeTransparency = 0
-	timeLabel.Font = Enum.Font.GothamBold
+	timeLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	timeLabel.TextSize = 11
 	timeLabel.Text = "0s"
 	timeLabel.Parent = frame
