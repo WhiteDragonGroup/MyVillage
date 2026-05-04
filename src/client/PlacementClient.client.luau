@@ -1039,6 +1039,36 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 
 	-- 마우스 클릭: 배치 확정 / BuildMode에서 건물 선택 / 펫 클릭
 	if input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessed then
+		-- 펫 Tool을 들고 있고 마을 안 클릭 → 그 자리에 펫 배치
+		do
+			local character = player.Character
+			local hasPetTool = false
+			if character then
+				for _, child in character:GetChildren() do
+					if child:IsA("Tool") and child:GetAttribute("PetId") then
+						hasPetTool = true
+						break
+					end
+				end
+			end
+			if hasPetTool then
+				local bz = getMyBuildZone()
+				if bz then
+					local clickPos = mouse.Hit.Position
+					local localPos = bz.CFrame:PointToObjectSpace(clickPos)
+					local half = bz.Size / 2
+					if math.abs(localPos.X) <= half.X and math.abs(localPos.Z) <= half.Z then
+						local dropEvent = remotes:FindFirstChild("DropPet")
+						if dropEvent then
+							dropEvent:FireServer(clickPos)
+							MainHUD.showMessage("Pet placed!", 1)
+							return
+						end
+					end
+				end
+			end
+		end
+
 		if currentState == BuildState.PlacingNew or currentState == BuildState.Moving then
 			if _dragPaused then
 				-- Fixed: click the building to resume
@@ -2193,7 +2223,9 @@ if openShopEvent then
 			end)
 			if npcPart then startNpcDistanceCheck(npcPart) end
 		elseif shopType == "eggs" then
+			closeAllPopups()
 			local greeting = HAILEY_GREETINGS[math.random(#HAILEY_GREETINGS)]
+			CameraManager.TweenFOV(TweenInfo.new(2.6, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), 60)
 			DialogUI.show("Hailey", greeting, HAILEY_CHOICES, function(choiceId)
 				if choiceId == "sellpet" then
 					DialogUI.showResponse("Let me see what you've got!", 1.5)
@@ -2265,5 +2297,49 @@ RunService.Heartbeat:Connect(function()
 	local inVillage = math.abs(localPos.X) <= halfSize.X + 10 and math.abs(localPos.Z) <= halfSize.Z + 10
 	MainHUD.setBuildButtonEnabled(inVillage)
 end)
+
+-- 펫 Tool을 들고 있는 동안 PetDetailUI 자동 표시
+local _heldPetId: string? = nil
+local function showHeldPetDetail(petId: string)
+	_heldPetId = petId
+	task.spawn(function()
+		local pets = getPetsFunc:InvokeServer()
+		if pets and _heldPetId == petId then
+			for _, pet in pets do
+				if pet.petId == petId then
+					PetDetailUI.show(pet)
+					break
+				end
+			end
+		end
+	end)
+end
+
+local function watchCharacterPetTools(character: Model)
+	local function onChildAdded(child)
+		if child:IsA("Tool") and child:GetAttribute("PetId") then
+			showHeldPetDetail(child:GetAttribute("PetId"))
+		end
+	end
+	local function onChildRemoved(child)
+		if child:IsA("Tool") and child:GetAttribute("PetId") then
+			-- 들고 있던 펫이 character에서 빠짐 (내려놓음/Unequip)
+			_heldPetId = nil
+			if PetDetailUI.isVisible() then
+				PetDetailUI.hide()
+			end
+		end
+	end
+	character.ChildAdded:Connect(onChildAdded)
+	character.ChildRemoved:Connect(onChildRemoved)
+	for _, child in character:GetChildren() do
+		onChildAdded(child)
+	end
+end
+
+player.CharacterAdded:Connect(watchCharacterPetTools)
+if player.Character then
+	watchCharacterPetTools(player.Character)
+end
 
 print("PlacementClient loaded - Build System v6")

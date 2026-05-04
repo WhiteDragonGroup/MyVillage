@@ -22,4 +22,16 @@ BuildingConfig.DEFAULT_INVENTORY = {
 	{ itemName = "HotSpring", count = 2 },
 }
 
+-- 광산/농장 capacity 시스템 (배율은 1 고정, 레벨에 따라 수용 한도 증가)
+-- 레벨업할 때마다 더 많은 코인을 모을 수 있음. 한도 차면 더 안 차고, 수확하면 비워짐.
+-- TODO: 실제 income 로직(수확 트리거, 시간당 코인 누적, UI 표시)은 미구현
+BuildingConfig.WORK_INCOME_RATE = 1   -- 초당 코인 (배율 1 고정)
+BuildingConfig.WORK_CAPACITY_BY_LEVEL = {
+	[1] = 100,
+	[2] = 250,
+	[3] = 500,
+	[4] = 1000,
+	[5] = 2000,
+}
+
 return BuildingConfig

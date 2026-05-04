@@ -407,10 +407,15 @@ function EggManager.hatchEgg(player: Player, eggId: string): (boolean, string, {
 
 	local selectedPet = candidates[math.random(#candidates)]
 
-	-- 선천적 돌연변이 확인
+	-- 선천적 돌연변이 확인 (프리미엄 레전더리 알은 확률 10배)
 	local mutations = {}
+	local mutMultiplier = 1
+	if data.eggType == "Egg_Legendary" then
+		mutMultiplier = EggCfg.PREMIUM_MUTATION_MULTIPLIER or 1
+	end
 	for mutType, chance in EggCfg.MUTATION_CHANCE do
-		if chance > 0 and math.random() < chance then
+		local effectiveChance = chance * mutMultiplier
+		if effectiveChance > 0 and math.random() < effectiveChance then
 			table.insert(mutations, mutType)
 		end
 	end

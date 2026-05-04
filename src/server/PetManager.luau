@@ -1148,7 +1148,7 @@ end
 ----------------------------------------------------------------
 -- Return held pet to world (re-spawn and restart behavior)
 ----------------------------------------------------------------
-function PetManager.returnPetToWorld(player: Player, petId: string)
+function PetManager.returnPetToWorld(player: Player, petId: string, requestedPos: Vector3?)
 	local pets = _playerPets[player]
 	if not pets or not pets[petId] then
 		warn("[ReturnPet] Pet not found: " .. tostring(petId))
@@ -1175,18 +1175,32 @@ function PetManager.returnPetToWorld(player: Player, petId: string)
 	petData.model = nil
 	petData._petModel = nil
 
-	-- Spawn at BuildZone surface near player
+	-- Spawn at BuildZone surface
 	local bzTop = buildZone.Position.Y + buildZone.Size.Y / 2
 	local spawnPos = Vector3.new(buildZone.Position.X, bzTop, buildZone.Position.Z)
-	local character = player.Character
-	if character then
-		local hrp = character:FindFirstChild("HumanoidRootPart")
-		if hrp then
-			spawnPos = Vector3.new(
-				hrp.Position.X + math.random(-3, 3),
-				bzTop,
-				hrp.Position.Z + math.random(-3, 3)
-			)
+
+	-- requestedPos가 BuildZone 안이면 그 자리에 배치
+	local placedAtRequested = false
+	if requestedPos then
+		local local2 = buildZone.CFrame:PointToObjectSpace(requestedPos)
+		local half = buildZone.Size / 2
+		if math.abs(local2.X) <= half.X and math.abs(local2.Z) <= half.Z then
+			spawnPos = Vector3.new(requestedPos.X, bzTop, requestedPos.Z)
+			placedAtRequested = true
+		end
+	end
+
+	if not placedAtRequested then
+		local character = player.Character
+		if character then
+			local hrp = character:FindFirstChild("HumanoidRootPart")
+			if hrp then
+				spawnPos = Vector3.new(
+					hrp.Position.X + math.random(-3, 3),
+					bzTop,
+					hrp.Position.Z + math.random(-3, 3)
+				)
+			end
 		end
 	end
 

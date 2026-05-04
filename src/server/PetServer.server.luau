@@ -265,7 +265,7 @@ holdPetEvent.OnServerEvent:Connect(function(player, petId)
 	end)
 end)
 
-dropPetEvent.OnServerEvent:Connect(function(player)
+dropPetEvent.OnServerEvent:Connect(function(player, position)
 	local held = _heldPets[player]
 	if not held then return end
 
@@ -278,8 +278,9 @@ dropPetEvent.OnServerEvent:Connect(function(player)
 		held.tool:Destroy()
 	end
 
-	-- Return pet to world
-	PetManager.returnPetToWorld(player, petId)
+	-- Return pet to world (optional position validated by PetManager)
+	local validPos = if typeof(position) == "Vector3" then position else nil
+	PetManager.returnPetToWorld(player, petId, validPos)
 end)
 
 -- Get held pet info
