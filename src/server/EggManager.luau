@@ -170,16 +170,32 @@ function EggManager._initShopEgg(slot: Folder, eggModel: Model, place: Model)
 	eggModel.Parent = slot
 	eggModel:PivotTo(place:GetPivot() * CFrame.new(Vector3.new(0, 0.5, 0)))
 
-	-- 프롬프트 생성
+	-- 프롬프트 부착 대상: PrimaryPart 우선, 없으면 첫 BasePart 폴백
+	local promptHost: Instance? = eggModel.PrimaryPart
+	if not promptHost then
+		if eggModel:IsA("BasePart") then
+			promptHost = eggModel
+		else
+			promptHost = eggModel:FindFirstChildWhichIsA("BasePart", true)
+		end
+	end
+	if not promptHost then
+		warn("[EggShop] PrimaryPart/BasePart 없음: " .. tostring(eggModel.Name))
+		return
+	end
+
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "BuyPrompt"
 	prompt.ActionText = "Buy Egg"
+	prompt.ObjectText = eggModel.Name
 	prompt.MaxActivationDistance = 10
 	prompt.HoldDuration = 0
 	prompt.RequiresLineOfSight = false
-	prompt.Parent = eggModel.PrimaryPart -- PrimaryPart는 항상 존재해야 함
+	prompt.Parent = promptHost
 	prompt.Triggered:Connect(function(player)
-		_showEggBuyPopup(player, slot.Name, eggModel.Name)
+		if _showEggBuyPopup then
+			_showEggBuyPopup(player, slot.Name, eggModel.Name)
+		end
 	end)
 
 	-- 모델 등록
