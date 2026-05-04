@@ -157,27 +157,45 @@ local function createPetModel(petData, position: Vector3): BasePart
 		pet.Shape = Enum.PartType.Ball
 	end
 
-	-- Model이면 mainPart 찾기
+	-- Model이면 mainPart 찾기 + PrimaryPart 보장 + 파트들 모델 중앙으로 모음
 	local mainPart
 	if pet:IsA("Model") then
 		mainPart = pet.PrimaryPart or pet:FindFirstChild("HumanoidRootPart") or pet:FindFirstChildWhichIsA("BasePart")
 		if mainPart then
-			pet:PivotTo(CFrame.new(position + Vector3.new(0, PetCfg.PET_HEIGHT, 0)))
-			-- 모든 파트에 속성 설정
+			-- 1. 일단 모델을 (0,0,0)으로 이동시켜 절대 좌표 정규화 (PetServer Tool 패턴과 동일)
+			pet:PivotTo(CFrame.new(0, 0, 0))
+
+			-- 2. PrimaryPart 강제 설정 (이후 PivotTo 일관성)
+			if not pet.PrimaryPart then
+				pet.PrimaryPart = mainPart
+			end
+
+			-- 3. 모든 파트 weld + 잠시 unanchored 상태에서 weld (anchor가 weld 우선)
 			for _, desc in pet:GetDescendants() do
 				if desc:IsA("BasePart") then
-					desc.Anchored = true
 					desc.CanCollide = false
 					desc.CanQuery = true
 					desc.CanTouch = false
 					desc.CollisionGroup = "Pets"
+					if desc ~= mainPart then
+						desc.Anchored = false
+						if not desc:FindFirstChildOfClass("WeldConstraint") then
+							local weld = Instance.new("WeldConstraint")
+							weld.Part0 = mainPart
+							weld.Part1 = desc
+							weld.Parent = desc
+						end
+					end
 				end
 			end
+			mainPart.Anchored = true -- mainPart만 anchored, 나머진 weld로 따라감
+
+			-- 4. 최종 위치로 이동
+			pet:PivotTo(CFrame.new(position + Vector3.new(0, PetCfg.PET_HEIGHT, 0)))
+
 			mainPart:SetAttribute("PetId", petData.petId)
 			pet.Name = "Pet_" .. petData.petId
-			pet.Parent = nil -- 나중에 plot에 배치
-			-- mainPart를 반환 (기존 코드 호환)
-			-- 하지만 Model 전체를 배치해야 하므로 petData에 저장
+			pet.Parent = nil
 			petData._petModel = pet
 		end
 	end

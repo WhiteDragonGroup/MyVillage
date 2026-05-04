@@ -1271,6 +1271,22 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			end
 
 			if petTarget then
+				-- 펫 클릭 → 건물 인포 닫기 + 하이라이트 제거
+				if BuildingInfoUI.isVisible() then
+					local prevId = BuildingInfoUI.getCurrentBuildingId()
+					if prevId then
+						local plotsFolder = workspace:FindFirstChild("Plots")
+						if plotsFolder then
+							for _, p in plotsFolder:GetDescendants() do
+								if p:IsA("BasePart") and p:GetAttribute("BuildingId") == prevId then
+									HighlightSystem.removeFrom(p)
+									break
+								end
+							end
+						end
+					end
+					BuildingInfoUI.hide()
+				end
 				-- Toggle pet detail
 				if PetDetailUI.isVisible() then
 					PetDetailUI.hide()
@@ -1295,7 +1311,23 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 					hatchEggEvent:FireServer(eggId)
 				end
 			elseif target then
-				-- 펫 아닌 곳 클릭 → PetDetail 닫기
+				-- 펫/건물 아닌 곳 클릭 → 모든 상세 UI 닫기 + 하이라이트 제거
+				if BuildingInfoUI.isVisible() then
+					local prevId = BuildingInfoUI.getCurrentBuildingId()
+					if prevId then
+						local plotsFolder = workspace:FindFirstChild("Plots")
+						if plotsFolder then
+							for _, p in plotsFolder:GetDescendants() do
+								if p:IsA("BasePart") and p:GetAttribute("BuildingId") == prevId then
+									HighlightSystem.removeFrom(p)
+									break
+								end
+							end
+						end
+					end
+					BuildingInfoUI.hide()
+					return
+				end
 				if PetDetailUI.isVisible() then
 					PetDetailUI.hide()
 					-- 근처 펫 감지 건너뜀
