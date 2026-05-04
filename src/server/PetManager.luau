@@ -158,20 +158,39 @@ local function createPetModel(petData, position: Vector3): BasePart
 		pet.Shape = Enum.PartType.Ball
 	end
 
-	-- Model이면 mainPart 찾기 + PrimaryPart 보장 + 파트들 모델 중앙으로 모음
+	-- Model이면 mainPart 찾기 + 바운딩박스 중심 기준으로 모델 재정렬
 	local mainPart
 	if pet:IsA("Model") then
-		mainPart = pet.PrimaryPart or pet:FindFirstChild("HumanoidRootPart") or pet:FindFirstChildWhichIsA("BasePart")
+		-- 1. 모델 일단 부모 임시 설정 (BoundingBox 계산용)
+		local tempParent = pet.Parent
+		pet.Parent = workspace
+
+		-- 2. 바운딩박스 중심에 가장 가까운 BasePart를 mainPart로 선택 (없으면 PrimaryPart, 첫 BasePart)
+		local bboxCFrame, _ = pet:GetBoundingBox()
+		local bboxCenter = bboxCFrame.Position
+		local bestPart = pet.PrimaryPart
+		local bestDist = bestPart and (bestPart.Position - bboxCenter).Magnitude or math.huge
+		for _, desc in pet:GetDescendants() do
+			if desc:IsA("BasePart") then
+				local d = (desc.Position - bboxCenter).Magnitude
+				if d < bestDist then
+					bestDist = d
+					bestPart = desc
+				end
+			end
+		end
+		mainPart = bestPart
 		if mainPart then
-			-- 1. 일단 모델을 (0,0,0)으로 이동시켜 절대 좌표 정규화 (PetServer Tool 패턴과 동일)
+			pet.PrimaryPart = mainPart -- 바운딩박스 중심에 가장 가까운 파트를 Pivot으로
+		end
+
+		pet.Parent = tempParent
+
+		if mainPart then
+			-- 3. 모델을 (0,0,0)으로 이동시켜 절대 좌표 정규화
 			pet:PivotTo(CFrame.new(0, 0, 0))
 
-			-- 2. PrimaryPart 강제 설정 (이후 PivotTo 일관성)
-			if not pet.PrimaryPart then
-				pet.PrimaryPart = mainPart
-			end
-
-			-- 3. 모든 파트 weld + 잠시 unanchored 상태에서 weld (anchor가 weld 우선)
+			-- 4. 모든 파트 weld + Anchored 처리
 			for _, desc in pet:GetDescendants() do
 				if desc:IsA("BasePart") then
 					desc.CanCollide = false
@@ -189,9 +208,9 @@ local function createPetModel(petData, position: Vector3): BasePart
 					end
 				end
 			end
-			mainPart.Anchored = true -- mainPart만 anchored, 나머진 weld로 따라감
+			mainPart.Anchored = true
 
-			-- 4. 최종 위치로 이동
+			-- 5. 최종 위치로 이동
 			pet:PivotTo(CFrame.new(position + Vector3.new(0, PetCfg.PET_HEIGHT, 0)))
 
 			mainPart:SetAttribute("PetId", petData.petId)
