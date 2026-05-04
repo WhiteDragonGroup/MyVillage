@@ -9,6 +9,7 @@ local HttpService = game:GetService("HttpService")
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
 local TimeState = require(ServerScriptService:WaitForChild("Server"):WaitForChild("TimeState"))
+local WeatherState = require(ServerScriptService:WaitForChild("Server"):WaitForChild("WeatherState"))
 
 local PetCfg = BalanceConfig.Pet
 local WeatherCfg = BalanceConfig.Weather
