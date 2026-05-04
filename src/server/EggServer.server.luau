@@ -87,6 +87,16 @@ end)
 ----------------------------------------------------------------
 
 -- 알 구매
+-- Remotes 폴더의 BuyEgg 인스턴스 확인 (중복 체크)
+do
+	local count = 0
+	for _, child in remotes:GetChildren() do
+		if child.Name == "BuyEgg" then
+			count = count + 1
+			print("[EggServer] BuyEgg 인스턴스 #" .. count .. ": " .. child:GetFullName() .. " class=" .. child.ClassName .. " same=" .. tostring(child == buyEggEvent))
+		end
+	end
+end
 print("[EggServer] BuyEgg class=" .. buyEggEvent.ClassName .. " 핸들러 설정")
 buyEggEvent.OnServerInvoke = function(player, slotName, eggName)
 	print("[EggServer] OnServerInvoke 호출 - player=" .. player.Name .. " slot=" .. tostring(slotName) .. " egg=" .. tostring(eggName))
