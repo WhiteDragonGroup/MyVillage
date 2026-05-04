@@ -50,24 +50,7 @@ local ClockTowerVisual = require(clientScript:WaitForChild("systems"):WaitForChi
 ClockTowerVisual.init()
 local BuffUI = require(clientScript:WaitForChild("build"):WaitForChild("BuffUI"))
 BuffUI.init()
-local BagUI = require(clientScript:WaitForChild("build"):WaitForChild("BagUI"))
 local BuildingInfoUI = require(clientScript:WaitForChild("build"):WaitForChild("BuildingInfoUI"))
-BagUI.init({
-	onItemClick = function(item)
-		if item.kind == "egg" then
-			local equipEgg = remotes:FindFirstChild("EquipEgg")
-			if equipEgg then equipEgg:FireServer(item.itemName) end
-			BagUI.hide()
-		elseif item.kind == "pet" then
-			-- 펫: HoldPet으로 Tool 장착
-			local holdPet = remotes:FindFirstChild("HoldPet")
-			if holdPet and item.petId then
-				holdPet:FireServer(item.petId)
-			end
-			BagUI.hide()
-		end
-	end,
-})
 
 -- Remotes
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
