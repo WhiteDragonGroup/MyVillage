@@ -226,6 +226,7 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, localCFrame,
 		item.CFrame = cframe
 		item.Anchored = true
 		item.CanCollide = true
+		item.CastShadow = false
 		item.Parent = plot
 		mainPart = item
 	elseif item:IsA("Model") then
@@ -278,10 +279,11 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, localCFrame,
 		end
 		item.Parent = plot
 
-		-- Anchor all parts in the model
+		-- Anchor all parts in the model + shadow 끄기
 		for _, desc in item:GetDescendants() do
 			if desc:IsA("BasePart") then
 				desc.Anchored = true
+				desc.CastShadow = false
 			end
 		end
 

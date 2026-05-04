@@ -39,7 +39,7 @@ local function createDisplay(building: BasePart)
 	coinLabel.Size = UDim2.new(1, 0, 0, 24)
 	coinLabel.Position = UDim2.new(0, 0, 0, 0)
 	coinLabel.BackgroundTransparency = 1
-	coinLabel.Font = Enum.Font.GothamBlack
+	coinLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Heavy)
 	coinLabel.TextSize = 18
 	coinLabel.TextColor3 = Color3.fromRGB(255, 220, 90)
 	coinLabel.TextStrokeTransparency = 0

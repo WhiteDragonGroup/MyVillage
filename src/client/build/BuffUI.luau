@@ -65,7 +65,7 @@ local function ensureGui()
 	tName.Position = UDim2.new(0, 5, 0, 4)
 	tName.BackgroundTransparency = 1
 	tName.TextColor3 = Color3.fromRGB(255, 220, 130)
-	tName.Font = Enum.Font.GothamBold
+	tName.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	tName.TextSize = 14
 	tName.TextXAlignment = Enum.TextXAlignment.Left
 	tName.Parent = _tooltip
@@ -76,7 +76,7 @@ local function ensureGui()
 	tDesc.Position = UDim2.new(0, 5, 0, 26)
 	tDesc.BackgroundTransparency = 1
 	tDesc.TextColor3 = Color3.fromRGB(220, 220, 220)
-	tDesc.Font = Enum.Font.Gotham
+	tDesc.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Regular)
 	tDesc.TextSize = 12
 	tDesc.TextWrapped = true
 	tDesc.TextXAlignment = Enum.TextXAlignment.Left

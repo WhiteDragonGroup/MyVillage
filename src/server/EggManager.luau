@@ -394,7 +394,7 @@ function EggManager._createHatchBillboard(model: Instance): TextLabel
 	label.TextColor3 = Color3.fromRGB(255, 255, 255)
 	label.TextStrokeTransparency = 0
 	label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-	label.Font = Enum.Font.GothamBold
+	label.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	label.TextSize = 18
 	label.Text = "..."
 	label.Parent = billboard
