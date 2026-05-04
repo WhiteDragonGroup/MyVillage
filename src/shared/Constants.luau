@@ -101,7 +101,7 @@ Constants.PETS = {
 	["Skeleton"]      = { name = "Skeleton",        petTypes = {"Mining", "Construction"},   rarity = "Common", size = "Small" },
 	["Ghost"]         = { name = "Ghost",            petTypes = {"Farming", "Buff"},          rarity = "Common", size = "Small" },
 	["SnowMole"]      = { name = "Snow Mole",       petTypes = {"Mining"},                   rarity = "Common", size = "Small" },
-	["Firewood"]      = { name = "Firewood",       petTypes = {"Buff"},                     rarity = "Common" },
+	-- ["Firewood"]      = { name = "Firewood",       petTypes = {"Buff"},                     rarity = "Common" }, -- 명세 미정
 	-- 레어
 	["Imp"]           = { name = "Imp",            petTypes = {"Mining", "Construction", "Buff"}, rarity = "Rare", size = "Medium" },
 	["Sunflowie"]     = { name = "Sunflowie",        petTypes = {"Farming", "Buff"},          rarity = "Rare", size = "Medium" },

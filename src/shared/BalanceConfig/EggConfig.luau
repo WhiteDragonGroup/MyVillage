@@ -29,7 +29,7 @@ EggConfig.EGGS = {
 			{ petName = "Skeleton",      petType = "Mining",       rarity = "Common", size = "Small" },
 			{ petName = "Ghost",         petType = "Farming",      rarity = "Common", size = "Small" },
 			{ petName = "SnowMole",      petType = "Mining",       rarity = "Common", size = "Small" },
-			{ petName = "Firewood",      petType = "Buff",         rarity = "Common", size = "Small" },
+			-- { petName = "Firewood",      petType = "Buff",         rarity = "Common", size = "Small" }, -- 명세 미정
 			{ petName = "Imp",           petType = "Mining",       rarity = "Rare", size = "Medium" },
 			{ petName = "ZombieNewbie",  petType = "Farming",      rarity = "Rare", size = "Small" },
 		},
