@@ -415,6 +415,22 @@ end
 ----------------------------------------------------------------
 -- 부화 타이머
 ----------------------------------------------------------------
+-- 플레이어의 마을에 Laboratory가 있으면 부화 속도 증가율 반환
+local function getLaboratoryHatchBoost(player: Player): number
+	local plot = EggManager._getPlayerPlot(player)
+	if not plot then return 0 end
+	local boostCfg = BalanceConfig.Buff and BalanceConfig.Buff.LABORATORY_HATCH_BOOST or {}
+	local maxBoost = 0
+	for _, desc in plot:GetDescendants() do
+		if desc:IsA("BasePart") and desc:GetAttribute("ItemName") == "Laboratory" then
+			local lvl = desc:GetAttribute("Level") or 1
+			local b = boostCfg[lvl] or 0
+			if b > maxBoost then maxBoost = b end
+		end
+	end
+	return maxBoost
+end
+
 function EggManager._startHatchTimer(player: Player, eggId: string)
 	local placed = _placedEggs[player]
 	if not placed or not placed[eggId] then return end
@@ -422,6 +438,10 @@ function EggManager._startHatchTimer(player: Player, eggId: string)
 	local data = placed[eggId]
 	local eggInfo = EggCfg.EGGS[data.eggType]
 	if not eggInfo then return end
+
+	-- Laboratory 부화 속도 부스트 (실제 부화 시간 단축)
+	local boost = getLaboratoryHatchBoost(player)
+	local effectiveHatchTime = eggInfo.hatchTime / (1 + boost)
 
 	-- 머리 위 타이머 BillboardGui 부착
 	local timerLabel: TextLabel? = nil
@@ -431,12 +451,12 @@ function EggManager._startHatchTimer(player: Player, eggId: string)
 			target = target.PrimaryPart
 		end
 		timerLabel = EggManager._createHatchBillboard(target)
-		timerLabel.Text = formatTime(eggInfo.hatchTime)
+		timerLabel.Text = formatTime(effectiveHatchTime)
 	end
 
 	task.spawn(function()
 		local elapsed = 0
-		while elapsed < eggInfo.hatchTime do
+		while elapsed < effectiveHatchTime do
 			task.wait(1)
 			elapsed = elapsed + 1
 
@@ -445,10 +465,10 @@ function EggManager._startHatchTimer(player: Player, eggId: string)
 			if not _placedEggs[player] or not _placedEggs[player][eggId] then return end
 
 			-- 진행도 업데이트
-			data.model:SetAttribute("HatchProgress", elapsed / eggInfo.hatchTime)
+			data.model:SetAttribute("HatchProgress", elapsed / effectiveHatchTime)
 
 			if timerLabel and timerLabel.Parent then
-				timerLabel.Text = formatTime(eggInfo.hatchTime - elapsed)
+				timerLabel.Text = formatTime(effectiveHatchTime - elapsed)
 			end
 		end
 

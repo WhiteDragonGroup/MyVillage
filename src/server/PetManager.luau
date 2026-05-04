@@ -633,7 +633,46 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 					if not _behaviorLoops[petId] then break end
 
 					setPetState(petData, "Resting")
-					task.wait(restDuration)
+
+					-- 휴식 건물별 버프 적용
+					local restItemName = restPlace:GetAttribute("ItemName")
+					local restLevel = restPlace:GetAttribute("Level") or 1
+					local restCfg = restItemName and BalanceConfig.Buff.REST_BUILDING_BUFFS[restItemName]
+					if restCfg then
+						-- 버프 적용 (BuffManager 외부 모듈)
+						local ok, BuffManager = pcall(require, script.Parent:WaitForChild("BuffManager"))
+						if ok and restCfg.buffId and BuffManager.applyBuff then
+							BuffManager.applyBuff(player, restCfg.buffId, restCfg.durationSec or 60)
+						end
+						-- 휴식 시간 단축 배율
+						if restCfg.restDecayMultiplier and restCfg.restDecayMultiplier > 0 then
+							restDuration = restDuration / restCfg.restDecayMultiplier
+						end
+						-- TreeOfGrowth XP 배율 처리
+						if restCfg.xpMultiplier and restCfg.xpMultiplier > 1 then
+							local elapsed = 0
+							while elapsed < restDuration and _behaviorLoops[petId] do
+								task.wait(1)
+								elapsed = elapsed + 1
+								-- 휴식 중 XP 획득 (TreeOfGrowth)
+								petData.xp = petData.xp + PetCfg.XP_PER_SECOND * restCfg.xpMultiplier
+								local req = PetCfg.XP_REQUIRED[petData.level]
+								if req and petData.xp >= req and petData.level < PetCfg.MAX_LEVEL then
+									petData.level = petData.level + 1
+									petData.xp = 0
+									petUpdateEvent:FireClient(player, "levelup", {
+										petId = petId,
+										petName = petData.petName,
+										newLevel = petData.level,
+									})
+								end
+							end
+						else
+							task.wait(restDuration)
+						end
+					else
+						task.wait(restDuration)
+					end
 				else
 					-- 산책
 					setPetState(petData, "Wandering")
