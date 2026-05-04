@@ -54,9 +54,15 @@ local BagUI = require(clientScript:WaitForChild("build"):WaitForChild("BagUI"))
 BagUI.init({
 	onItemClick = function(item)
 		if item.kind == "egg" then
-			-- 알: 자동 Equip → Tool 장착
 			local equipEgg = remotes:FindFirstChild("EquipEgg")
 			if equipEgg then equipEgg:FireServer(item.itemName) end
+			BagUI.hide()
+		elseif item.kind == "pet" then
+			-- 펫: HoldPet으로 Tool 장착
+			local holdPet = remotes:FindFirstChild("HoldPet")
+			if holdPet and item.petId then
+				holdPet:FireServer(item.petId)
+			end
 			BagUI.hide()
 		end
 	end,
