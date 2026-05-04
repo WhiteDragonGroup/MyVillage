@@ -551,16 +551,36 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 							end
 							if isWork then
 								local BCfg = BalanceConfig.Building
+								local AbilityCfg = BalanceConfig.PetAbility
 								local incomeCfg = (BCfg.WORK_INCOME and BCfg.WORK_INCOME[itemName]) or { rate = 1, gemChance = 0 }
 								local level = workplace:GetAttribute("Level") or 1
 								local caps = BCfg.WORK_CAPACITY_BY_LEVEL or {}
 								local cap = caps[level] or caps[1] or 100
+
+								-- 펫 효율 보너스 (수동 능력)
+								local effMult = 1
+								local passive = AbilityCfg.PASSIVE[petData.petName]
+								if passive then
+									if passive.snowEfficiencyBonus and WeatherState.get and WeatherState.get() == "Frost" then
+										effMult = effMult * (1 + passive.snowEfficiencyBonus)
+									end
+									if passive.nightWorkBonus and not TimeState.isDay() then
+										effMult = effMult * (1 + passive.nightWorkBonus)
+									end
+								end
+
+								local incomeAmount = math.ceil(incomeCfg.rate * effMult)
 								local stored = workplace:GetAttribute("StoredCoins") or 0
 								if stored < cap then
-									workplace:SetAttribute("StoredCoins", math.min(cap, stored + incomeCfg.rate))
+									workplace:SetAttribute("StoredCoins", math.min(cap, stored + incomeAmount))
 								end
-								-- 보석 (Mine 등)
-								if incomeCfg.gemChance > 0 and math.random() < incomeCfg.gemChance then
+
+								-- 보석 (Mine 등) + 크리스탈 골렘 보너스
+								local effectiveGemChance = incomeCfg.gemChance
+								if passive and passive.gemChanceBonus then
+									effectiveGemChance = effectiveGemChance * (1 + passive.gemChanceBonus)
+								end
+								if effectiveGemChance > 0 and math.random() < effectiveGemChance then
 									local storedGems = workplace:GetAttribute("StoredGems") or 0
 									workplace:SetAttribute("StoredGems", storedGems + 1)
 								end
