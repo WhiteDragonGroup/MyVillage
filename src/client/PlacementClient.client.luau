@@ -120,6 +120,27 @@ local function restoreCollisionBox(building: BasePart)
 	end
 end
 
+-- 이동/프리뷰 시작 시 투명도 저장 후 반투명 처리
+local function setMovePreviewPart(part: BasePart)
+	if part:GetAttribute("IsCollisionBox") then return end
+	if part:GetAttribute("_OrigT") == nil then
+		part:SetAttribute("_OrigT", part.Transparency)
+	end
+	part.Transparency = math.max(0.5, part.Transparency)
+	part.CanCollide = false
+end
+
+-- 이동/프리뷰 종료 시 원본 투명도 복원
+local function restoreMovePreviewPart(part: BasePart)
+	if part:GetAttribute("IsCollisionBox") then return end
+	local orig = part:GetAttribute("_OrigT")
+	if orig ~= nil then
+		part.Transparency = orig
+		part:SetAttribute("_OrigT", nil)
+	end
+	part.CanCollide = true
+end
+
 -- 건물의 부모가 건물 Model인지 판정 (플롯 Model 제외)
 local function getBuildingModel(building: BasePart): Model?
 	local parent = building.Parent
@@ -251,7 +272,7 @@ local function createPreview(itemName: string, level: number?): BasePart?
 	local mainPart: BasePart
 	if item:IsA("BasePart") then
 		item.Name = "PlacementPreview"
-		item.Transparency = 0.5
+		item.Transparency = math.max(0.5, item.Transparency)
 		item.CanCollide = false
 		item.Anchored = true
 		item.CanQuery = false
@@ -276,10 +297,10 @@ local function createPreview(itemName: string, level: number?): BasePart?
 			item:Destroy()
 			return nil
 		end
-		-- 모든 파트를 프리뷰 상태로
+		-- 모든 파트를 프리뷰 상태로 (원본 투명도 유지)
 		for _, desc in item:GetDescendants() do
 			if desc:IsA("BasePart") then
-				desc.Transparency = 0.5
+				desc.Transparency = math.max(0.5, desc.Transparency)
 				desc.CanCollide = false
 				desc.Anchored = true
 				desc.CanQuery = false
@@ -532,11 +553,10 @@ local function toMoving(building: BasePart)
 	local bModel = getParentModel(building)
 	if bModel then
 		for _, d in bModel:GetDescendants() do
-			if d:IsA("BasePart") and not d:GetAttribute("IsCollisionBox") then d.Transparency = 0.5; d.CanCollide = false end
+			if d:IsA("BasePart") then setMovePreviewPart(d) end
 		end
 	else
-		building.Transparency = 0.5
-		building.CanCollide = false
+		setMovePreviewPart(building)
 	end
 	previewPart = building -- mainPart를 프리뷰로 사용
 
@@ -684,12 +704,11 @@ BuildUI.init(function()
 			if rModel then
 				rModel:PivotTo(originalCFrame)
 				for _, d in rModel:GetDescendants() do
-					if d:IsA("BasePart") and not d:GetAttribute("IsCollisionBox") then d.Transparency = 0; d.CanCollide = true end
+					if d:IsA("BasePart") then restoreMovePreviewPart(d) end
 				end
 			else
 				selectedBuilding.CFrame = originalCFrame
-				selectedBuilding.Transparency = 0
-				selectedBuilding.CanCollide = true
+				restoreMovePreviewPart(selectedBuilding)
 			end
 			restoreCollisionBox(selectedBuilding)
 			DragHandler.stopDrag()
@@ -735,7 +754,7 @@ InventoryUI.init(function(itemName: string, level: number)
 					if mp then
 						for _, desc in preview:GetDescendants() do
 							if desc:IsA("BasePart") then
-								desc.Transparency = 0.5
+								desc.Transparency = math.max(0.5, desc.Transparency)
 								desc.CanCollide = false
 								desc.Anchored = true
 								desc.CanQuery = false
@@ -756,7 +775,7 @@ InventoryUI.init(function(itemName: string, level: number)
 						end
 					end
 				elseif preview:IsA("BasePart") then
-					preview.Transparency = 0.5
+					preview.Transparency = math.max(0.5, preview.Transparency)
 					preview.CanCollide = false
 					preview.Anchored = true
 					preview.CanQuery = false
@@ -946,11 +965,10 @@ local function confirmPlace()
 		local cpModel = getParentModel(selectedBuilding)
 		if cpModel then
 			for _, d in cpModel:GetDescendants() do
-				if d:IsA("BasePart") and not d:GetAttribute("IsCollisionBox") then d.Transparency = 0; d.CanCollide = true end
+				if d:IsA("BasePart") then restoreMovePreviewPart(d) end
 			end
 		else
-			selectedBuilding.Transparency = 0
-			selectedBuilding.CanCollide = true
+			restoreMovePreviewPart(selectedBuilding)
 		end
 		HighlightSystem.removeFrom(selectedBuilding)
 		restoreCollisionBox(selectedBuilding)
@@ -986,12 +1004,11 @@ MoveHandleUI.init({
 			if rpModel then
 				rpModel:PivotTo(originalCFrame)
 				for _, d in rpModel:GetDescendants() do
-					if d:IsA("BasePart") and not d:GetAttribute("IsCollisionBox") then d.Transparency = 0; d.CanCollide = true end
+					if d:IsA("BasePart") then restoreMovePreviewPart(d) end
 				end
 			else
 				selectedBuilding.CFrame = originalCFrame
-				selectedBuilding.Transparency = 0
-				selectedBuilding.CanCollide = true
+				restoreMovePreviewPart(selectedBuilding)
 			end
 			restoreCollisionBox(selectedBuilding)
 			HighlightSystem.removeFrom(selectedBuilding)
@@ -1331,12 +1348,11 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			if epModel then
 				epModel:PivotTo(originalCFrame)
 				for _, d in epModel:GetDescendants() do
-					if d:IsA("BasePart") and not d:GetAttribute("IsCollisionBox") then d.Transparency = 0; d.CanCollide = true end
+					if d:IsA("BasePart") then restoreMovePreviewPart(d) end
 				end
 			else
 				selectedBuilding.CFrame = originalCFrame
-				selectedBuilding.Transparency = 0
-				selectedBuilding.CanCollide = true
+				restoreMovePreviewPart(selectedBuilding)
 			end
 			restoreCollisionBox(selectedBuilding)
 			HighlightSystem.removeFrom(selectedBuilding)
@@ -1361,12 +1377,11 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 				if bpModel then
 					bpModel:PivotTo(originalCFrame)
 					for _, d in bpModel:GetDescendants() do
-						if d:IsA("BasePart") and not d:GetAttribute("IsCollisionBox") then d.Transparency = 0; d.CanCollide = true end
+						if d:IsA("BasePart") then restoreMovePreviewPart(d) end
 					end
 				else
 					selectedBuilding.CFrame = originalCFrame
-					selectedBuilding.Transparency = 0
-					selectedBuilding.CanCollide = true
+					restoreMovePreviewPart(selectedBuilding)
 				end
 				restoreCollisionBox(selectedBuilding)
 				DragHandler.stopDrag()
@@ -1927,7 +1942,9 @@ petUpdateEvent.OnClientEvent:Connect(function(eventType, data)
 			end)
 		end
 		if eventType == "levelup" then
-			MainHUD.showMessage("Pet leveled up! Lv." .. (data.level or "?"), 3)
+			local name = data.petName or "Pet"
+			local level = data.newLevel or data.level or "?"
+			MainHUD.showMessage(name .. " leveled up! Lv." .. level, 3)
 		end
 	elseif eventType == "mutation" then
 		-- 돌연변이 추가 시 알림

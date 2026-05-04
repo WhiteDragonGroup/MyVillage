@@ -551,6 +551,7 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 						end
 						petUpdateEvent:FireClient(player, "levelup", {
 							petId = petId,
+							petName = petData.petName,
 							newLevel = petData.level,
 						})
 					end

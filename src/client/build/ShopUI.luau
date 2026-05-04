@@ -208,9 +208,15 @@ function ShopUI._renderItems()
 	-- Ensure layout exists
 	if not scrollFrame:FindFirstChildWhichIsA("UIListLayout") and not scrollFrame:FindFirstChildWhichIsA("UIGridLayout") then
 		local layout = Instance.new("UIListLayout")
-		layout.Padding = UDim.new(0, 4)
+		layout.Padding = UDim.new(0, 12)
 		layout.SortOrder = Enum.SortOrder.LayoutOrder
 		layout.Parent = scrollFrame
+
+		local padding = Instance.new("UIPadding")
+		padding.PaddingTop = UDim.new(0, 15)
+		padding.PaddingBottom = UDim.new(0, 30)
+		padding.PaddingLeft = UDim.new(0.03, 0)
+		padding.Parent = scrollFrame
 	end
 
 	for i, item in _shopData do
@@ -244,6 +250,11 @@ function ShopUI._renderItems()
 		local stockText = slot:FindFirstChild("StockText")
 		if stockText then
 			stockText.Text = if item.stock > 0 then item.stock .. "x stock" else "NO STOCK"
+			if stockText:IsA("TextLabel") or stockText:IsA("TextButton") then
+				stockText.TextColor3 = if item.stock > 0
+					then Color3.fromRGB(255, 255, 255)
+					else Color3.fromRGB(198, 36, 39)
+			end
 		end
 
 		-- Rarity
@@ -264,7 +275,8 @@ function ShopUI._renderItems()
 				end)
 			else
 				buyDollar.Active = false
-				buyDollar.BackgroundTransparency = 0.5
+				buyDollar.BackgroundColor3 = Color3.fromRGB(198, 36, 39)
+				buyDollar.BackgroundTransparency = 0
 			end
 		end
 

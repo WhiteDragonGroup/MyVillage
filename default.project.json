@@ -98,6 +98,12 @@
         },
         "AdminCommand": {
           "$className": "RemoteEvent"
+        },
+        "GetSettings": {
+          "$className": "RemoteFunction"
+        },
+        "SaveSetting": {
+          "$className": "RemoteEvent"
         }
       },
       "Weather": {

@@ -17,6 +17,7 @@ local CurrencyManager = require(serverScript:WaitForChild("CurrencyManager"))
 local DataStoreManager = require(serverScript:WaitForChild("DataStoreManager"))
 local ShopManager = require(serverScript:WaitForChild("ShopManager"))
 local EggManager = require(serverScript:WaitForChild("EggManager"))
+local SettingsManager = require(serverScript:WaitForChild("SettingsManager"))
 local VillageSignManager = require(serverScript:WaitForChild("VillageSignManager"))
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
@@ -69,6 +70,10 @@ end)
 
 DataStoreManager.registerGatherCallback("eggs", function(player)
 	return EggManager.getSaveData(player)
+end)
+
+DataStoreManager.registerGatherCallback("settings", function(player)
+	return SettingsManager.getSaveData(player)
 end)
 
 ----------------------------------------------------------------
@@ -347,6 +352,7 @@ Players.PlayerAdded:Connect(function(player)
 	CurrencyManager.initPlayer(player, savedData.coins)
 	ShopManager.initPlayer(player)
 	EggManager.initPlayer(player, savedData and savedData.eggs or nil)
+	SettingsManager.initPlayer(player, savedData and savedData.settings or nil)
 
 	-- 3. 플롯 배정
 	local plot = findEmptyPlot()
@@ -450,6 +456,9 @@ Players.PlayerRemoving:Connect(function(player)
 
 	-- 인벤토리 제거
 	InventoryManager.removePlayer(player)
+
+	-- 설정 제거
+	SettingsManager.removePlayer(player)
 
 	-- DataStore 캐시 제거
 	DataStoreManager.removePlayer(player)
