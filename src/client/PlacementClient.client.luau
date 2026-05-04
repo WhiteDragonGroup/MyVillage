@@ -51,6 +51,7 @@ ClockTowerVisual.init()
 local BuffUI = require(clientScript:WaitForChild("build"):WaitForChild("BuffUI"))
 BuffUI.init()
 local BagUI = require(clientScript:WaitForChild("build"):WaitForChild("BagUI"))
+local BuildingInfoUI = require(clientScript:WaitForChild("build"):WaitForChild("BuildingInfoUI"))
 BagUI.init({
 	onItemClick = function(item)
 		if item.kind == "egg" then
@@ -1238,11 +1239,12 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 				end
 			end
 
-			-- Idle 상태에서 펫/알 클릭
+			-- Idle 상태에서 펫/알/건물 클릭
 			target = mouse.Target
-			-- 클릭한 파트 또는 조상에서 PetId/IsEgg 찾기
+			-- 클릭한 파트 또는 조상에서 PetId/IsEgg/BuildingId 찾기
 			local petTarget = nil
 			local eggTarget = nil
+			local buildingTarget = nil
 			local current = target
 			while current and current ~= workspace do
 				if current:IsA("BasePart") then
@@ -1252,9 +1254,35 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 					elseif current:GetAttribute("IsEgg") then
 						eggTarget = current
 						break
+					elseif current:GetAttribute("BuildingId") then
+						buildingTarget = current
+						break
 					end
 				end
 				current = current.Parent
+			end
+
+			-- 다른 선택을 풀고 새 선택 적용 (건물 우선)
+			if buildingTarget then
+				-- 펫 선택 풀기
+				if PetDetailUI.isVisible() then PetDetailUI.hide() end
+				-- 이전 건물 하이라이트 풀기
+				local prevId = BuildingInfoUI.getCurrentBuildingId()
+				if prevId then
+					local plotsFolder = workspace:FindFirstChild("Plots")
+					if plotsFolder then
+						for _, plot in plotsFolder:GetDescendants() do
+							if plot:IsA("BasePart") and plot:GetAttribute("BuildingId") == prevId then
+								HighlightSystem.removeFrom(plot)
+								break
+							end
+						end
+					end
+				end
+				-- 새 건물 하이라이트 + 정보 표시
+				HighlightSystem.applyTo(buildingTarget, Color3.new(1, 1, 1), 0.7)
+				BuildingInfoUI.show(buildingTarget)
+				return
 			end
 
 			if petTarget then
@@ -2216,6 +2244,14 @@ local HAILEY_CHOICES = {
 DialogUI.init()
 PetSellUI.init()
 EggInfoUI.init()
+BuildingInfoUI.init({
+	onUpgrade = function(buildingId)
+		local startUpgradeEvent = remotes:FindFirstChild("StartUpgrade")
+		if startUpgradeEvent then
+			startUpgradeEvent:FireServer(buildingId)
+		end
+	end,
+})
 
 local _npcDistanceConn = nil
 
