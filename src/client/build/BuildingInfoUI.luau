@@ -157,7 +157,7 @@ function BuildingInfoUI.show(building: BasePart)
 		end
 		local maxDim = math.max(size.X, size.Y, size.Z)
 		camera.CFrame = CFrame.lookAt(
-			cf.Position + Vector3.new(maxDim * 0.9, maxDim * 0.6, maxDim * 1.1),
+			cf.Position + Vector3.new(maxDim * 0.4, maxDim * 0.2, maxDim * 0.6),
 			cf.Position
 		)
 	end
