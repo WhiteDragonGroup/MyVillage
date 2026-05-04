@@ -301,17 +301,39 @@ function EggManager.placeEgg(player: Player, eggType: string, position: Vector3)
 		eggModel.Material = Enum.Material.SmoothPlastic
 	end
 
+	-- 크기 4배 확대
+	local SCALE = 4
+	if eggModel:IsA("Model") then
+		eggModel:ScaleTo(SCALE)
+	elseif eggModel:IsA("BasePart") then
+		eggModel.Size = eggModel.Size * SCALE
+	end
+
 	local eggId = HttpService:GenerateGUID(false)
+
+	-- 모델 높이 측정해서 바닥 위에 올리기
+	local function getModelHeight(): number
+		if eggModel:IsA("Model") then
+			local _, sz = eggModel:GetBoundingBox()
+			return sz.Y
+		elseif eggModel:IsA("BasePart") then
+			return eggModel.Size.Y
+		end
+		return 0
+	end
+	local height = getModelHeight()
+	-- position은 클릭 지점(주로 바닥). 알 중심을 바닥+(height/2)로
+	local placePos = Vector3.new(position.X, position.Y + height / 2, position.Z)
 
 	-- 위치 설정
 	local mainPart
 	if eggModel:IsA("Model") then
 		mainPart = eggModel.PrimaryPart or eggModel:FindFirstChildWhichIsA("BasePart")
 		if mainPart then
-			eggModel:PivotTo(CFrame.new(position))
+			eggModel:PivotTo(CFrame.new(placePos))
 		end
 	elseif eggModel:IsA("BasePart") then
-		eggModel.CFrame = CFrame.new(position)
+		eggModel.CFrame = CFrame.new(placePos)
 		mainPart = eggModel
 	end
 
