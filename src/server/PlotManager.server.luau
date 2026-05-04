@@ -46,7 +46,7 @@ UpgradeManager.setCurrencyFunctions(
 -- GetCurrency Remote
 local getCurrencyFunc = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("GetCurrency")
 getCurrencyFunc.OnServerInvoke = function(player)
-	return CurrencyManager.getCoins(player)
+	return CurrencyManager.getCoins(player), CurrencyManager.getGems(player)
 end
 
 ----------------------------------------------------------------
@@ -54,6 +54,10 @@ end
 ----------------------------------------------------------------
 DataStoreManager.registerGatherCallback("coins", function(player)
 	return CurrencyManager.getSaveData(player)
+end)
+
+DataStoreManager.registerGatherCallback("gems", function(player)
+	return CurrencyManager.getGemsSaveData(player)
 end)
 
 DataStoreManager.registerGatherCallback("inventory", function(player)
@@ -349,7 +353,7 @@ Players.PlayerAdded:Connect(function(player)
 	-- 2. 각 매니저 초기화 (저장된 데이터 전달)
 	InventoryManager.initPlayer(player, savedData.inventory)
 	PetManager.initPlayer(player, savedData.pets)
-	CurrencyManager.initPlayer(player, savedData.coins)
+	CurrencyManager.initPlayer(player, savedData.coins, savedData.gems)
 	ShopManager.initPlayer(player)
 	EggManager.initPlayer(player, savedData and savedData.eggs or nil)
 	SettingsManager.initPlayer(player, savedData and savedData.settings or nil)

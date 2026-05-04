@@ -540,7 +540,7 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 						break
 					end
 
-					-- 광산/농장 등 Work 건물에 코인 누적 (capacity 한도까지)
+					-- 광산/농장 등 Work 건물에 코인 누적 (capacity 한도까지) + Mine은 보석 확률
 					do
 						local itemName = workplace:GetAttribute("ItemName")
 						local buildingInfo = itemName and Constants.BUILDINGS[itemName]
@@ -551,13 +551,18 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 							end
 							if isWork then
 								local BCfg = BalanceConfig.Building
-								local rate = (BCfg and BCfg.WORK_INCOME_RATE) or 1
+								local incomeCfg = (BCfg.WORK_INCOME and BCfg.WORK_INCOME[itemName]) or { rate = 1, gemChance = 0 }
 								local level = workplace:GetAttribute("Level") or 1
-								local caps = BCfg and BCfg.WORK_CAPACITY_BY_LEVEL or {}
+								local caps = BCfg.WORK_CAPACITY_BY_LEVEL or {}
 								local cap = caps[level] or caps[1] or 100
 								local stored = workplace:GetAttribute("StoredCoins") or 0
 								if stored < cap then
-									workplace:SetAttribute("StoredCoins", math.min(cap, stored + rate))
+									workplace:SetAttribute("StoredCoins", math.min(cap, stored + incomeCfg.rate))
+								end
+								-- 보석 (Mine 등)
+								if incomeCfg.gemChance > 0 and math.random() < incomeCfg.gemChance then
+									local storedGems = workplace:GetAttribute("StoredGems") or 0
+									workplace:SetAttribute("StoredGems", storedGems + 1)
 								end
 							end
 						end

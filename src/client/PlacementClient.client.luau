@@ -48,6 +48,8 @@ local WeatherVFX = require(clientScript:WaitForChild("systems"):WaitForChild("We
 local CameraManager = require(clientScript:WaitForChild("systems"):WaitForChild("CameraManager"))
 local ClockTowerVisual = require(clientScript:WaitForChild("systems"):WaitForChild("ClockTowerVisual"))
 ClockTowerVisual.init()
+local WorkBuildingDisplay = require(clientScript:WaitForChild("systems"):WaitForChild("WorkBuildingDisplay"))
+WorkBuildingDisplay.init()
 local BuffUI = require(clientScript:WaitForChild("build"):WaitForChild("BuffUI"))
 BuffUI.init()
 local BuildingInfoUI = require(clientScript:WaitForChild("build"):WaitForChild("BuildingInfoUI"))
@@ -1572,15 +1574,15 @@ end)
 
 -- CurrencyUI 제거됨 (MainHUD 하단에 통합)
 
-currencyUpdateEvent.OnClientEvent:Connect(function(coins)
+currencyUpdateEvent.OnClientEvent:Connect(function(coins, gems)
 	MainHUD.updateCoins(coins)
+	if gems ~= nil then MainHUD.updateGems(gems) end
 end)
 
 task.spawn(function()
-	local coins = getCurrencyFunc:InvokeServer()
-	if coins then
-		MainHUD.updateCoins(coins)
-	end
+	local coins, gems = getCurrencyFunc:InvokeServer()
+	if coins then MainHUD.updateCoins(coins) end
+	if gems then MainHUD.updateGems(gems) end
 end)
 
 ----------------------------------------------------------------
