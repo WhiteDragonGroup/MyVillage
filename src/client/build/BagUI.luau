@@ -320,7 +320,7 @@ end
 local function loadInventory()
 	local items = {}
 
-	-- 알 인벤토리
+	-- 알만 표시 (건물은 빌드 모드(B)에서)
 	local getEggsFunc = remotes:FindFirstChild("GetEggs")
 	if getEggsFunc then
 		local ok, eggs = pcall(function() return getEggsFunc:InvokeServer() end)
@@ -335,28 +335,6 @@ local function loadInventory()
 					iconAssetId = nil,
 					kind = "egg",
 				})
-			end
-		end
-	end
-
-	-- 건물 인벤토리
-	local getInventoryFunc = remotes:FindFirstChild("GetInventory")
-	if getInventoryFunc then
-		local ok, inv = pcall(function() return getInventoryFunc:InvokeServer() end)
-		if ok and inv then
-			for _, b in inv do
-				local info = Constants.BUILDINGS[b.itemName]
-				if info then
-					table.insert(items, {
-						itemName = b.itemName,
-						displayName = info.name or b.itemName,
-						rarity = info.rarity or "Common",
-						count = b.count,
-						level = b.level,
-						iconAssetId = info.icon,
-						kind = "building",
-					})
-				end
 			end
 		end
 	end

@@ -58,9 +58,6 @@ BagUI.init({
 			local equipEgg = remotes:FindFirstChild("EquipEgg")
 			if equipEgg then equipEgg:FireServer(item.itemName) end
 			BagUI.hide()
-		elseif item.kind == "building" then
-			-- 건물: 빌드모드에서 처리 (현재는 닫고 안내만)
-			MainHUD.showMessage("Press B and select from build inventory.", 3)
 		end
 	end,
 })
