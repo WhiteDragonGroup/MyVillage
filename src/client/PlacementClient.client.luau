@@ -1090,12 +1090,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 					local half = bz.Size / 2
 					if math.abs(localPos.X) <= half.X and math.abs(localPos.Z) <= half.Z then
 						placeEggEvent:FireServer(heldEggType, clickPos)
-						-- Tool 정리는 서버 측 PlaceEgg 처리 후 ancestry 변경으로 자동
-						for _, child in character:GetChildren() do
-							if child:IsA("Tool") and child:GetAttribute("IsEggTool") then
-								child:Destroy()
-							end
-						end
+						-- 서버가 syncEggTools로 알 Tool 카운트 갱신/제거 처리
 						MainHUD.showMessage("Egg placed!", 1)
 						return
 					end

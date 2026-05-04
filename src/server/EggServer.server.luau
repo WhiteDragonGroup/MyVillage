@@ -123,6 +123,8 @@ _bindBuyEgg = function()
 		local success, msg = EggManager.buyEgg(player, slotName, eggName)
 		if success then
 			print(player.Name .. " - 알 구매: " .. slotName)
+			-- 인벤토리 알을 Backpack Tool로 즉시 동기화
+			if _G.SyncEggTools then _G.SyncEggTools(player) end
 		else
 			warn(player.Name .. " - 알 구매 실패: " .. tostring(msg))
 		end
@@ -150,6 +152,7 @@ placeEggEvent.OnServerEvent:Connect(function(player, eggType, position)
 	end
 
 	eggUpdateEvent:FireClient(player, "inventory", EggManager.getEggInventory(player))
+	if _G.SyncEggTools then _G.SyncEggTools(player) end
 end)
 
 -- 부화
@@ -176,43 +179,14 @@ getPlacedEggsFunc.OnServerInvoke = function(player)
 	return EggManager.getPlacedEggs(player)
 end
 
--- 알을 Tool로 들기 (인벤토리에 있는 알을 들고 다닐 수 있도록)
-local equipEggEvent = remotes:WaitForChild("EquipEgg")
-local _heldEggs: { [Player]: Tool } = {}
-
-equipEggEvent.OnServerEvent:Connect(function(player, eggType)
-	if typeof(eggType) ~= "string" then return end
-
-	-- 인벤토리에 알 있는지 확인
-	local inv = EggManager.getEggInventory(player)
-	local hasEgg = false
-	for _, e in inv do
-		if e.eggType == eggType and e.count > 0 then
-			hasEgg = true
-			break
-		end
-	end
-	if not hasEgg then
-		warn(player.Name .. " - EquipEgg: no egg " .. eggType)
-		return
-	end
-
-	-- 기존에 들고 있던 알 Tool 제거
-	if _heldEggs[player] and _heldEggs[player].Parent then
-		_heldEggs[player]:Destroy()
-	end
-
-	-- Tool 생성
+-- 알 Tool 자동 동기화: 인벤토리에 있는 알을 Backpack에 Tool 형태로 유지 (스택)
+local function buildEggTool(eggType: string): Tool
 	local tool = Instance.new("Tool")
-	tool.Name = "Egg_" .. eggType
 	tool.RequiresHandle = true
 	tool.CanBeDropped = false
 	tool:SetAttribute("EggType", eggType)
 	tool:SetAttribute("IsEggTool", true)
 
-	-- Handle (model from ReplicatedStorage.Egg)
-	local eggFolder = game:GetService("ReplicatedStorage"):FindFirstChild("Egg")
-	local template = eggFolder and eggFolder:FindFirstChild(eggType)
 	local handle = Instance.new("Part")
 	handle.Name = "Handle"
 	handle.Size = Vector3.new(2, 2, 2)
@@ -221,6 +195,8 @@ equipEggEvent.OnServerEvent:Connect(function(player, eggType)
 	handle.Massless = true
 	handle.Parent = tool
 
+	local eggFolder = game:GetService("ReplicatedStorage"):FindFirstChild("Egg")
+	local template = eggFolder and eggFolder:FindFirstChild(eggType)
 	if template then
 		local clone = template:Clone()
 		if clone:IsA("Model") then
@@ -248,30 +224,93 @@ equipEggEvent.OnServerEvent:Connect(function(player, eggType)
 		clone.Parent = tool
 	end
 
-	tool.Parent = player.Backpack
-	_heldEggs[player] = tool
+	return tool
+end
 
-	-- 자동 장착
+local function getDisplayName(eggType: string, count: number): string
+	local info = BalanceConfig.Egg.EGGS[eggType]
+	local base = (info and info.name) or eggType
+	if count > 1 then
+		return string.format("%s x%d", base, count)
+	end
+	return base
+end
+
+local function syncEggTools(player: Player)
+	if not player or not player.Parent then return end
+
+	local inv = EggManager.getEggInventory(player)
+	local desired: { [string]: number } = {}
+	for _, e in inv do
+		if e.count > 0 then
+			desired[e.eggType] = e.count
+		end
+	end
+
+	-- 기존 Tool 수집 (Backpack + Character)
+	local existing: { [string]: Tool } = {}
+	local function scan(parent)
+		if not parent then return end
+		for _, child in parent:GetChildren() do
+			if child:IsA("Tool") and child:GetAttribute("IsEggTool") then
+				local et = child:GetAttribute("EggType")
+				if et then existing[et] = child end
+			end
+		end
+	end
+	scan(player:FindFirstChild("Backpack"))
+	scan(player.Character)
+
+	-- 필요없는 Tool 제거
+	for et, tool in existing do
+		if not desired[et] then
+			tool:Destroy()
+		end
+	end
+
+	-- 필요한 Tool 생성/업데이트
+	for et, count in desired do
+		local tool = existing[et]
+		if not tool or not tool.Parent then
+			tool = buildEggTool(et)
+			tool.Parent = player.Backpack
+		end
+		tool.Name = getDisplayName(et, count)
+		tool:SetAttribute("Count", count)
+	end
+end
+
+-- 외부 노출
+_G.SyncEggTools = syncEggTools
+
+-- 알을 Tool로 들기 Remote (수동 트리거 - 자동 동기화로 거의 불필요)
+local equipEggEvent = remotes:WaitForChild("EquipEgg")
+equipEggEvent.OnServerEvent:Connect(function(player, eggType)
+	if typeof(eggType) ~= "string" then return end
+	syncEggTools(player)
+
+	-- 해당 타입 Tool 자동 장착
+	local tool
+	for _, child in player.Backpack:GetChildren() do
+		if child:IsA("Tool") and child:GetAttribute("EggType") == eggType then
+			tool = child
+			break
+		end
+	end
+	if not tool then return end
+
 	local humanoid = player.Character and player.Character:FindFirstChildWhichIsA("Humanoid")
 	if humanoid then
 		humanoid:EquipTool(tool)
 	end
-
-	-- Tool 사라지면 트래킹 해제
-	tool.AncestryChanged:Connect(function(_, newParent)
-		if not newParent then
-			if _heldEggs[player] == tool then
-				_heldEggs[player] = nil
-			end
-		end
-	end)
 end)
 
-game:GetService("Players").PlayerRemoving:Connect(function(player)
-	if _heldEggs[player] and _heldEggs[player].Parent then
-		_heldEggs[player]:Destroy()
-	end
-	_heldEggs[player] = nil
+-- 플레이어 접속 시 인벤토리 기반으로 Tool 동기화
+game:GetService("Players").PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function()
+		task.wait(1)
+		syncEggTools(player)
+	end)
 end)
 
 -- 상점 판매 목록 업데이트
