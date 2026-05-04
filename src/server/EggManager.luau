@@ -193,13 +193,9 @@ function EggManager._initShopEgg(slot: Folder, eggModel: Model, place: Model)
 	prompt.RequiresLineOfSight = false
 	prompt.KeyboardKeyCode = Enum.KeyCode.E
 	prompt.Parent = promptHost
-	print("[EggShop] BuyPrompt 부착 - slot:" .. slot.Name .. " egg:" .. eggModel.Name .. " host:" .. promptHost:GetFullName())
 	prompt.Triggered:Connect(function(player)
-		print("[EggShop] BuyPrompt triggered by " .. player.Name)
 		if _showEggBuyPopup then
 			_showEggBuyPopup(player, slot.Name, eggModel.Name)
-		else
-			warn("[EggShop] _showEggBuyPopup not set!")
 		end
 	end)
 

@@ -73,39 +73,25 @@ function EggShopUI.init(callbacks: { onConfirm: (slotName: string, eggName: stri
 		_confirmBtn = frame:FindFirstChild("Confirm")
 			or frame:FindFirstChild("Cinfirm") -- 기존 UI 오타
 			or frame:FindFirstChild("Buy")
-		print("[EggShopUI] init: cancleBtn=" .. tostring(_cancleBtn) .. ", confirmBtn=" .. tostring(_confirmBtn))
 
 		if _cancleBtn and _cancleBtn:IsA("GuiButton") then
 			_cancleBtn.MouseButton1Click:Connect(function()
-				print("[EggShopUI] cancel clicked, _visible=" .. tostring(_visible))
 				if _callbacks.onCancel and _visible then _callbacks.onCancel() end
 			end)
 		end
 
 		if _confirmBtn and _confirmBtn:IsA("GuiButton") then
 			_confirmBtn.MouseButton1Click:Connect(function()
-				print("[EggShopUI] confirm clicked, _visible=" .. tostring(_visible))
 				if _callbacks.onConfirm and _visible then
-					_callbacks.onConfirm(
-						_slotName,
-						_eggName
-					)
+					_callbacks.onConfirm(_slotName, _eggName)
 				end
 			end)
-		else
-			warn("[EggShopUI] Confirm 버튼을 찾을 수 없거나 GuiButton 아님")
 		end
-	else
-		warn("[EggShopUI] PopUp.Frame 없음")
 	end
 end
 
 function EggShopUI.show(slotName: string, eggName: string)
-	if not popUpFrame then
-		warn("[EggShopUI] show 호출됐지만 popUpFrame 없음 - init 실패한 듯")
-		return
-	end
-	print("[EggShopUI] show: slot=" .. tostring(slotName) .. " egg=" .. tostring(eggName))
+	if not popUpFrame then return end
 	_visible = true
 
 	-- TextLabel 업데이트 (2개 있음)

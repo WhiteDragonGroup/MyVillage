@@ -1801,16 +1801,14 @@ ShopUI.init({
 -- 알 상점 UI 초기화
 EggShopUI.init({
 	onConfirm = function(slotName: string, eggName: string)
-		print("[EggShopUI/Client] confirm: " .. tostring(slotName) .. " / " .. tostring(eggName) .. ", BuyEgg class=" .. buyEggEvent.ClassName)
 		EggShopUI.hide()
 		local ok, msg = pcall(function()
 			return buyEggEvent:InvokeServer(slotName, eggName)
 		end)
 		if not ok then
-			warn("[EggShopUI/Client] InvokeServer 실패: " .. tostring(msg))
-			MainHUD.showMessage("Purchase error: " .. tostring(msg), 4)
+			MainHUD.showMessage("Purchase error", 3)
 		else
-			MainHUD.showMessage(msg or "Purchase done", 4)
+			MainHUD.showMessage(msg or "Purchase done", 3)
 		end
 	end,
 
