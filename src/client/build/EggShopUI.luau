@@ -66,20 +66,25 @@ function EggShopUI.init(callbacks: { onConfirm: (slotName: string, eggName: stri
 		end
 	end
 	
-	-- Frame 내 버튼 연결
+	-- Frame 내 버튼 연결 (다양한 이름 변형 허용)
 	local frame = popUpFrame:FindFirstChild("Frame")
 	if frame then
-		_cancleBtn = frame:FindFirstChild("Cancle")
-		_confirmBtn = frame:FindFirstChild("Confirm") -- 오타 그대로 사용
+		_cancleBtn = frame:FindFirstChild("Cancle") or frame:FindFirstChild("Cancel")
+		_confirmBtn = frame:FindFirstChild("Confirm")
+			or frame:FindFirstChild("Cinfirm") -- 기존 UI 오타
+			or frame:FindFirstChild("Buy")
+		print("[EggShopUI] init: cancleBtn=" .. tostring(_cancleBtn) .. ", confirmBtn=" .. tostring(_confirmBtn))
 
 		if _cancleBtn and _cancleBtn:IsA("GuiButton") then
 			_cancleBtn.MouseButton1Click:Connect(function()
+				print("[EggShopUI] cancel clicked, _visible=" .. tostring(_visible))
 				if _callbacks.onCancel and _visible then _callbacks.onCancel() end
 			end)
 		end
 
 		if _confirmBtn and _confirmBtn:IsA("GuiButton") then
 			_confirmBtn.MouseButton1Click:Connect(function()
+				print("[EggShopUI] confirm clicked, _visible=" .. tostring(_visible))
 				if _callbacks.onConfirm and _visible then
 					_callbacks.onConfirm(
 						_slotName,
@@ -87,7 +92,11 @@ function EggShopUI.init(callbacks: { onConfirm: (slotName: string, eggName: stri
 					)
 				end
 			end)
+		else
+			warn("[EggShopUI] Confirm 버튼을 찾을 수 없거나 GuiButton 아님")
 		end
+	else
+		warn("[EggShopUI] PopUp.Frame 없음")
 	end
 end
 
