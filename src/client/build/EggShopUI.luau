@@ -23,23 +23,26 @@ local updateResolution = 60 * 5 -- EggServer 의 값과 일치하도록
 function EggShopUI.init(callbacks: { onConfirm: (slotName: string, eggName: string) -> (), onCancel: () -> () })
 	_callbacks = callbacks
 
-	eggShopRestockGui = playerGui:WaitForChild("EggShopRestock")
+	-- EggShopRestock BillboardGui (있을 때만 카운트다운 갱신, 없어도 init은 계속)
+	eggShopRestockGui = playerGui:FindFirstChild("EggShopRestock")
 	if not eggShopRestockGui then
-		warn("[EggShopUI] EggShopRestock BillboardGui를 찾을 수 없음")
+		task.spawn(function()
+			eggShopRestockGui = playerGui:WaitForChild("EggShopRestock", 30)
+		end)
 	end
 	task.spawn(function ()
 		while true do
 			task.wait(1)
+			if not eggShopRestockGui then continue end
+			local label = eggShopRestockGui:FindFirstChildOfClass("TextLabel")
+			if not label then continue end
 			local remain = updateResolution - (workspace:GetServerTimeNow() % updateResolution)
 			local minutes = tostring(remain // 60)
 			local seconds = tostring(math.floor(remain % 60))
-			
 			if #seconds == 1 then
 				seconds = "0" .. seconds
 			end
-
-			eggShopRestockGui:FindFirstChildOfClass("TextLabel").Text =
-				`Eggs Restocking In : {minutes}:{seconds}`
+			label.Text = `Eggs Restocking In : {minutes}:{seconds}`
 		end
 	end)
 
@@ -89,9 +92,13 @@ function EggShopUI.init(callbacks: { onConfirm: (slotName: string, eggName: stri
 end
 
 function EggShopUI.show(slotName: string, eggName: string)
-	if not popUpFrame then return end
+	if not popUpFrame then
+		warn("[EggShopUI] show 호출됐지만 popUpFrame 없음 - init 실패한 듯")
+		return
+	end
+	print("[EggShopUI] show: slot=" .. tostring(slotName) .. " egg=" .. tostring(eggName))
 	_visible = true
-	
+
 	-- TextLabel 업데이트 (2개 있음)
 	local textLabels = {}
 	for _, child in popUpFrame:GetChildren() do
@@ -99,16 +106,26 @@ function EggShopUI.show(slotName: string, eggName: string)
 			table.insert(textLabels, child)
 		end
 	end
-	
-	_cancleBtn.TextLabel.Text = "Cancle"
-	_confirmBtn.TextLabel.Text = "Buy"
-	
+
+	if _cancleBtn and _cancleBtn:FindFirstChild("TextLabel") then
+		_cancleBtn.TextLabel.Text = "Cancle"
+	end
+	if _confirmBtn and _confirmBtn:FindFirstChild("TextLabel") then
+		_confirmBtn.TextLabel.Text = "Buy"
+	end
+
 	_slotName = slotName
 	_eggName = eggName
-	
-	textLabels[1].Text = `Buy the egg '{eggName}'?`
-	textLabels[2].Text = `Will cost ${BalanceConfig.Egg.EGGS[eggName].price}`
-	
+
+	local eggInfo = BalanceConfig.Egg.EGGS[eggName]
+	local displayName = (eggInfo and eggInfo.name) or eggName
+	if textLabels[1] then
+		textLabels[1].Text = `Buy the egg '{displayName}'?`
+	end
+	if textLabels[2] then
+		textLabels[2].Text = `Will cost ${eggInfo and eggInfo.price or "?"}`
+	end
+
 	popUpFrame.Visible = true
 end
 
