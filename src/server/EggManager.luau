@@ -227,15 +227,9 @@ function EggManager.buyEgg(player: Player, slotName: string, eggName: string): (
 	EggManager.addEgg(player, item.pickedEggName, 1)
 	_shopSlotItems[slotName] = nil
 
-	local prompt = item.model:FindFirstChild("BuyPrompt")
-	if prompt then
-		prompt:Destroy()
-	end
-	for _, part in item.model:GetDescendants() do
-		if part:IsA("BasePart") then
-			part.Transparency = math.max(0.65, part.Transparency)
-			part.CanCollide = false
-		end
+	-- 구매한 알 모델은 다음 리젠 시점까지 완전히 제거
+	if item.model and item.model.Parent then
+		item.model:Destroy()
 	end
 
 	return true, "Purchase complete"
