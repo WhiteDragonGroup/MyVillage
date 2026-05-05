@@ -38,15 +38,39 @@ Constants.RARITY_COLORS = {
 
 -- 건물 카탈로그
 -- collisionSize: 충돌 판정용 고정 사이즈 (모델 실제 크기와 무관, 레벨 변경에도 불변)
--- icon: 레벨별 아이콘 테이블. icon[level] = "rbxassetid://..." (1~5)
--- TODO: 각 건물별 레벨별 아이콘 Asset ID 입력. 비어있으면 표시 안 됨.
+--
+-- icon: 레벨별 아이콘 테이블 { [level] = "rbxassetid://..." }
+--   레벨 1~5까지 각각 다른 아이콘 지정 가능.
+--   비어있는 레벨은 가까운 레벨 아이콘으로 자동 폴백 (Constants.getBuildingIcon 참고).
+--
+-- 작성 예시 (Mine 참고):
+--   Mine = { ...,
+--     icon = {
+--       [1] = "rbxassetid://1234567890",  -- Lv.1 외형
+--       [2] = "rbxassetid://1234567891",  -- Lv.2 외형
+--       [3] = "rbxassetid://1234567892",  -- Lv.3 외형 (생략 시 Lv.2로 폴백)
+--       [4] = "",                          -- 비워두면 Lv.3으로 폴백
+--       [5] = "rbxassetid://1234567893",  -- Lv.5 (최대 레벨)
+--     },
+--   }
+--
+-- 사용법: Constants.getBuildingIcon("Mine", 3) → 해당 레벨 아이콘 반환
 local function emptyIcons()
 	return { [1] = "", [2] = "", [3] = "", [4] = "", [5] = "" }
 end
 Constants.BUILDINGS = {
 	ClockTower   = { name = "Clock Tower",       types = {"Decoration"}, rarity = "Common",    collisionSize = Vector3.new(6, 10, 6), icon = emptyIcons() },
 	Farm         = { name = "Farm",              types = {"Work"},       rarity = "Common",    collisionSize = Vector3.new(6, 3, 6), workTypes = {"Farming"}, icon = emptyIcons() },
-	Mine         = { name = "Mine",              types = {"Work"},       rarity = "Common",    collisionSize = Vector3.new(6, 4, 6), workTypes = {"Mining"}, icon = emptyIcons() },
+	-- 예시: Mine은 레벨별로 아이콘이 다르게 지정됨 (실제 Asset ID로 교체 필요)
+	Mine         = { name = "Mine",              types = {"Work"},       rarity = "Common",    collisionSize = Vector3.new(6, 4, 6), workTypes = {"Mining"},
+		icon = {
+			[1] = "rbxassetid://0", -- TODO: Lv.1 채굴 곡괭이 아이콘
+			[2] = "rbxassetid://0", -- TODO: Lv.2
+			[3] = "rbxassetid://0", -- TODO: Lv.3
+			[4] = "rbxassetid://0", -- TODO: Lv.4
+			[5] = "rbxassetid://0", -- TODO: Lv.5 (최대)
+		},
+	},
 	Campfire     = { name = "Campfire",          types = {"Rest"},       rarity = "Rare",      collisionSize = Vector3.new(4, 3, 4), icon = emptyIcons() },
 	PotionCafe   = { name = "Potion Cafe",       types = {"Rest"},       rarity = "Epic",      collisionSize = Vector3.new(6, 5, 6), icon = emptyIcons() },
 	HotSpring    = { name = "Hot Spring",        types = {"Rest"},       rarity = "Legendary", collisionSize = Vector3.new(8, 2, 8), icon = emptyIcons() },
