@@ -158,39 +158,47 @@ local function createPetModel(petData, position: Vector3): BasePart
 		pet.Shape = Enum.PartType.Ball
 	end
 
-	-- Model이면 mainPart 찾기 + 바운딩박스 중심 기준으로 모델 재정렬
+	-- Model이면 mainPart 찾기 + 모든 파트 weld
 	local mainPart
 	if pet:IsA("Model") then
-		-- 1. 모델 일단 부모 임시 설정 (BoundingBox 계산용)
-		local tempParent = pet.Parent
-		pet.Parent = workspace
-
-		-- 2. 바운딩박스 중심에 가장 가까운 BasePart를 mainPart로 선택 (없으면 PrimaryPart, 첫 BasePart)
-		local bboxCFrame, _ = pet:GetBoundingBox()
-		local bboxCenter = bboxCFrame.Position
-		local bestPart = pet.PrimaryPart
-		local bestDist = bestPart and (bestPart.Position - bboxCenter).Magnitude or math.huge
+		-- 1. 직접 BasePart들로부터 평균 위치 계산 (모델 중심 추정)
+		local sum = Vector3.zero
+		local count = 0
+		local firstPart
 		for _, desc in pet:GetDescendants() do
 			if desc:IsA("BasePart") then
-				local d = (desc.Position - bboxCenter).Magnitude
-				if d < bestDist then
-					bestDist = d
-					bestPart = desc
-				end
+				sum = sum + desc.Position
+				count = count + 1
+				if not firstPart then firstPart = desc end
 			end
 		end
-		mainPart = bestPart
-		if mainPart then
-			pet.PrimaryPart = mainPart -- 바운딩박스 중심에 가장 가까운 파트를 Pivot으로
+
+		if count > 0 then
+			local center = sum / count
+			-- 중심에 가장 가까운 BasePart를 mainPart로
+			local bestDist = math.huge
+			for _, desc in pet:GetDescendants() do
+				if desc:IsA("BasePart") then
+					local d = (desc.Position - center).Magnitude
+					if d < bestDist then
+						bestDist = d
+						mainPart = desc
+					end
+				end
+			end
+			-- PrimaryPart 보장 (PivotTo가 mainPart 기준으로 동작)
+			if mainPart then
+				pet.PrimaryPart = mainPart
+			end
 		end
 
-		pet.Parent = tempParent
+		mainPart = mainPart or pet.PrimaryPart or firstPart
 
 		if mainPart then
-			-- 3. 모델을 (0,0,0)으로 이동시켜 절대 좌표 정규화
-			pet:PivotTo(CFrame.new(0, 0, 0))
+			-- 2. 최종 위치로 이동 (PrimaryPart가 중심이라 모델 전체가 중앙에 모임)
+			pet:PivotTo(CFrame.new(position + Vector3.new(0, PetCfg.PET_HEIGHT, 0)))
 
-			-- 4. 모든 파트 weld + Anchored 처리
+			-- 3. 모든 파트 weld + Anchored 처리
 			for _, desc in pet:GetDescendants() do
 				if desc:IsA("BasePart") then
 					desc.CanCollide = false
@@ -210,12 +218,8 @@ local function createPetModel(petData, position: Vector3): BasePart
 			end
 			mainPart.Anchored = true
 
-			-- 5. 최종 위치로 이동
-			pet:PivotTo(CFrame.new(position + Vector3.new(0, PetCfg.PET_HEIGHT, 0)))
-
 			mainPart:SetAttribute("PetId", petData.petId)
 			pet.Name = "Pet_" .. petData.petId
-			pet.Parent = nil
 			petData._petModel = pet
 		end
 	end
