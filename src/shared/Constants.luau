@@ -55,29 +55,117 @@ Constants.RARITY_COLORS = {
 --   }
 --
 -- 사용법: Constants.getBuildingIcon("Mine", 3) → 해당 레벨 아이콘 반환
-local function emptyIcons()
-	return { [1] = "", [2] = "", [3] = "", [4] = "", [5] = "" }
-end
 Constants.BUILDINGS = {
-	ClockTower   = { name = "Clock Tower",       types = {"Decoration"}, rarity = "Common",    collisionSize = Vector3.new(6, 10, 6), icon = emptyIcons() },
-	Farm         = { name = "Farm",              types = {"Work"},       rarity = "Common",    collisionSize = Vector3.new(6, 3, 6), workTypes = {"Farming"}, icon = emptyIcons() },
-	-- 예시: Mine은 레벨별로 아이콘이 다르게 지정됨 (실제 Asset ID로 교체 필요)
-	Mine         = { name = "Mine",              types = {"Work"},       rarity = "Common",    collisionSize = Vector3.new(6, 4, 6), workTypes = {"Mining"},
+	ClockTower = {
+		name = "Clock Tower", types = {"Decoration"}, rarity = "Common",
+		collisionSize = Vector3.new(6, 10, 6),
 		icon = {
-			[1] = "rbxassetid://0", -- TODO: Lv.1 채굴 곡괭이 아이콘
-			[2] = "rbxassetid://0", -- TODO: Lv.2
-			[3] = "rbxassetid://0", -- TODO: Lv.3
-			[4] = "rbxassetid://0", -- TODO: Lv.4
-			[5] = "rbxassetid://0", -- TODO: Lv.5 (최대)
+			[1] = "rbxassetid://0", -- TODO: ClockTower Lv.1
+			[2] = "rbxassetid://0", -- TODO: ClockTower Lv.2
+			[3] = "rbxassetid://0", -- TODO: ClockTower Lv.3
+			[4] = "rbxassetid://0", -- TODO: ClockTower Lv.4
+			[5] = "rbxassetid://0", -- TODO: ClockTower Lv.5
 		},
 	},
-	Campfire     = { name = "Campfire",          types = {"Rest"},       rarity = "Rare",      collisionSize = Vector3.new(4, 3, 4), icon = emptyIcons() },
-	PotionCafe   = { name = "Potion Cafe",       types = {"Rest"},       rarity = "Epic",      collisionSize = Vector3.new(6, 5, 6), icon = emptyIcons() },
-	HotSpring    = { name = "Hot Spring",        types = {"Rest"},       rarity = "Legendary", collisionSize = Vector3.new(8, 2, 8), icon = emptyIcons() },
-	TreeOfGrowth = { name = "Tree of Growth",    types = {"Rest"},       rarity = "Mythic",    collisionSize = Vector3.new(6, 12, 6), icon = emptyIcons() },
-	AltarOfBlessing = { name = "Altar of Blessing", types = {"Rest"},    rarity = "Mythic",    collisionSize = Vector3.new(8, 6, 8), icon = emptyIcons() },
-	GiantFurnace = { name = "Giant Furnace",     types = {"Support"},    rarity = "Epic",      collisionSize = Vector3.new(8, 8, 8), icon = emptyIcons() },
-	Laboratory   = { name = "Laboratory",        types = {"Support"},    rarity = "Legendary", collisionSize = Vector3.new(8, 8, 8), icon = emptyIcons() },
+	Farm = {
+		name = "Farm", types = {"Work"}, rarity = "Common",
+		collisionSize = Vector3.new(6, 3, 6), workTypes = {"Farming"},
+		icon = {
+			[1] = "rbxassetid://0", -- TODO: Farm Lv.1
+			[2] = "rbxassetid://0", -- TODO: Farm Lv.2
+			[3] = "rbxassetid://0", -- TODO: Farm Lv.3
+			[4] = "rbxassetid://0", -- TODO: Farm Lv.4
+			[5] = "rbxassetid://0", -- TODO: Farm Lv.5
+		},
+	},
+	Mine = {
+		name = "Mine", types = {"Work"}, rarity = "Common",
+		collisionSize = Vector3.new(6, 4, 6), workTypes = {"Mining"},
+		icon = {
+			[1] = "rbxassetid://0", -- TODO: Mine Lv.1
+			[2] = "rbxassetid://0", -- TODO: Mine Lv.2
+			[3] = "rbxassetid://0", -- TODO: Mine Lv.3
+			[4] = "rbxassetid://0", -- TODO: Mine Lv.4
+			[5] = "rbxassetid://0", -- TODO: Mine Lv.5
+		},
+	},
+	Campfire = {
+		name = "Campfire", types = {"Rest"}, rarity = "Rare",
+		collisionSize = Vector3.new(4, 3, 4),
+		icon = {
+			[1] = "rbxassetid://0", -- TODO: Campfire Lv.1
+			[2] = "rbxassetid://0", -- TODO: Campfire Lv.2
+			[3] = "rbxassetid://0", -- TODO: Campfire Lv.3
+			[4] = "rbxassetid://0", -- TODO: Campfire Lv.4
+			[5] = "rbxassetid://0", -- TODO: Campfire Lv.5
+		},
+	},
+	PotionCafe = {
+		name = "Potion Cafe", types = {"Rest"}, rarity = "Epic",
+		collisionSize = Vector3.new(6, 5, 6),
+		icon = {
+			[1] = "rbxassetid://0", -- TODO: PotionCafe Lv.1
+			[2] = "rbxassetid://0", -- TODO: PotionCafe Lv.2
+			[3] = "rbxassetid://0", -- TODO: PotionCafe Lv.3
+			[4] = "rbxassetid://0", -- TODO: PotionCafe Lv.4
+			[5] = "rbxassetid://0", -- TODO: PotionCafe Lv.5
+		},
+	},
+	HotSpring = {
+		name = "Hot Spring", types = {"Rest"}, rarity = "Legendary",
+		collisionSize = Vector3.new(8, 2, 8),
+		icon = {
+			[1] = "rbxassetid://0", -- TODO: HotSpring Lv.1
+			[2] = "rbxassetid://0", -- TODO: HotSpring Lv.2
+			[3] = "rbxassetid://0", -- TODO: HotSpring Lv.3
+			[4] = "rbxassetid://0", -- TODO: HotSpring Lv.4
+			[5] = "rbxassetid://0", -- TODO: HotSpring Lv.5
+		},
+	},
+	TreeOfGrowth = {
+		name = "Tree of Growth", types = {"Rest"}, rarity = "Mythic",
+		collisionSize = Vector3.new(6, 12, 6),
+		icon = {
+			[1] = "rbxassetid://0", -- TODO: TreeOfGrowth Lv.1
+			[2] = "rbxassetid://0", -- TODO: TreeOfGrowth Lv.2
+			[3] = "rbxassetid://0", -- TODO: TreeOfGrowth Lv.3
+			[4] = "rbxassetid://0", -- TODO: TreeOfGrowth Lv.4
+			[5] = "rbxassetid://0", -- TODO: TreeOfGrowth Lv.5
+		},
+	},
+	AltarOfBlessing = {
+		name = "Altar of Blessing", types = {"Rest"}, rarity = "Mythic",
+		collisionSize = Vector3.new(8, 6, 8),
+		icon = {
+			[1] = "rbxassetid://0", -- TODO: AltarOfBlessing Lv.1
+			[2] = "rbxassetid://0", -- TODO: AltarOfBlessing Lv.2
+			[3] = "rbxassetid://0", -- TODO: AltarOfBlessing Lv.3
+			[4] = "rbxassetid://0", -- TODO: AltarOfBlessing Lv.4
+			[5] = "rbxassetid://0", -- TODO: AltarOfBlessing Lv.5
+		},
+	},
+	GiantFurnace = {
+		name = "Giant Furnace", types = {"Support"}, rarity = "Epic",
+		collisionSize = Vector3.new(8, 8, 8),
+		icon = {
+			[1] = "rbxassetid://0", -- TODO: GiantFurnace Lv.1
+			[2] = "rbxassetid://0", -- TODO: GiantFurnace Lv.2
+			[3] = "rbxassetid://0", -- TODO: GiantFurnace Lv.3
+			[4] = "rbxassetid://0", -- TODO: GiantFurnace Lv.4
+			[5] = "rbxassetid://0", -- TODO: GiantFurnace Lv.5
+		},
+	},
+	Laboratory = {
+		name = "Laboratory", types = {"Support"}, rarity = "Legendary",
+		collisionSize = Vector3.new(8, 8, 8),
+		icon = {
+			[1] = "rbxassetid://0", -- TODO: Laboratory Lv.1
+			[2] = "rbxassetid://0", -- TODO: Laboratory Lv.2
+			[3] = "rbxassetid://0", -- TODO: Laboratory Lv.3
+			[4] = "rbxassetid://0", -- TODO: Laboratory Lv.4
+			[5] = "rbxassetid://0", -- TODO: Laboratory Lv.5
+		},
+	},
 }
 
 -- 레벨별 아이콘 조회 헬퍼. 해당 레벨 비어있으면 가까운 레벨로 폴백.
