@@ -38,20 +38,47 @@ Constants.RARITY_COLORS = {
 
 -- 건물 카탈로그
 -- collisionSize: 충돌 판정용 고정 사이즈 (모델 실제 크기와 무관, 레벨 변경에도 불변)
--- icon: 빌드모드 인벤토리 아이콘 이미지 (rbxassetid://숫자)
--- TODO: 각 건물별 아이콘 이미지 Asset ID를 icon 필드에 입력해주세요
+-- icon: 레벨별 아이콘 테이블. icon[level] = "rbxassetid://..." (1~5)
+-- TODO: 각 건물별 레벨별 아이콘 Asset ID 입력. 비어있으면 표시 안 됨.
+local function emptyIcons()
+	return { [1] = "", [2] = "", [3] = "", [4] = "", [5] = "" }
+end
 Constants.BUILDINGS = {
-	ClockTower   = { name = "Clock Tower",       types = {"Decoration"}, rarity = "Common",    collisionSize = Vector3.new(6, 10, 6), icon = "" },
-	Farm         = { name = "Farm",              types = {"Work"},       rarity = "Common",    collisionSize = Vector3.new(6, 3, 6), workTypes = {"Farming"}, icon = "" },
-	Mine         = { name = "Mine",              types = {"Work"},       rarity = "Common",    collisionSize = Vector3.new(6, 4, 6), workTypes = {"Mining"}, icon = "" },
-	Campfire     = { name = "Campfire",          types = {"Rest"},       rarity = "Rare",      collisionSize = Vector3.new(4, 3, 4), icon = "" },
-	PotionCafe   = { name = "Potion Cafe",       types = {"Rest"},       rarity = "Epic",      collisionSize = Vector3.new(6, 5, 6), icon = "" },
-	HotSpring    = { name = "Hot Spring",        types = {"Rest"},       rarity = "Legendary", collisionSize = Vector3.new(8, 2, 8), icon = "" },
-	TreeOfGrowth = { name = "Tree of Growth",    types = {"Rest"},       rarity = "Mythic",    collisionSize = Vector3.new(6, 12, 6), icon = "" },
-	AltarOfBlessing = { name = "Altar of Blessing", types = {"Rest"},    rarity = "Mythic",    collisionSize = Vector3.new(8, 6, 8), icon = "" },
-	GiantFurnace = { name = "Giant Furnace",     types = {"Support"},    rarity = "Epic",      collisionSize = Vector3.new(8, 8, 8), icon = "" },
-	Laboratory   = { name = "Laboratory",        types = {"Support"},    rarity = "Legendary", collisionSize = Vector3.new(8, 8, 8), icon = "" },
+	ClockTower   = { name = "Clock Tower",       types = {"Decoration"}, rarity = "Common",    collisionSize = Vector3.new(6, 10, 6), icon = emptyIcons() },
+	Farm         = { name = "Farm",              types = {"Work"},       rarity = "Common",    collisionSize = Vector3.new(6, 3, 6), workTypes = {"Farming"}, icon = emptyIcons() },
+	Mine         = { name = "Mine",              types = {"Work"},       rarity = "Common",    collisionSize = Vector3.new(6, 4, 6), workTypes = {"Mining"}, icon = emptyIcons() },
+	Campfire     = { name = "Campfire",          types = {"Rest"},       rarity = "Rare",      collisionSize = Vector3.new(4, 3, 4), icon = emptyIcons() },
+	PotionCafe   = { name = "Potion Cafe",       types = {"Rest"},       rarity = "Epic",      collisionSize = Vector3.new(6, 5, 6), icon = emptyIcons() },
+	HotSpring    = { name = "Hot Spring",        types = {"Rest"},       rarity = "Legendary", collisionSize = Vector3.new(8, 2, 8), icon = emptyIcons() },
+	TreeOfGrowth = { name = "Tree of Growth",    types = {"Rest"},       rarity = "Mythic",    collisionSize = Vector3.new(6, 12, 6), icon = emptyIcons() },
+	AltarOfBlessing = { name = "Altar of Blessing", types = {"Rest"},    rarity = "Mythic",    collisionSize = Vector3.new(8, 6, 8), icon = emptyIcons() },
+	GiantFurnace = { name = "Giant Furnace",     types = {"Support"},    rarity = "Epic",      collisionSize = Vector3.new(8, 8, 8), icon = emptyIcons() },
+	Laboratory   = { name = "Laboratory",        types = {"Support"},    rarity = "Legendary", collisionSize = Vector3.new(8, 8, 8), icon = emptyIcons() },
 }
+
+-- 레벨별 아이콘 조회 헬퍼. 해당 레벨 비어있으면 가까운 레벨로 폴백.
+function Constants.getBuildingIcon(itemName: string, level: number?): string
+	local info = Constants.BUILDINGS[itemName]
+	if not info or typeof(info.icon) ~= "table" then return "" end
+	level = level or 1
+	-- 정확한 레벨
+	if info.icon[level] and info.icon[level] ~= "" then
+		return info.icon[level]
+	end
+	-- 가까운 낮은 레벨로 폴백
+	for l = level, 1, -1 do
+		if info.icon[l] and info.icon[l] ~= "" then
+			return info.icon[l]
+		end
+	end
+	-- 그 다음 높은 레벨로 폴백
+	for l = level + 1, 5 do
+		if info.icon[l] and info.icon[l] ~= "" then
+			return info.icon[l]
+		end
+	end
+	return ""
+end
 
 -- 펫 유형
 Constants.PetType = {

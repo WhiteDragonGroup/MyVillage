@@ -179,10 +179,13 @@ function InventoryUI._renderSlots()
 			levelText.Text = "Lv." .. (item.level or 1)
 		end
 
-		-- Icon 이미지 업데이트 (icon 필드가 있고 비어있지 않으면 적용)
+		-- Icon 이미지 업데이트 (레벨별 아이콘)
 		local iconLabel = slot:FindFirstChild("Icon")
-		if iconLabel and building and building.icon and building.icon ~= "" then
-			iconLabel.Image = building.icon
+		if iconLabel and building then
+			local iconId = Constants.getBuildingIcon(item.itemName, item.level or 1)
+			if iconId ~= "" then
+				iconLabel.Image = iconId
+			end
 		end
 
 		-- Count 표시 (2개 이상일 때)
