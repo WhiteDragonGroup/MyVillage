@@ -173,9 +173,12 @@ local function createPetModel(petData, position: Vector3): BasePart
 			end
 		end
 
-		if count > 0 then
+		-- 원본 모델의 PrimaryPart가 있으면 그대로 사용 (디자이너가 설정한 회전 보존)
+		if pet.PrimaryPart then
+			mainPart = pet.PrimaryPart
+		elseif count > 0 then
+			-- PrimaryPart 미설정 시에만 바운딩박스 중심에 가까운 파트 자동 선택
 			local center = sum / count
-			-- 중심에 가장 가까운 BasePart를 mainPart로
 			local bestDist = math.huge
 			for _, desc in pet:GetDescendants() do
 				if desc:IsA("BasePart") then
@@ -186,13 +189,12 @@ local function createPetModel(petData, position: Vector3): BasePart
 					end
 				end
 			end
-			-- PrimaryPart 보장 (PivotTo가 mainPart 기준으로 동작)
 			if mainPart then
 				pet.PrimaryPart = mainPart
 			end
 		end
 
-		mainPart = mainPart or pet.PrimaryPart or firstPart
+		mainPart = mainPart or firstPart
 
 		if mainPart then
 			-- 2. 최종 위치로 이동 (PrimaryPart가 중심이라 모델 전체가 중앙에 모임)
