@@ -152,15 +152,24 @@ local _heldPets = {}
 holdPetEvent.OnServerEvent:Connect(function(player, petId)
 	if typeof(petId) ~= "string" then return end
 
-	-- Already holding a pet? Drop it first
-	if _heldPets[player] then
-		local held = _heldPets[player]
-		if held.tool and held.tool.Parent then
-			held.tool:Destroy()
+	-- 기존 펫 Tool 전부 정리 (Backpack + Character 모두 검사하여 누락 방지)
+	local function cleanupExisting()
+		local containers = { player:FindFirstChild("Backpack"), player.Character }
+		for _, c in containers do
+			if not c then continue end
+			for _, child in c:GetChildren() do
+				if child:IsA("Tool") and child:GetAttribute("PetId") then
+					local oldPetId = child:GetAttribute("PetId")
+					child:Destroy()
+					if oldPetId then
+						PetManager.returnPetToWorld(player, oldPetId)
+					end
+				end
+			end
 		end
-		PetManager.returnPetToWorld(player, held.petId)
 		_heldPets[player] = nil
 	end
+	cleanupExisting()
 
 	local petData = PetManager.getPetData(player, petId)
 	if not petData then
