@@ -148,11 +148,11 @@ Constants.BUILDINGS = {
 		name = "Giant Furnace", types = {"Support"}, rarity = "Epic",
 		collisionSize = Vector3.new(8, 8, 8),
 		icon = {
-			[1] = "rbxassetid://0", -- TODO: GiantFurnace Lv.1
-			[2] = "rbxassetid://0", -- TODO: GiantFurnace Lv.2
-			[3] = "rbxassetid://0", -- TODO: GiantFurnace Lv.3
-			[4] = "rbxassetid://0", -- TODO: GiantFurnace Lv.4
-			[5] = "rbxassetid://0", -- TODO: GiantFurnace Lv.5
+			[1] = "rbxassetid://110584518800321",
+			[2] = "rbxassetid://139760238450829",
+			[3] = "rbxassetid://116390245039685",
+			[4] = "rbxassetid://92608256457868",
+			[5] = "rbxassetid://72795129899691",
 		},
 	},
 	Laboratory = {
