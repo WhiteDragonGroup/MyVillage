@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
+local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
 local BuffCfg = BalanceConfig.Buff
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -117,13 +118,15 @@ local function createSlot(buffId: string): typeof(_slots[""])
 	hCorner.CornerRadius = UDim.new(0, 6)
 	hCorner.Parent = iconHolder
 
+	-- 아이콘은 Constants.BUFF_ICONS 단일 소스에서 우선 조회 (BuffConfig.icon 폴백)
+	local iconId = (Constants.BUFF_ICONS and Constants.BUFF_ICONS[buffId]) or cfg.icon or ""
 	local icon: ImageLabel? = nil
-	if cfg.icon and cfg.icon ~= "" then
+	if iconId ~= "" then
 		icon = Instance.new("ImageLabel")
 		icon.Size = UDim2.new(1, -4, 1, -4)
 		icon.Position = UDim2.new(0, 2, 0, 2)
 		icon.BackgroundTransparency = 1
-		icon.Image = cfg.icon
+		icon.Image = iconId
 		icon.Parent = iconHolder
 	end
 

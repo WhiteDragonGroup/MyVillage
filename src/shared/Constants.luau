@@ -330,22 +330,24 @@ Constants.BUFF_COLORS = {
 }
 
 -- ============================================================
--- BUFF ICONS: Replace "" with "rbxassetid://NUMBER"
+-- BUFF ICONS: 버프 아이콘의 단일 소스 - 여기서 수정하면 BuffUI에 자동 반영됨
+-- 형식: "rbxassetid://숫자" (Roblox Asset ID)
 -- ============================================================
 Constants.BUFF_ICONS = {
-	Vitality = "",
-	Haste = "",
-	Blessing = "",
-	Fortune = "",
-	Satiation = "",
-	Energy = "",
-	Serenity = "",
-	AllysEncouragement = "",
-	GhostsSong = "",
-	Charge = "",
-	DemonicPower = "",
-	DragonsPower = "",
-	BurningHeart = "",
+	Vitality           = "rbxassetid://7332675943101",
+	Haste              = "rbxassetid://7359965909027",
+	Blessing           = "rbxassetid://75207170833091",
+	Fortune            = "rbxassetid://7196659985405",
+	Satiation          = "rbxassetid://9433611845158",
+	Energy             = "rbxassetid://1318945478220",
+	Serenity           = "rbxassetid://7480292072562",
+	AllyEncouragement  = "rbxassetid://10535369273907",
+	AllysEncouragement = "rbxassetid://10535369273907", -- 대체 키 (호환)
+	GhostsSong         = "rbxassetid://7359965909027",
+	Charge             = "rbxassetid://7280996972142",
+	DemonicPower       = "rbxassetid://11860226787052",
+	DragonsPower       = "rbxassetid://7350697566332",
+	BurningHeart       = "rbxassetid://11168226756916",
 }
 
 -- Legacy compatibility (old mutation references)
