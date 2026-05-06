@@ -254,12 +254,15 @@ local function restoreBuildings(player, plot, savedBuildings: { any })
 			end
 		end
 
-		-- 레벨별 외형 적용 (모델 스왑이 아닌 경우만)
-		if not useModel and level > 1 then
-			UpgradeManager.applyVisualUpgrade(mainPart, level)
+		-- 레벨별 외형 적용 (모델 스왑은 새 mainPart 반환)
+		if level > 1 then
+			local newPart = UpgradeManager.applyVisualUpgrade(mainPart, level)
+			if newPart and newPart.Parent then
+				mainPart = newPart -- 스왑된 새 파트 참조
+			end
 		end
 
-		-- 업그레이드 진행중이었으면 루프 재시작
+		-- 업그레이드 진행중이었으면 루프 재시작 (스왑된 새 파트 기준)
 		if bData.upgradeState == Constants.UpgradeState.Upgrading then
 			UpgradeManager._startProgressLoop(player, mainPart, buildingId)
 		end
