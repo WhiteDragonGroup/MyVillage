@@ -54,6 +54,26 @@ function PetDetailUI.init(callbacks: { onHold: ((string) -> ())? }?)
 			end)
 		end
 	end
+
+	-- PickUp 버튼 (PetInfo 프레임 내부) — 펫을 인벤토리로 회수
+	local pickUp = petInfoFrame:FindFirstChild("PickUp")
+	if pickUp then
+		local pickBtn
+		if pickUp:IsA("GuiButton") then
+			pickBtn = pickUp
+		else
+			pickBtn = pickUp:FindFirstChildWhichIsA("TextButton", true)
+				or pickUp:FindFirstChildWhichIsA("ImageButton", true)
+		end
+		if pickBtn then
+			pickBtn.MouseButton1Click:Connect(function()
+				if _currentPetId and _onHold then
+					_onHold(_currentPetId)
+					PetDetailUI.hide()
+				end
+			end)
+		end
+	end
 end
 
 function PetDetailUI.show(petData: { [string]: any })
