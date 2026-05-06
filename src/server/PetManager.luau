@@ -332,14 +332,23 @@ local function findWorkplace(plot, petData): BasePart?
 		if not itemName then continue end
 
 		local buildingInfo = Constants.BUILDINGS[itemName]
-		if not buildingInfo or not buildingInfo.workTypes then continue end
+		if not buildingInfo then continue end
 
-		-- petType 매칭 확인
 		local canWork = false
-		for _, wt in buildingInfo.workTypes do
-			if wt == petTypeKor then
+		-- (1) Farm/Mine 등 workTypes 매칭
+		if buildingInfo.workTypes then
+			for _, wt in buildingInfo.workTypes do
+				if wt == petTypeKor then
+					canWork = true
+					break
+				end
+			end
+		end
+		-- (2) Construction 펫: 업그레이드 중인 모든 건물도 일터로 인정
+		if not canWork and petData.petType == "Construction" then
+			local upState = building:GetAttribute("UpgradeState") or ""
+			if upState == Constants.UpgradeState.Upgrading then
 				canWork = true
-				break
 			end
 		end
 		if not canWork then continue end
@@ -348,6 +357,10 @@ local function findWorkplace(plot, petData): BasePart?
 		local buildingId = building:GetAttribute("BuildingId")
 		local occupants = _workplaceOccupancy[buildingId]
 		if occupants and #occupants >= 1 then continue end
+
+		-- 업그레이드 건물은 이미 다른 펫 배정돼있는지 확인
+		local assignedPetId = building:GetAttribute("AssignedPetId") or ""
+		if assignedPetId ~= "" and assignedPetId ~= petData.petId then continue end
 
 		table.insert(candidates, building)
 	end
@@ -663,6 +676,11 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 				-- 작업 종료 → 점유 해제
 				vacateWorkplace(buildingId, petId)
 				petData.targetBuildingId = ""
+				-- 업그레이드 건물이라면 AssignedPetId 해제 (다른 펫이 이어서 일하도록)
+				if workplace.Parent and (workplace:GetAttribute("AssignedPetId") or "") == petId then
+					workplace:SetAttribute("AssignedPetId", "")
+					petData.assignedBuildingId = ""
+				end
 
 				if not _behaviorLoops[petId] then break end
 
