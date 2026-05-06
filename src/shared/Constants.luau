@@ -93,11 +93,11 @@ Constants.BUILDINGS = {
 		name = "Campfire", types = {"Rest"}, rarity = "Rare",
 		collisionSize = Vector3.new(4, 3, 4),
 		icon = {
-			[1] = "rbxassetid://0", -- TODO: Campfire Lv.1
-			[2] = "rbxassetid://0", -- TODO: Campfire Lv.2
-			[3] = "rbxassetid://0", -- TODO: Campfire Lv.3
-			[4] = "rbxassetid://0", -- TODO: Campfire Lv.4
-			[5] = "rbxassetid://0", -- TODO: Campfire Lv.5
+			[1] = "rbxassetid://97923155957288",
+			[2] = "rbxassetid://101361821820728",
+			[3] = "rbxassetid://128659579964842",
+			[4] = "rbxassetid://122503490972334",
+			[5] = "rbxassetid://103788390244761",
 		},
 	},
 	PotionCafe = {
