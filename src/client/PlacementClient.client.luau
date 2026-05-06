@@ -1734,9 +1734,15 @@ if weatherChangedRemote then
 		MainHUD.updateWeather(weatherType)
 	end)
 end
+-- 즉시 현재 날씨 가져와서 적용 (디자인 디폴트 아이콘 노출 방지)
 task.spawn(function()
-	task.wait(2) -- WeatherVFX 초기화 대기
-	MainHUD.updateWeather(WeatherVFX.getCurrentWeather())
+	local getWeatherFunc = remotes:FindFirstChild("GetWeather")
+	if getWeatherFunc then
+		local ok, weather = pcall(function() return getWeatherFunc:InvokeServer() end)
+		if ok and typeof(weather) == "string" then
+			MainHUD.updateWeather(weather)
+		end
+	end
 end)
 
 ----------------------------------------------------------------
