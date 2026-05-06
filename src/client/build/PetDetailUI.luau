@@ -16,6 +16,7 @@ local petInfoFrame = nil
 local _visible = false
 local _currentPetId = nil
 local _onHold = nil
+local _pickUpFrames = {} -- 표시/숨김 동기화용
 
 function PetDetailUI.init(callbacks: { onHold: ((string) -> ())? }?)
 	_onHold = callbacks and callbacks.onHold or nil
@@ -55,9 +56,19 @@ function PetDetailUI.init(callbacks: { onHold: ((string) -> ())? }?)
 		end
 	end
 
-	-- PickUp 버튼 (PetInfo 프레임 내부) — 펫을 인벤토리로 회수
-	local pickUp = petInfoFrame:FindFirstChild("PickUp")
-	if pickUp then
+	-- PickUp 버튼: PetInfo 내부 + Features 직속 후보 모두 검사
+	local pickUpCandidates = {
+		petInfoFrame:FindFirstChild("PickUp"),
+		featuresGui:FindFirstChild("PickUp"),
+	}
+	for _, pickUp in pickUpCandidates do
+		if not pickUp then continue end
+		-- 초기 숨김 + 추적 등록
+		if pickUp:IsA("GuiObject") then
+			pickUp.Visible = false
+			table.insert(_pickUpFrames, pickUp)
+		end
+		-- 클릭 버튼 연결
 		local pickBtn
 		if pickUp:IsA("GuiButton") then
 			pickBtn = pickUp
@@ -80,6 +91,11 @@ function PetDetailUI.show(petData: { [string]: any })
 	if not petInfoFrame then return end
 	_visible = true
 	_currentPetId = petData.petId
+
+	-- PickUp 버튼 노출
+	for _, f in _pickUpFrames do
+		if f and f.Parent then f.Visible = true end
+	end
 
 	local petInfo = Constants.PETS[petData.petName]
 	local level = petData.level or 1
@@ -325,6 +341,9 @@ function PetDetailUI.hide()
 	_visible = false
 	_currentPetId = nil
 	petInfoFrame.Visible = false
+	for _, f in _pickUpFrames do
+		if f and f.Parent then f.Visible = false end
+	end
 end
 
 function PetDetailUI.isVisible(): boolean
