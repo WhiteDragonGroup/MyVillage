@@ -103,17 +103,10 @@ local function attach(building: BasePart)
 
 	if clone:IsA("Model") then
 		if clone.ScaleTo then clone:ScaleTo(scaleFactor) end
-		-- XZ는 바운딩박스 중심 일치, Y는 바닥 일치 (펜스가 바닥에 서도록)
-		local newCF, newSize = clone:GetBoundingBox()
-		local targetBottom = targetCF.Position.Y - targetSize.Y / 2
-		local newBottom = newCF.Position.Y - newSize.Y / 2
-		local desired = Vector3.new(
-			targetCF.Position.X,
-			targetBottom + newSize.Y / 2,
-			targetCF.Position.Z
-		)
-		local offset = desired - newCF.Position
-		clone:PivotTo(clone:GetPivot() + offset)
+		-- 바운딩박스 중심을 건물 바운딩박스 중심에 일치 + 건물 회전 적용
+		local newCF, _ = clone:GetBoundingBox()
+		local relativePivot = newCF:Inverse() * clone:GetPivot()
+		clone:PivotTo(targetCF * relativePivot)
 	elseif clone:IsA("BasePart") then
 		clone.Size = origSize * scaleFactor
 		clone.CFrame = targetCF
