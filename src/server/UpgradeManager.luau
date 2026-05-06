@@ -133,8 +133,12 @@ end
 -- 진행도 루프 (펫이 배치되어 있을 때만 진행)
 ----------------------------------------------------------------
 function UpgradeManager._startProgressLoop(player: Player, building: BasePart, buildingId: string)
-	if _activeLoops[buildingId] then return end
+	if _activeLoops[buildingId] then
+		print("[UpgradeLoop] " .. buildingId .. " 이미 실행 중")
+		return
+	end
 	_activeLoops[buildingId] = true
+	print("[UpgradeLoop] " .. buildingId .. " 시작")
 
 	task.spawn(function()
 		while _activeLoops[buildingId] do
@@ -142,6 +146,7 @@ function UpgradeManager._startProgressLoop(player: Player, building: BasePart, b
 
 			-- 건물이 아직 존재하는지 확인
 			if not building or not building.Parent then
+				print("[UpgradeLoop] " .. buildingId .. " 건물 사라짐 → 중단")
 				_activeLoops[buildingId] = nil
 				break
 			end
@@ -149,6 +154,7 @@ function UpgradeManager._startProgressLoop(player: Player, building: BasePart, b
 			-- 수리중 상태인지 확인
 			local state = building:GetAttribute("UpgradeState") or ""
 			if state ~= Constants.UpgradeState.Upgrading then
+				print("[UpgradeLoop] " .. buildingId .. " 상태=" .. state .. " → 중단")
 				_activeLoops[buildingId] = nil
 				break
 			end
@@ -186,6 +192,11 @@ function UpgradeManager._startProgressLoop(player: Player, building: BasePart, b
 
 			progress = math.min(requiredWork, progress + increment)
 			building:SetAttribute("UpgradeProgress", progress)
+			-- 진행 진단 (5초 간격)
+			if math.floor(progress) % (math.floor(increment * 5)) < math.floor(increment) then
+				print(string.format("[UpgradeLoop] %s progress=%d/%d (+%d)",
+					buildingId, math.floor(progress), requiredWork, math.floor(increment)))
+			end
 
 			-- 작업량 도달 시 완료
 			if progress >= requiredWork then
