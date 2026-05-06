@@ -104,11 +104,11 @@ Constants.BUILDINGS = {
 		name = "Potion Cafe", types = {"Rest"}, rarity = "Epic",
 		collisionSize = Vector3.new(6, 5, 6),
 		icon = {
-			[1] = "rbxassetid://0", -- TODO: PotionCafe Lv.1
-			[2] = "rbxassetid://0", -- TODO: PotionCafe Lv.2
-			[3] = "rbxassetid://0", -- TODO: PotionCafe Lv.3
-			[4] = "rbxassetid://0", -- TODO: PotionCafe Lv.4
-			[5] = "rbxassetid://0", -- TODO: PotionCafe Lv.5
+			[1] = "rbxassetid://124543854198569",
+			[2] = "rbxassetid://99418700881863",
+			[3] = "rbxassetid://120906391652091",
+			[4] = "rbxassetid://73138275260609",
+			[5] = "rbxassetid://92877579126847",
 		},
 	},
 	HotSpring = {
