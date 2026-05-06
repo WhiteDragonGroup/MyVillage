@@ -9,6 +9,7 @@ local UpgradeVisual = {}
 local _attached: { [BasePart]: Instance } = {}
 local _connections: { [BasePart]: RBXScriptConnection } = {}
 
+local _logged = false
 local function getConstructionTemplate(): Instance?
 	local models = ReplicatedStorage:FindFirstChild("Models")
 	if not models then
@@ -20,13 +21,29 @@ local function getConstructionTemplate(): Instance?
 		warn("[UpgradeVisual] ReplicatedStorage.Models.ConstructionLine 없음")
 		return nil
 	end
-	-- 자식 Model 중 첫 번째 사용 (디자이너가 여러 변형 둠)
+
+	-- 디버그: 첫 호출 시 폴더 구조 출력
+	if not _logged then
+		_logged = true
+		print("[UpgradeVisual] ConstructionLine 폴더 ClassName=" .. folder.ClassName)
+		for i, child in folder:GetChildren() do
+			print("  [" .. i .. "] " .. child.Name .. " (" .. child.ClassName .. ")")
+			if child:IsA("Model") then
+				local cf, sz = child:GetBoundingBox()
+				print("       bbox size=" .. tostring(sz))
+			end
+		end
+	end
+
+	-- folder 자체가 Model이면 folder 사용, 아니면 첫 Model 자식
+	if folder:IsA("Model") then
+		return folder
+	end
 	for _, child in folder:GetChildren() do
 		if child:IsA("Model") then
 			return child
 		end
 	end
-	-- BasePart 폴백
 	local fallback = folder:FindFirstChildWhichIsA("BasePart")
 	if not fallback then
 		warn("[UpgradeVisual] ConstructionLine 안에 Model/BasePart 없음")
