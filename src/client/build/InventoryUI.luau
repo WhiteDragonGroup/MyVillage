@@ -196,7 +196,7 @@ function InventoryUI._renderSlots()
 				countLabel = Instance.new("TextLabel")
 				countLabel.Name = "CountText"
 				countLabel.Size = UDim2.new(0, 28, 0, 18)
-				countLabel.Position = UDim2.new(1, -30, 0, 2)
+				countLabel.Position = UDim2.new(0, 2, 0, 2)
 				countLabel.BackgroundColor3 = Color3.fromRGB(30, 25, 20)
 				countLabel.BackgroundTransparency = 0.3
 				countLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
