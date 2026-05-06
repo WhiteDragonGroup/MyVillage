@@ -107,59 +107,29 @@ function BuildingInfoUI.show(building: BasePart)
 	_currentBuildingId = buildingId
 	_visible = true
 
-	-- Icon: ViewportFrame으로 3D 건물 모델 표시
+	-- Icon: Constants의 레벨별 아이콘 이미지 사용
 	local frameRoot = _frame:FindFirstChild("Frame") or _frame
 	local iconFrame = frameRoot:FindFirstChild("Icon")
 	if iconFrame then
-		if iconFrame:IsA("ImageLabel") then
-			iconFrame.Image = ""
-		end
-
+		-- 기존 ViewportFrame 제거
 		local oldVP = iconFrame:FindFirstChild("_BuildingViewport")
 		if oldVP then oldVP:Destroy() end
 
-		local source = getBuildingModel(building)
-		local clone = source:Clone()
-		-- 앵커 처리
-		if clone:IsA("BasePart") then
-			clone.Anchored = true
+		local iconId = Constants.getBuildingIcon and Constants.getBuildingIcon(itemName, level) or ""
+		if iconFrame:IsA("ImageLabel") or iconFrame:IsA("ImageButton") then
+			iconFrame.Image = iconId
 		else
-			for _, p in clone:GetDescendants() do
-				if p:IsA("BasePart") then
-					p.Anchored = true
-					p.CanCollide = false
-				end
+			-- 일반 Frame이면 자식 ImageLabel 갱신/생성
+			local img = iconFrame:FindFirstChildWhichIsA("ImageLabel")
+			if not img then
+				img = Instance.new("ImageLabel")
+				img.Size = UDim2.new(1, 0, 1, 0)
+				img.BackgroundTransparency = 1
+				img.ScaleType = Enum.ScaleType.Fit
+				img.Parent = iconFrame
 			end
+			img.Image = iconId
 		end
-
-		local vpf = Instance.new("ViewportFrame")
-		vpf.Name = "_BuildingViewport"
-		vpf.Size = UDim2.new(1, 0, 1, 0)
-		vpf.BackgroundTransparency = 1
-		vpf.LightDirection = Vector3.new(-0.4, -1, -0.3).Unit
-		vpf.LightColor = Color3.fromRGB(255, 245, 220)
-		vpf.Ambient = Color3.fromRGB(120, 110, 100)
-		vpf.ZIndex = 2
-		vpf.Parent = iconFrame
-
-		clone.Parent = vpf
-
-		local camera = Instance.new("Camera")
-		vpf.CurrentCamera = camera
-		camera.Parent = vpf
-
-		local cf, size
-		if clone:IsA("Model") then
-			cf, size = clone:GetBoundingBox()
-		else
-			cf = clone.CFrame
-			size = clone.Size
-		end
-		local maxDim = math.max(size.X, size.Y, size.Z)
-		camera.CFrame = CFrame.lookAt(
-			cf.Position + Vector3.new(maxDim * 0.55, maxDim * 0.3, maxDim * 0.85),
-			cf.Position
-		)
 	end
 
 	-- 헤더 텍스트 (이름 + 레벨)
