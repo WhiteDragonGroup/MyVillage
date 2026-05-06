@@ -470,6 +470,11 @@ end
 local function toIdle()
 	setState(BuildState.Idle)
 
+	-- 빌드모드 종료: Backpack UI 복원
+	pcall(function()
+		game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, true)
+	end)
+
 	-- UI 숨기기
 	BuildUI.setBuildMode(false)
 	InventoryUI.hide()
@@ -499,6 +504,26 @@ end
 -- BuildMode 상태로 전환
 local function toBuildMode()
 	setState(BuildState.BuildMode)
+
+	-- 빌드모드 진입: 들고있는 Tool 내려놓기 + 기본 Backpack UI 숨기기
+	pcall(function()
+		game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+	end)
+	do
+		local character = player.Character
+		if character then
+			local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+			if humanoid then humanoid:UnequipTools() end
+			-- 펫 Tool은 서버에 알려 월드로 복귀
+			for _, child in character:GetChildren() do
+				if child:IsA("Tool") and child:GetAttribute("PetId") then
+					local dropEvent = remotes:FindFirstChild("DropPet")
+					if dropEvent then dropEvent:FireServer() end
+					break
+				end
+			end
+		end
+	end
 
 	BuildUI.setBuildMode(true)
 	SelectionUI.hide()
