@@ -2027,6 +2027,18 @@ if buyResultEvent then
 	end)
 end
 
+-- 서버에서 HoldPet 에러 메시지 받으면 표시
+do
+	local holdEvt = remotes:FindFirstChild("HoldPet")
+	if holdEvt then
+		holdEvt.OnClientEvent:Connect(function(eventType, message)
+			if eventType == "error" and typeof(message) == "string" then
+				MainHUD.showMessage(message, 3)
+			end
+		end)
+	end
+end
+
 -- 펫 Hold ProximityPrompt → HoldPet 서버 전송
 local function connectPetHoldPrompt()
 	local evt = remotes:FindFirstChild("PetHoldPrompt")

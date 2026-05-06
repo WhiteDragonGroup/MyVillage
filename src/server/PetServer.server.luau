@@ -168,9 +168,10 @@ holdPetEvent.OnServerEvent:Connect(function(player, petId)
 		return
 	end
 
-	-- Can't hold assigned pets
+	-- Can't hold assigned pets (e.g., 업그레이드/작업 중)
 	if petData.assignedBuildingId and petData.assignedBuildingId ~= "" then
 		warn("[HoldPet] Pet is assigned")
+		holdPetEvent:FireClient(player, "error", "Pet is busy with a building.")
 		return
 	end
 
