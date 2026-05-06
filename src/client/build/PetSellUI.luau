@@ -86,6 +86,76 @@ local function clearSlots()
 	end
 end
 
+local function findPetModelByPetId(petId: string): Instance?
+	local plotsFolder = workspace:FindFirstChild("Plots")
+	if not plotsFolder then return nil end
+	for _, plot in plotsFolder:GetChildren() do
+		for _, desc in plot:GetDescendants() do
+			if desc:GetAttribute("PetId") == petId then
+				local mdl = desc
+				local cur = desc.Parent
+				while cur and cur ~= plot do
+					if cur:IsA("Model") then mdl = cur end
+					cur = cur.Parent
+				end
+				return mdl
+			end
+		end
+	end
+	return nil
+end
+
+local function setPetIcon(slot: GuiObject, pet)
+	local iconHost = findFirst(slot, { "Icon", "PetIcon", "Image" })
+	if not iconHost then return end
+
+	-- 기존 박혀있는 ImageLabel/Image 비우기
+	if iconHost:IsA("ImageLabel") then
+		iconHost.Image = ""
+	end
+	-- 기존 ViewportFrame 제거
+	local oldVP = iconHost:FindFirstChild("_PetSellVP")
+	if oldVP then oldVP:Destroy() end
+	-- 슬롯에 박혀있는 다른 ImageLabel(예: 마녀 박힌)도 숨기기
+	for _, desc in iconHost:GetDescendants() do
+		if desc:IsA("ImageLabel") and desc.Image ~= "" then
+			desc.Image = ""
+		end
+	end
+
+	local model = findPetModelByPetId(pet.petId)
+	if not model or not model:IsA("Model") then return end
+
+	local vpf = Instance.new("ViewportFrame")
+	vpf.Name = "_PetSellVP"
+	vpf.Size = UDim2.new(1, 0, 1, 0)
+	vpf.BackgroundTransparency = 1
+	vpf.LightDirection = Vector3.new(-0.4, -1, -0.3).Unit
+	vpf.Ambient = Color3.fromRGB(160, 160, 160)
+	vpf.ZIndex = 5
+	vpf.Parent = iconHost
+
+	local clone = model:Clone()
+	for _, p in clone:GetDescendants() do
+		if p:IsA("BasePart") then
+			p.Anchored = true
+			p.CanCollide = false
+		end
+	end
+	clone.Parent = vpf
+
+	local camera = Instance.new("Camera")
+	vpf.CurrentCamera = camera
+	camera.Parent = vpf
+
+	local cf, size = clone:GetBoundingBox()
+	local maxDim = math.max(size.X, size.Y, size.Z)
+	camera.CFrame = CFrame.lookAt(
+		cf.Position + Vector3.new(maxDim * 0.6, maxDim * 0.3, maxDim * 0.9),
+		cf.Position
+	)
+end
+
 local function populateSlot(slot: GuiObject, pet, sellPrice: number)
 	local petInfo = Constants.PETS[pet.petName]
 	local displayName = (petInfo and petInfo.name) or pet.petName
@@ -95,6 +165,8 @@ local function populateSlot(slot: GuiObject, pet, sellPrice: number)
 	setText(slot, { "PriceText", "Price", "SellPriceText" }, "$" .. sellPrice)
 	setText(slot, { "LevelText", "Level" }, "Lv." .. (pet.level or 1))
 	setText(slot, { "WeightText", "Weight" }, string.format("%.1fkg", pet.weight or 0))
+
+	setPetIcon(slot, pet)
 
 	-- Sell 버튼: 흔한 이름들 시도
 	local sellBtn = findFirst(slot, { "SellButton", "Sell", "BuyButton", "Buy", "Confirm" })
