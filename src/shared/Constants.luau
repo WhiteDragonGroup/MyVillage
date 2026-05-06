@@ -71,11 +71,11 @@ Constants.BUILDINGS = {
 		name = "Farm", types = {"Work"}, rarity = "Common",
 		collisionSize = Vector3.new(6, 3, 6), workTypes = {"Farming"},
 		icon = {
-			[1] = "rbxassetid://0", -- TODO: Farm Lv.1
-			[2] = "rbxassetid://0", -- TODO: Farm Lv.2
-			[3] = "rbxassetid://0", -- TODO: Farm Lv.3
-			[4] = "rbxassetid://0", -- TODO: Farm Lv.4
-			[5] = "rbxassetid://0", -- TODO: Farm Lv.5
+			[1] = "rbxassetid://129699132906145",
+			[2] = "rbxassetid://114920300255596",
+			[3] = "rbxassetid://72377293468684",
+			[4] = "rbxassetid://88178996668336",
+			[5] = "rbxassetid://132475850358862",
 		},
 	},
 	Mine = {
