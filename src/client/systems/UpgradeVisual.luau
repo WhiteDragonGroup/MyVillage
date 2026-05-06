@@ -84,9 +84,12 @@ local function attach(building: BasePart)
 	if maxOrig <= 0 then maxOrig = 1 end
 	local scaleFactor = (maxTarget / maxOrig) * 1.05
 
-	if clone:IsA("Model") and clone.ScaleTo then
-		clone:ScaleTo(scaleFactor)
-		clone:PivotTo(targetCF)
+	if clone:IsA("Model") then
+		if clone.ScaleTo then clone:ScaleTo(scaleFactor) end
+		-- 바운딩박스 중심을 건물 바운딩박스 중심에 맞춤 (Pivot 위치와 무관)
+		local newCF, _ = clone:GetBoundingBox()
+		local offset = targetCF.Position - newCF.Position
+		clone:PivotTo(clone:GetPivot() + offset)
 	elseif clone:IsA("BasePart") then
 		clone.Size = origSize * scaleFactor
 		clone.CFrame = targetCF
