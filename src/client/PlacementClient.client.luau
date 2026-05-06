@@ -1624,6 +1624,10 @@ end)
 ----------------------------------------------------------------
 
 upgradeStateChangedEvent.OnClientEvent:Connect(function(buildingId, action, data)
+	if action == "error" then
+		MainHUD.showMessage(tostring(data or "Upgrade failed"), 3)
+		return
+	end
 	-- 업그레이드 완료/취소 시 선택 중이면 UI 갱신
 	if currentState == BuildState.Selected and selectedBuilding then
 		if selectedBuilding:GetAttribute("BuildingId") == buildingId then

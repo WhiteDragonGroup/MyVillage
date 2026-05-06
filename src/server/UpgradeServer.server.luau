@@ -59,16 +59,20 @@ end
 ----------------------------------------------------------------
 -- StartUpgrade
 ----------------------------------------------------------------
+local upgradeStateChanged = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("UpgradeStateChanged")
+
 startUpgradeEvent.OnServerEvent:Connect(function(player, buildingId)
 	local plot, building, err = validateRequest(player, buildingId)
 	if not building then
 		warn(player.Name .. " - StartUpgrade failed: " .. (err or ""))
+		upgradeStateChanged:FireClient(player, buildingId or "", "error", err or "Invalid request")
 		return
 	end
 
 	local ok, reason = UpgradeManager.startUpgrade(player, building)
 	if not ok then
 		warn(player.Name .. " - upgrade start failed: " .. (reason or ""))
+		upgradeStateChanged:FireClient(player, buildingId, "error", reason or "Upgrade failed")
 	end
 end)
 
