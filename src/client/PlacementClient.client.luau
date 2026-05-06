@@ -463,6 +463,22 @@ local function toBuildMode()
 	MoveHandleUI.hide()
 	UpgradeUI.hide()
 	PetListUI.hide()
+	-- 건물 상세 페이지도 숨기고 하이라이트 제거 (빌드모드 UI와 중복 방지)
+	if BuildingInfoUI.isVisible() then
+		local prevId = BuildingInfoUI.getCurrentBuildingId()
+		if prevId then
+			local plotsFolder = workspace:FindFirstChild("Plots")
+			if plotsFolder then
+				for _, p in plotsFolder:GetDescendants() do
+					if p:IsA("BasePart") and p:GetAttribute("BuildingId") == prevId then
+						HighlightSystem.removeFrom(p)
+						break
+					end
+				end
+			end
+		end
+		BuildingInfoUI.hide()
+	end
 	DragHandler.stopDrag()
 	removePreview()
 
