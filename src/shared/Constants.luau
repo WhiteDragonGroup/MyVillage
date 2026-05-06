@@ -350,6 +350,16 @@ Constants.BUFF_ICONS = {
 	BurningHeart       = "rbxassetid://116169227576916",
 }
 
+-- ============================================================
+-- WEATHER ICONS: 날씨별 아이콘. 여기 수정하면 UI에 자동 반영
+-- ============================================================
+Constants.WEATHER_ICONS = {
+	Sunny        = "rbxassetid://115846128924753",
+	Rain         = "rbxassetid://88477663323972",
+	Frost        = "rbxassetid://101014378123757",
+	ThunderStorm = "rbxassetid://140556407108794",
+}
+
 -- Legacy compatibility (old mutation references)
 Constants.MutationType = Constants.BuffType
 Constants.MUTATION_NAMES = Constants.BUFF_NAMES

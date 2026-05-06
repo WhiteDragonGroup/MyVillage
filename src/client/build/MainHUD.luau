@@ -9,6 +9,7 @@ local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
+local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -339,10 +340,11 @@ function MainHUD.updateWeather(weatherType: string)
 	local weatherFrame = normalGui:FindFirstChild("Weather")
 	if not weatherFrame then return end
 
-	-- 날씨 아이콘 이미지 변경
+	-- 날씨 아이콘 이미지: Constants.WEATHER_ICONS 우선, 폴백 imageId
+	local iconId = (Constants.WEATHER_ICONS and Constants.WEATHER_ICONS[weatherType]) or info.imageId or ""
 	if weatherFrame:IsA("ImageButton") or weatherFrame:IsA("ImageLabel") then
-		if info.imageId and info.imageId ~= "" then
-			weatherFrame.Image = info.imageId
+		if iconId ~= "" then
+			weatherFrame.Image = iconId
 		end
 	end
 
