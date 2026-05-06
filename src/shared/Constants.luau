@@ -137,11 +137,11 @@ Constants.BUILDINGS = {
 		name = "Altar of Blessing", types = {"Rest"}, rarity = "Mythic",
 		collisionSize = Vector3.new(8, 6, 8),
 		icon = {
-			[1] = "rbxassetid://0", -- TODO: AltarOfBlessing Lv.1
-			[2] = "rbxassetid://0", -- TODO: AltarOfBlessing Lv.2
-			[3] = "rbxassetid://0", -- TODO: AltarOfBlessing Lv.3
-			[4] = "rbxassetid://0", -- TODO: AltarOfBlessing Lv.4
-			[5] = "rbxassetid://0", -- TODO: AltarOfBlessing Lv.5
+			[1] = "rbxassetid://115635936999721",
+			[2] = "rbxassetid://127928185404566",
+			[3] = "rbxassetid://122943042462828",
+			[4] = "rbxassetid://139554868757341",
+			[5] = "rbxassetid://128433042673678",
 		},
 	},
 	GiantFurnace = {
