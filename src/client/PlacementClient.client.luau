@@ -463,6 +463,7 @@ local function toBuildMode()
 	MoveHandleUI.hide()
 	UpgradeUI.hide()
 	PetListUI.hide()
+	if PetDetailUI.isVisible() then PetDetailUI.hide() end
 	-- 건물 상세 페이지도 숨기고 하이라이트 제거 (빌드모드 UI와 중복 방지)
 	if BuildingInfoUI.isVisible() then
 		local prevId = BuildingInfoUI.getCurrentBuildingId()
