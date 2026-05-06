@@ -192,8 +192,8 @@ function BuildingInfoUI.show(building: BasePart)
 			setText(upgradeFrame, { "Cost", "CostText" }, "")
 		else
 			local cost = 0
-			if UpgradeCfg and UpgradeCfg.LEVEL_COSTS then
-				cost = UpgradeCfg.LEVEL_COSTS[level + 1] or 0
+			if UpgradeCfg and UpgradeCfg.COST then
+				cost = UpgradeCfg.COST[level] or 0
 			end
 			setText(upgradeFrame, { "Level", "LevelText" }, string.format("Level %d→%d", level, level + 1))
 			setText(upgradeFrame, { "Cost", "CostText" }, "Cost: $" .. cost)
