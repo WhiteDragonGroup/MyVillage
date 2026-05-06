@@ -82,11 +82,11 @@ Constants.BUILDINGS = {
 		name = "Mine", types = {"Work"}, rarity = "Common",
 		collisionSize = Vector3.new(6, 4, 6), workTypes = {"Mining"},
 		icon = {
-			[1] = "rbxassetid://0", -- TODO: Mine Lv.1
-			[2] = "rbxassetid://0", -- TODO: Mine Lv.2
-			[3] = "rbxassetid://0", -- TODO: Mine Lv.3
-			[4] = "rbxassetid://0", -- TODO: Mine Lv.4
-			[5] = "rbxassetid://0", -- TODO: Mine Lv.5
+			[1] = "rbxassetid://88757013091698",
+			[2] = "rbxassetid://73273000490779",
+			[3] = "rbxassetid://94526620968495",
+			[4] = "rbxassetid://129875650794344",
+			[5] = "rbxassetid://111733804466492",
 		},
 	},
 	Campfire = {
