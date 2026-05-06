@@ -11,9 +11,15 @@ local _connections: { [BasePart]: RBXScriptConnection } = {}
 
 local function getConstructionTemplate(): Instance?
 	local models = ReplicatedStorage:FindFirstChild("Models")
-	if not models then return nil end
+	if not models then
+		warn("[UpgradeVisual] ReplicatedStorage.Models 없음")
+		return nil
+	end
 	local folder = models:FindFirstChild("ConstructionLine")
-	if not folder then return nil end
+	if not folder then
+		warn("[UpgradeVisual] ReplicatedStorage.Models.ConstructionLine 없음")
+		return nil
+	end
 	-- 자식 Model 중 첫 번째 사용 (디자이너가 여러 변형 둠)
 	for _, child in folder:GetChildren() do
 		if child:IsA("Model") then
@@ -21,7 +27,11 @@ local function getConstructionTemplate(): Instance?
 		end
 	end
 	-- BasePart 폴백
-	return folder:FindFirstChildWhichIsA("BasePart")
+	local fallback = folder:FindFirstChildWhichIsA("BasePart")
+	if not fallback then
+		warn("[UpgradeVisual] ConstructionLine 안에 Model/BasePart 없음")
+	end
+	return fallback
 end
 
 local function getBuildingModel(building: BasePart): Instance
@@ -53,6 +63,7 @@ local function attach(building: BasePart)
 
 	local template = getConstructionTemplate()
 	if not template then return end
+	print("[UpgradeVisual] attaching ConstructionLine to " .. (building:GetAttribute("ItemName") or "?"))
 
 	local clone = template:Clone()
 	-- 원본 라인의 바운딩박스
