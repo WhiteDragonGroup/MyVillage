@@ -50,6 +50,8 @@ local ClockTowerVisual = require(clientScript:WaitForChild("systems"):WaitForChi
 ClockTowerVisual.init()
 local WorkBuildingDisplay = require(clientScript:WaitForChild("systems"):WaitForChild("WorkBuildingDisplay"))
 WorkBuildingDisplay.init()
+local UpgradeVisual = require(clientScript:WaitForChild("systems"):WaitForChild("UpgradeVisual"))
+UpgradeVisual.init()
 local BuffUI = require(clientScript:WaitForChild("build"):WaitForChild("BuffUI"))
 BuffUI.init()
 local BuildingInfoUI = require(clientScript:WaitForChild("build"):WaitForChild("BuildingInfoUI"))
