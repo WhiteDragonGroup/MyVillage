@@ -98,6 +98,48 @@ local function closeAllPopups()
 	EggShopUI.hide()
 end
 
+-- 선택된 펫 흰색 하이라이트 (PetDetailUI show/hide에 후크)
+local _selectedPetPart: BasePart? = nil
+local _origPetDetailShow = PetDetailUI.show
+local _origPetDetailHide = PetDetailUI.hide
+
+local function findPetPartByPetId(petId: string): BasePart?
+	local plotsFolder = workspace:FindFirstChild("Plots")
+	if not plotsFolder then return nil end
+	for _, plot in plotsFolder:GetChildren() do
+		for _, desc in plot:GetDescendants() do
+			if desc:IsA("BasePart") and desc:GetAttribute("PetId") == petId then
+				return desc
+			end
+		end
+	end
+	return nil
+end
+
+local function clearSelectedPetHighlight()
+	if _selectedPetPart and _selectedPetPart.Parent then
+		HighlightSystem.removeFrom(_selectedPetPart)
+	end
+	_selectedPetPart = nil
+end
+
+PetDetailUI.show = function(pet)
+	clearSelectedPetHighlight()
+	if pet and pet.petId then
+		local part = findPetPartByPetId(pet.petId)
+		if part then
+			HighlightSystem.applyTo(part, Color3.new(1, 1, 1), 0.7)
+			_selectedPetPart = part
+		end
+	end
+	return _origPetDetailShow(pet)
+end
+
+PetDetailUI.hide = function()
+	clearSelectedPetHighlight()
+	return _origPetDetailHide()
+end
+
 -- NPC interaction distance
 local NPC_MAX_DISTANCE = 15
 
@@ -1261,6 +1303,17 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 					elseif current:GetAttribute("BuildingId") then
 						buildingTarget = current
 						break
+					end
+				elseif current:IsA("Model") then
+					-- 모델 내부에서 BuildingId 가진 mainPart 찾기 (다중 파트 건물)
+					if current:GetAttribute("Owner") == nil and current.Name ~= "Plots" then
+						for _, desc in current:GetDescendants() do
+							if desc:IsA("BasePart") and desc:GetAttribute("BuildingId") then
+								buildingTarget = desc
+								break
+							end
+						end
+						if buildingTarget then break end
 					end
 				end
 				current = current.Parent
