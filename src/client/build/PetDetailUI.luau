@@ -56,10 +56,9 @@ function PetDetailUI.init(callbacks: { onHold: ((string) -> ())? }?)
 		end
 	end
 
-	-- PickUp 버튼: PetInfo 내부 + Features 직속 후보 모두 검사
+	-- PickUp 버튼: PetInfo 내부의 것만 사용 (캐릭터 아래에 표시되는 버튼)
 	local pickUpCandidates = {
 		petInfoFrame:FindFirstChild("PickUp"),
-		featuresGui:FindFirstChild("PickUp"),
 	}
 	for _, pickUp in pickUpCandidates do
 		if not pickUp then continue end
