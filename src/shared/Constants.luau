@@ -115,11 +115,11 @@ Constants.BUILDINGS = {
 		name = "Hot Spring", types = {"Rest"}, rarity = "Legendary",
 		collisionSize = Vector3.new(8, 2, 8),
 		icon = {
-			[1] = "rbxassetid://0", -- TODO: HotSpring Lv.1
-			[2] = "rbxassetid://0", -- TODO: HotSpring Lv.2
-			[3] = "rbxassetid://0", -- TODO: HotSpring Lv.3
-			[4] = "rbxassetid://0", -- TODO: HotSpring Lv.4
-			[5] = "rbxassetid://0", -- TODO: HotSpring Lv.5
+			[1] = "rbxassetid://90241666410858",
+			[2] = "rbxassetid://102498928116182",
+			[3] = "rbxassetid://108418297809383",
+			[4] = "rbxassetid://83431372871833",
+			[5] = "rbxassetid://82970813051544",
 		},
 	},
 	TreeOfGrowth = {
