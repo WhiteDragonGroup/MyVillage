@@ -126,11 +126,11 @@ Constants.BUILDINGS = {
 		name = "Tree of Growth", types = {"Rest"}, rarity = "Mythic",
 		collisionSize = Vector3.new(6, 12, 6),
 		icon = {
-			[1] = "rbxassetid://0", -- TODO: TreeOfGrowth Lv.1
-			[2] = "rbxassetid://0", -- TODO: TreeOfGrowth Lv.2
-			[3] = "rbxassetid://0", -- TODO: TreeOfGrowth Lv.3
-			[4] = "rbxassetid://0", -- TODO: TreeOfGrowth Lv.4
-			[5] = "rbxassetid://0", -- TODO: TreeOfGrowth Lv.5
+			[1] = "rbxassetid://93974551023223",
+			[2] = "rbxassetid://117821154949242",
+			[3] = "rbxassetid://107144772974847",
+			[4] = "rbxassetid://70776738959020",
+			[5] = "rbxassetid://92108535752634",
 		},
 	},
 	AltarOfBlessing = {
