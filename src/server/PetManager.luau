@@ -344,11 +344,22 @@ local function findWorkplace(plot, petData): BasePart?
 				end
 			end
 		end
-		-- (2) Construction 펫: 업그레이드 중인 모든 건물도 일터로 인정
-		if not canWork and petData.petType == "Construction" then
-			local upState = building:GetAttribute("UpgradeState") or ""
-			if upState == Constants.UpgradeState.Upgrading then
-				canWork = true
+		-- (2) Construction 가능 펫: 업그레이드 중 건물 일터로 인정
+		if not canWork then
+			local petCatalog = Constants.PETS[petData.petName]
+			local canConstruct = false
+			if petCatalog and petCatalog.petTypes then
+				for _, pt in petCatalog.petTypes do
+					if pt == "Construction" then canConstruct = true; break end
+				end
+			elseif petData.petType == "Construction" then
+				canConstruct = true
+			end
+			if canConstruct then
+				local upState = building:GetAttribute("UpgradeState") or ""
+				if upState == Constants.UpgradeState.Upgrading then
+					canWork = true
+				end
 			end
 		end
 		if not canWork then continue end
