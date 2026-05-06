@@ -60,11 +60,11 @@ Constants.BUILDINGS = {
 		name = "Clock Tower", types = {"Decoration"}, rarity = "Common",
 		collisionSize = Vector3.new(6, 10, 6),
 		icon = {
-			[1] = "rbxassetid://0", -- TODO: ClockTower Lv.1
-			[2] = "rbxassetid://0", -- TODO: ClockTower Lv.2
-			[3] = "rbxassetid://0", -- TODO: ClockTower Lv.3
-			[4] = "rbxassetid://0", -- TODO: ClockTower Lv.4
-			[5] = "rbxassetid://0", -- TODO: ClockTower Lv.5
+			[1] = "rbxassetid://134614034433306",
+			[2] = "rbxassetid://88746670522861",
+			[3] = "rbxassetid://125385038189366",
+			[4] = "rbxassetid://101916008578099",
+			[5] = "rbxassetid://86122639644015",
 		},
 	},
 	Farm = {
