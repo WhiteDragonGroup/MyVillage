@@ -334,20 +334,20 @@ Constants.BUFF_COLORS = {
 -- 형식: "rbxassetid://숫자" (Roblox Asset ID)
 -- ============================================================
 Constants.BUFF_ICONS = {
-	Vitality           = "rbxassetid://7332675943101",
-	Haste              = "rbxassetid://7359965909027",
+	Vitality           = "rbxassetid://73326759437101",
+	Haste              = "rbxassetid://73599659003999",
 	Blessing           = "rbxassetid://75207170833091",
-	Fortune            = "rbxassetid://7196659985405",
-	Satiation          = "rbxassetid://9433611845158",
-	Energy             = "rbxassetid://1318945478220",
-	Serenity           = "rbxassetid://7480292072562",
-	AllyEncouragement  = "rbxassetid://10535369273907",
-	AllysEncouragement = "rbxassetid://10535369273907", -- 대체 키 (호환)
-	GhostsSong         = "rbxassetid://7359965909027",
-	Charge             = "rbxassetid://7280996972142",
-	DemonicPower       = "rbxassetid://11860226787052",
-	DragonsPower       = "rbxassetid://7350697566332",
-	BurningHeart       = "rbxassetid://11168226756916",
+	Fortune            = "rbxassetid://91966590858565",
+	Satiation          = "rbxassetid://94336118415187",
+	Energy             = "rbxassetid://131094547825254",
+	Serenity           = "rbxassetid://114173008292562",
+	AllysEncouragement = "rbxassetid://105353692737907",
+	AllyEncouragement  = "rbxassetid://105353692737907", -- 대체 키 (BuffConfig 호환)
+	GhostsSong         = "rbxassetid://73599659003999",
+	Charge             = "rbxassetid://102926972827142",
+	DemonicPower       = "rbxassetid://115822186628705",
+	DragonsPower       = "rbxassetid://93002264780015",
+	BurningHeart       = "rbxassetid://116169227576916",
 }
 
 -- Legacy compatibility (old mutation references)
