@@ -207,9 +207,15 @@ Constants.PetState = {
 	Fatigued = "Fatigued",
 	Resting = "Resting",
 	Wandering = "Wandering",
+	SearchingForWork = "SearchingForWork", -- 일터를 못 찾아 돌아다니는 중
 	Chatting = "Chatting",
 	Sleeping = "Sleeping",
 	Assigned = "Assigned",
+}
+
+-- 머리 위 BillboardGui 텍스트 (해당 상태일 때만 표시)
+Constants.PET_STATE_LABELS = {
+	SearchingForWork = "Looking for work...",
 }
 
 -- 펫 사이즈

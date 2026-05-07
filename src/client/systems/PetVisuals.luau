@@ -17,14 +17,15 @@ local _activeVFX = {}    -- { [BasePart]: { [vfxName]: Instance } }
 -- 상태별 표시 설정
 ----------------------------------------------------------------
 local STATUS_MAP = {
-	Working   = { text = "Working",   color = Color3.fromRGB(100, 220, 100) },
-	Fatigued  = { text = "Tired...",  color = Color3.fromRGB(220, 200, 100) },
-	Resting   = { text = "Resting",  color = Color3.fromRGB(100, 180, 255) },
-	Wandering = { text = "Wandering",  color = Color3.fromRGB(180, 180, 180) },
-	Chatting  = { text = "Chatting",  color = Color3.fromRGB(255, 200, 100) },
-	Sleeping  = { text = "Sleeping",  color = Color3.fromRGB(150, 150, 200) },
-	Assigned  = { text = "건설중...", color = Color3.fromRGB(100, 220, 100) },
-	Idle      = { text = "대기중",  color = Color3.fromRGB(180, 180, 180) },
+	Working          = { text = "Working",            color = Color3.fromRGB(100, 220, 100) },
+	Fatigued         = { text = "Tired...",           color = Color3.fromRGB(220, 200, 100) },
+	Resting          = { text = "Resting",            color = Color3.fromRGB(100, 180, 255) },
+	Wandering        = { text = "Wandering",          color = Color3.fromRGB(180, 180, 180) },
+	SearchingForWork = { text = "Looking for work...", color = Color3.fromRGB(255, 180, 80) },
+	Chatting         = { text = "Chatting",           color = Color3.fromRGB(255, 200, 100) },
+	Sleeping         = { text = "Sleeping",           color = Color3.fromRGB(150, 150, 200) },
+	Assigned         = { text = "Building...",        color = Color3.fromRGB(100, 220, 100) },
+	Idle             = { text = "Idle",               color = Color3.fromRGB(180, 180, 180) },
 }
 
 ----------------------------------------------------------------

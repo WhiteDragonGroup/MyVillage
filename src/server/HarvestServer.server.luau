@@ -52,7 +52,7 @@ local function attachTouchHandler(building: BasePart)
 	if building:GetAttribute("_HarvestWired") then return end
 	building:SetAttribute("_HarvestWired", true)
 
-	building.Touched:Connect(function(otherPart)
+	local function onTouched(otherPart)
 		local character = otherPart and otherPart.Parent
 		if not character then return end
 		local humanoid = character:FindFirstChildWhichIsA("Humanoid")
@@ -60,7 +60,23 @@ local function attachTouchHandler(building: BasePart)
 		local player = Players:GetPlayerFromCharacter(character)
 		if not player then return end
 		tryHarvest(player, building)
-	end)
+	end
+
+	-- mainPart 본인 + 같은 모델의 모든 파트에 Touched 부착
+	building.Touched:Connect(onTouched)
+	local model = building:FindFirstAncestorWhichIsA("Model")
+	if model then
+		for _, part in model:GetDescendants() do
+			if part:IsA("BasePart") and part ~= building and not part:GetAttribute("IsCollisionBox") then
+				part.Touched:Connect(onTouched)
+			end
+		end
+		model.DescendantAdded:Connect(function(d)
+			if d:IsA("BasePart") and not d:GetAttribute("IsCollisionBox") then
+				d.Touched:Connect(onTouched)
+			end
+		end)
+	end
 end
 
 local function scanBuildings()

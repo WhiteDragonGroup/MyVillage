@@ -146,39 +146,27 @@ if not dropPetEvent then
 	dropPetEvent.Parent = remotes
 end
 
--- Track held pets: { [Player] = { petId, tool } }
-local _heldPets = {}
+-- 펫 Tool은 Backpack/Character의 PetId 속성으로 식별 (별도 레지스트리 없음)
+local function findPetTool(player: Player, petId: string): Tool?
+	local containers = { player:FindFirstChild("Backpack"), player.Character }
+	for _, c in containers do
+		if not c then continue end
+		for _, child in c:GetChildren() do
+			if child:IsA("Tool") and child:GetAttribute("PetId") == petId then
+				return child
+			end
+		end
+	end
+	return nil
+end
 
 holdPetEvent.OnServerEvent:Connect(function(player, petId)
 	if typeof(petId) ~= "string" then return end
 
-	-- 이미 같은 펫을 들고 있으면 무시 (재생성 사이클로 인한 복제 방지)
-	if _heldPets[player] and _heldPets[player].petId == petId then
-		local existingTool = _heldPets[player].tool
-		if existingTool and existingTool.Parent then
-			return
-		end
+	-- 이미 같은 펫 Tool이 있으면 무시 (다른 펫 Tool들은 그대로 유지)
+	if findPetTool(player, petId) then
+		return
 	end
-
-	-- 기존 펫 Tool 전부 정리 (Backpack + Character 모두 검사하여 누락 방지)
-	-- _heldPets를 먼저 비워서 Tool destroy → AncestryChanged 리스너가 returnPetToWorld 이중 호출하는 것 방지
-	local function cleanupExisting()
-		_heldPets[player] = nil
-		local containers = { player:FindFirstChild("Backpack"), player.Character }
-		for _, c in containers do
-			if not c then continue end
-			for _, child in c:GetChildren() do
-				if child:IsA("Tool") and child:GetAttribute("PetId") then
-					local oldPetId = child:GetAttribute("PetId")
-					child:Destroy()
-					if oldPetId then
-						PetManager.returnPetToWorld(player, oldPetId)
-					end
-				end
-			end
-		end
-	end
-	cleanupExisting()
 
 	local petData = PetManager.getPetData(player, petId)
 	if not petData then
@@ -265,59 +253,61 @@ holdPetEvent.OnServerEvent:Connect(function(player, petId)
 	tool:SetAttribute("PetName", petData.petName)
 	tool.Parent = player.Backpack
 
-	_heldPets[player] = { petId = petId, tool = tool }
-
-	-- When tool is removed (unequipped to backpack or destroyed), drop the pet
+	-- Tool이 백팩/캐릭터에서 빠짐(소실/캐릭터 리스폰) → 펫을 월드로 복귀
+	-- 같은 Tool이 그냥 destroy되는 경우엔 dropPetEvent가 명시적으로 호출하여 복귀 처리
 	tool.AncestryChanged:Connect(function(_, newParent)
-		if not newParent or (newParent ~= player.Backpack and newParent ~= player.Character) then
-			-- Tool was removed
-			if _heldPets[player] and _heldPets[player].petId == petId then
-				PetManager.returnPetToWorld(player, petId)
-				_heldPets[player] = nil
-			end
+		if newParent == nil and not tool:GetAttribute("_DroppedExplicit") then
+			-- 캐릭터 리스폰 등으로 Tool이 사라진 경우만 자동 복귀
+			PetManager.returnPetToWorld(player, petId)
 		end
 	end)
 end)
 
-dropPetEvent.OnServerEvent:Connect(function(player, position)
-	local held = _heldPets[player]
-	if not held then return end
+dropPetEvent.OnServerEvent:Connect(function(player, position, petIdParam)
+	-- petIdParam이 들어오면 그 펫만 드롭, 없으면 캐릭터에 장착된 펫 Tool 자동 탐지
+	local tool: Tool? = nil
+	local petId: string? = nil
 
-	local petId = held.petId
-	-- Clear first to prevent AncestryChanged double trigger
-	_heldPets[player] = nil
-
-	-- Destroy tool
-	if held.tool and held.tool.Parent then
-		held.tool:Destroy()
+	if typeof(petIdParam) == "string" and petIdParam ~= "" then
+		tool = findPetTool(player, petIdParam)
+		petId = petIdParam
+	else
+		local character = player.Character
+		if character then
+			for _, child in character:GetChildren() do
+				if child:IsA("Tool") and child:GetAttribute("PetId") then
+					tool = child
+					petId = child:GetAttribute("PetId")
+					break
+				end
+			end
+		end
 	end
 
-	-- Return pet to world (optional position validated by PetManager)
+	if not tool or not petId then return end
+
+	-- 명시적 드롭 표시 → AncestryChanged 자동 복귀 막음
+	tool:SetAttribute("_DroppedExplicit", true)
+	if tool.Parent then tool:Destroy() end
+
 	local validPos = if typeof(position) == "Vector3" then position else nil
 	PetManager.returnPetToWorld(player, petId, validPos)
 end)
 
--- Get held pet info
-local getHeldPetFunc = remotes:FindFirstChild("GetHeldPet")
-if not getHeldPetFunc then
-	getHeldPetFunc = Instance.new("RemoteFunction")
-	getHeldPetFunc.Name = "GetHeldPet"
-	getHeldPetFunc.Parent = remotes
-end
-
-getHeldPetFunc.OnServerInvoke = function(player)
-	local held = _heldPets[player]
-	if held then return held.petId end
-	return nil
-end
-
--- Cleanup
+-- Cleanup: 플레이어 나갈 때 들고 있던 펫 모두 월드로 복귀
 game:GetService("Players").PlayerRemoving:Connect(function(player)
-	local held = _heldPets[player]
-	if held then
-		if held.tool and held.tool.Parent then held.tool:Destroy() end
-		PetManager.returnPetToWorld(player, held.petId)
-		_heldPets[player] = nil
+	local containers = { player:FindFirstChild("Backpack"), player.Character }
+	for _, c in containers do
+		if not c then continue end
+		for _, child in c:GetChildren() do
+			if child:IsA("Tool") and child:GetAttribute("PetId") then
+				local pid = child:GetAttribute("PetId")
+				child:Destroy()
+				if pid then
+					PetManager.returnPetToWorld(player, pid)
+				end
+			end
+		end
 	end
 end)
 

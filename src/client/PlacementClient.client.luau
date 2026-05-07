@@ -514,14 +514,7 @@ local function toBuildMode()
 		if character then
 			local humanoid = character:FindFirstChildWhichIsA("Humanoid")
 			if humanoid then humanoid:UnequipTools() end
-			-- 펫 Tool은 서버에 알려 월드로 복귀
-			for _, child in character:GetChildren() do
-				if child:IsA("Tool") and child:GetAttribute("PetId") then
-					local dropEvent = remotes:FindFirstChild("DropPet")
-					if dropEvent then dropEvent:FireServer() end
-					break
-				end
-			end
+			-- 펫 Tool은 백팩에 그대로 보관 (월드로 복귀시키지 않음)
 		end
 	end
 
@@ -1121,16 +1114,16 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		-- 펫 Tool을 들고 있고 마을 안 클릭 → 그 자리에 펫 배치
 		do
 			local character = player.Character
-			local hasPetTool = false
+			local equippedPetId: string? = nil
 			if character then
 				for _, child in character:GetChildren() do
 					if child:IsA("Tool") and child:GetAttribute("PetId") then
-						hasPetTool = true
+						equippedPetId = child:GetAttribute("PetId")
 						break
 					end
 				end
 			end
-			if hasPetTool then
+			if equippedPetId then
 				local bz = getMyBuildZone()
 				if bz then
 					local clickPos = mouse.Hit.Position
@@ -1139,7 +1132,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 					if math.abs(localPos.X) <= half.X and math.abs(localPos.Z) <= half.Z then
 						local dropEvent = remotes:FindFirstChild("DropPet")
 						if dropEvent then
-							dropEvent:FireServer(clickPos)
+							dropEvent:FireServer(clickPos, equippedPetId)
 							MainHUD.showMessage("Pet placed!", 1)
 							return
 						end
@@ -1455,94 +1448,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		end -- elseif Idle
 	end -- MouseButton1
 
-	-- E키: 펫 내려놓기 (2초 홀드 + 타이머 UI)
-	if input.KeyCode == Enum.KeyCode.E then
-		local character = player.Character
-		if character then
-			local hasPetTool = false
-			for _, child in character:GetChildren() do
-				if child:IsA("Tool") and child:GetAttribute("PetId") then
-					hasPetTool = true
-					break
-				end
-			end
-			if hasPetTool then
-				-- 타이머 UI 생성
-				local timerGui = Instance.new("ScreenGui")
-				timerGui.Name = "_DropTimerGui"
-				timerGui.DisplayOrder = 999
-				timerGui.Parent = playerGui
-
-				local timerFrame = Instance.new("Frame")
-				timerFrame.Size = UDim2.new(0, 160, 0, 30)
-				timerFrame.Position = UDim2.new(0.5, -80, 0.7, 0)
-				timerFrame.BackgroundColor3 = Color3.fromRGB(30, 25, 20)
-				timerFrame.BackgroundTransparency = 0.3
-				timerFrame.BorderSizePixel = 0
-				timerFrame.Parent = timerGui
-
-				local timerCorner = Instance.new("UICorner")
-				timerCorner.CornerRadius = UDim.new(0, 8)
-				timerCorner.Parent = timerFrame
-
-				local timerBar = Instance.new("Frame")
-				timerBar.Name = "Bar"
-				timerBar.Size = UDim2.new(0, 0, 1, 0)
-				timerBar.BackgroundColor3 = Color3.fromRGB(255, 180, 60)
-				timerBar.BorderSizePixel = 0
-				timerBar.Parent = timerFrame
-
-				local barCorner = Instance.new("UICorner")
-				barCorner.CornerRadius = UDim.new(0, 8)
-				barCorner.Parent = timerBar
-
-				local timerLabel = Instance.new("TextLabel")
-				timerLabel.Size = UDim2.new(1, 0, 1, 0)
-				timerLabel.BackgroundTransparency = 1
-				timerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-				timerLabel.TextSize = 12
-				timerLabel.Font = Enum.Font.GothamBold
-				timerLabel.Text = "Dropping..."
-				timerLabel.ZIndex = 2
-				timerLabel.Parent = timerFrame
-
-				local HOLD_TIME = 2
-				local startTime = tick()
-				local filling = true
-
-				-- 매 프레임 바 업데이트
-				local fillConn
-				fillConn = RunService.Heartbeat:Connect(function()
-					if not filling then return end
-					local elapsed = tick() - startTime
-					local ratio = math.clamp(elapsed / HOLD_TIME, 0, 1)
-					timerBar.Size = UDim2.new(ratio, 0, 1, 0)
-					if ratio >= 1 then
-						filling = false
-						fillConn:Disconnect()
-						timerGui:Destroy()
-						local dropEvent = remotes:FindFirstChild("DropPet")
-						if dropEvent then
-							dropEvent:FireServer()
-							MainHUD.showMessage("Pet dropped!", 1)
-						end
-					end
-				end)
-
-				-- E키 놓으면 취소
-				local dropConn
-				dropConn = UserInputService.InputEnded:Connect(function(endInput)
-					if endInput.KeyCode == Enum.KeyCode.E then
-						dropConn:Disconnect()
-						filling = false
-						if fillConn.Connected then fillConn:Disconnect() end
-						if timerGui.Parent then timerGui:Destroy() end
-					end
-				end)
-				return
-			end
-		end
-	end
 
 	if gameProcessed then return end
 

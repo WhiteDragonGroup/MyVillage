@@ -643,10 +643,11 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 					end
 
 					-- 광산/농장 등 Work 건물에 코인 누적 (capacity 한도까지) + Mine은 보석 확률
+					-- 업그레이드 중인 건물은 코인/보석 누적 안 함 (업그레이드 진행도만 올림)
 					do
 						local itemName = workplace:GetAttribute("ItemName")
 						local buildingInfo = itemName and Constants.BUILDINGS[itemName]
-						if buildingInfo and buildingInfo.types then
+						if not isUpgradeWork and buildingInfo and buildingInfo.types then
 							local isWork = false
 							for _, t in buildingInfo.types do
 								if t == "Work" then isWork = true; break end
@@ -806,8 +807,8 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 					doWander(petData, buildZone, restDuration)
 				end
 			else
-				-- 일터 없음 → 산책
-				setPetState(petData, "Wandering")
+				-- 일터 없음 → 일자리 찾기 모드 (Wandering과 구분)
+				setPetState(petData, Constants.PetState.SearchingForWork)
 				local wanderDuration = PetCfg.REST_DURATION_MIN
 					+ math.random() * (PetCfg.REST_DURATION_MAX - PetCfg.REST_DURATION_MIN)
 				doWander(petData, buildZone, wanderDuration)
@@ -1190,7 +1191,12 @@ function PetManager.addPetDirect(player: Player, petData)
 		local buildZone = plot:FindFirstChild("BuildZone", true)
 		if buildZone then
 			local pet = createPetModel(petData, buildZone.Position)
-			pet.Parent = plot
+			-- Model이면 wrapping Model을 plot에 넣어야 모든 파트가 함께 보임
+			if petData._petModel then
+				petData._petModel.Parent = plot
+			else
+				pet.Parent = plot
+			end
 			petData.model = pet
 
 			-- 행동 AI 시작

@@ -266,65 +266,28 @@ function PetDetailUI.show(petData: { [string]: any })
 		setJobTransparency(jobsFrame:FindFirstChild("Building"), petTypes["Construction"] == true)
 	end
 
-	-- Icon: ViewportFrame으로 3D 펫 모델 표시
+	-- Icon: 2D 이미지 (PET_ICONS)
 	local iconFrame = frame:FindFirstChild("Icon")
 	if iconFrame then
-		-- 기존 이미지 숨기기
-		if iconFrame:IsA("ImageLabel") then
-			iconFrame.Image = ""
-		end
-
-		-- 기존 ViewportFrame 제거
+		-- 기존 ViewportFrame 제거 (이전 버전 잔재)
 		local oldVP = iconFrame:FindFirstChild("_PetViewport")
 		if oldVP then oldVP:Destroy() end
 
-		-- 월드에서 해당 펫 모델 찾기 (Pet_{petId})
-		local petModel = nil
-		local plotsFolder = workspace:FindFirstChild("Plots")
-		if plotsFolder then
-			for _, plot in plotsFolder:GetChildren() do
-				if plot:GetAttribute("Owner") == game:GetService("Players").LocalPlayer.Name then
-					for _, desc in plot:GetDescendants() do
-						if desc:GetAttribute("PetId") == petData.petId then
-							-- 최상위 Model 찾기
-							local mdl = desc
-							local cur = desc.Parent
-							while cur and cur ~= plot do
-								if cur:IsA("Model") then mdl = cur end
-								cur = cur.Parent
-							end
-							if mdl:IsA("Model") then
-								petModel = mdl
-							end
-							break
-						end
-					end
-					break
-				end
+		local iconId = Constants.getPetIcon and Constants.getPetIcon(petData.petName) or ""
+		if iconFrame:IsA("ImageLabel") or iconFrame:IsA("ImageButton") then
+			iconFrame.Image = iconId
+		else
+			local img = iconFrame:FindFirstChild("_PetIcon")
+			if not img then
+				img = Instance.new("ImageLabel")
+				img.Name = "_PetIcon"
+				img.Size = UDim2.new(1, 0, 1, 0)
+				img.BackgroundTransparency = 1
+				img.ScaleType = Enum.ScaleType.Fit
+				img.ZIndex = 2
+				img.Parent = iconFrame
 			end
-		end
-
-		if petModel then
-			local vpf = Instance.new("ViewportFrame")
-			vpf.Name = "_PetViewport"
-			vpf.Size = UDim2.new(1, 0, 1, 0)
-			vpf.BackgroundTransparency = 1
-			vpf.ZIndex = 2
-			vpf.Parent = iconFrame
-
-			local clone = petModel:Clone()
-			clone.Parent = vpf
-
-			local camera = Instance.new("Camera")
-			vpf.CurrentCamera = camera
-			camera.Parent = vpf
-
-			local cf, size = clone:GetBoundingBox()
-			local maxDim = math.max(size.X, size.Y, size.Z)
-			camera.CFrame = CFrame.lookAt(
-				cf.Position + Vector3.new(maxDim * 0.6, maxDim * 0.3, maxDim * 0.9),
-				cf.Position
-			)
+			img.Image = iconId
 		end
 	end
 
