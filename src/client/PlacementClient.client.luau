@@ -974,20 +974,6 @@ SelectionUI.init({
 		end
 	end,
 
-	onAssignPet = function()
-		if currentState == BuildState.Selected and selectedBuilding then
-			local buildingId = selectedBuilding:GetAttribute("BuildingId")
-			-- 서버에서 펫 목록 가져오기
-			task.spawn(function()
-				local pets = getPetsFunc:InvokeServer()
-				if pets and #pets > 0 then
-					PetListUI.show(pets, buildingId)
-				else
-					PetListUI.show({}, buildingId)
-				end
-			end)
-		end
-	end,
 })
 
 -- UpgradeUI: 업그레이드 확인 다이얼로그
@@ -2522,40 +2508,16 @@ RunService.Heartbeat:Connect(function()
 	MainHUD.setBuildButtonEnabled(inVillage)
 end)
 
--- 펫 Tool을 들고 있는 동안 PetDetailUI 자동 표시
-local _heldPetId: string? = nil
-local function showHeldPetDetail(petId: string)
-	_heldPetId = petId
-	task.spawn(function()
-		local pets = getPetsFunc:InvokeServer()
-		if pets and _heldPetId == petId then
-			for _, pet in pets do
-				if pet.petId == petId then
-					PetDetailUI.show(pet)
-					break
-				end
-			end
-		end
-	end)
-end
-
+-- 펫 Tool을 들면 PetDetailUI를 닫음 (자동 노출 제거)
 local function watchCharacterPetTools(character: Model)
 	local function onChildAdded(child)
 		if child:IsA("Tool") and child:GetAttribute("PetId") then
-			showHeldPetDetail(child:GetAttribute("PetId"))
-		end
-	end
-	local function onChildRemoved(child)
-		if child:IsA("Tool") and child:GetAttribute("PetId") then
-			-- 들고 있던 펫이 character에서 빠짐 (내려놓음/Unequip)
-			_heldPetId = nil
 			if PetDetailUI.isVisible() then
 				PetDetailUI.hide()
 			end
 		end
 	end
 	character.ChildAdded:Connect(onChildAdded)
-	character.ChildRemoved:Connect(onChildRemoved)
 	for _, child in character:GetChildren() do
 		onChildAdded(child)
 	end

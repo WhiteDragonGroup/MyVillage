@@ -159,9 +159,10 @@ function UpgradeManager._startProgressLoop(player: Player, building: BasePart, b
 				break
 			end
 
-			-- 펫이 배치되어 있는지 확인
+			-- 펫이 배치되어 있는지 확인 (작업자 수 또는 legacy AssignedPetId)
+			local workers = building:GetAttribute("UpgradeWorkers") or 0
 			local assignedPetId = building:GetAttribute("AssignedPetId") or ""
-			if assignedPetId == "" then
+			if workers <= 0 and assignedPetId == "" then
 				continue
 			end
 
@@ -169,23 +170,26 @@ function UpgradeManager._startProgressLoop(player: Player, building: BasePart, b
 			local level = building:GetAttribute("Level") or 1
 			local requiredWork = UpgradeCfg.REQUIRED_WORK[level] or 1500
 
-			-- 진행도 증가
+			-- 진행도 증가 (작업자 수만큼 가속)
 			local progress = building:GetAttribute("UpgradeProgress") or 0
-			local increment = PetCfg.BUILD_SPEED -- 기본 속도
+			local workerMult = math.max(1, workers)
+			local increment = PetCfg.BUILD_SPEED * workerMult
 
 			-- Rain 날씨 보너스 (+50%)
 			if getWeatherState().get() == "Rain" then
 				increment *= 1.5
 			end
 
-			-- 펫 돌연변이 보너스
-			local pm = getPetManager()
-			local petData = pm.getPetData(player, assignedPetId)
-			if petData and petData.mutations then
-				for mutationType, _ in petData.mutations do
-					local bonus = WeatherCfg.MUTATION_SPEED_BONUS[mutationType]
-					if bonus then
-						increment *= (1 + bonus)
+			-- 펫 돌연변이 보너스 (legacy 단일 펫 기준)
+			if assignedPetId ~= "" then
+				local pm = getPetManager()
+				local petData = pm.getPetData(player, assignedPetId)
+				if petData and petData.mutations then
+					for mutationType, _ in petData.mutations do
+						local bonus = WeatherCfg.MUTATION_SPEED_BONUS[mutationType]
+						if bonus then
+							increment *= (1 + bonus)
+						end
 					end
 				end
 			end
@@ -304,17 +308,32 @@ function UpgradeManager._swapModel(oldBuilding: BasePart, template: Instance): B
 		newBuilding.Anchored = true
 	end
 
-	-- 바닥 보정 (BuildZone 찾기)
+	-- 바닥 보정 (보이는 파트 기준, CollisionBox/투명 제외)
 	if newModel:IsA("Model") and parent then
 		local plot = parent
 		local buildZone = plot:FindFirstChild("BuildZone", true)
 		if buildZone then
 			local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
-			local bbCF, bbSize = newModel:GetBoundingBox()
-			local modelBottom = bbCF.Position.Y - bbSize.Y / 2
-			local yAdjust = buildZoneTop - modelBottom
-			if math.abs(yAdjust) > 0.01 then
-				newModel:PivotTo(newModel:GetPivot() + Vector3.new(0, yAdjust, 0))
+			local minY = math.huge
+			for _, part in newModel:GetDescendants() do
+				if not part:IsA("BasePart") then continue end
+				if part:GetAttribute("IsCollisionBox") then continue end
+				if part.Transparency >= 0.99 then continue end
+				local cf, s = part.CFrame, part.Size
+				for sx = -1, 1, 2 do
+					for sy = -1, 1, 2 do
+						for sz = -1, 1, 2 do
+							local p = cf:PointToWorldSpace(Vector3.new(sx*s.X/2, sy*s.Y/2, sz*s.Z/2))
+							if p.Y < minY then minY = p.Y end
+						end
+					end
+				end
+			end
+			if minY < math.huge then
+				local yAdjust = buildZoneTop - minY
+				if math.abs(yAdjust) > 0.01 then
+					newModel:PivotTo(newModel:GetPivot() + Vector3.new(0, yAdjust, 0))
+				end
 			end
 		end
 	end

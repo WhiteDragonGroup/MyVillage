@@ -40,16 +40,15 @@ local function applyAbility(petPart: BasePart, petName: string, cfg)
 	if cfg.kind == "buff_kin" then
 		local kin = findNearbyPets(petPart, cfg.range, petName, petId)
 		if #kin > 0 then
-			local level = cfg.levelByKinCount and #kin or (cfg.level or 1)
-			-- 자기 자신에게 적용 (같은 종 발견 시 자기가 인사받음)
-			BuffManager.applyPetBuff(petId, cfg.buffId, level, cfg.duration)
+				-- 자기 자신에게 적용 (같은 종 발견 시 자기가 인사받음)
+			BuffManager.applyPetBuff(petId, cfg.buffId, cfg.duration)
 		end
 	elseif cfg.kind == "buff_others" then
 		local others = findNearbyPets(petPart, cfg.range, nil, petId)
 		for _, otherPart in others do
 			local otherId = otherPart:GetAttribute("PetId")
 			if otherId then
-				BuffManager.applyPetBuff(otherId, cfg.buffId, cfg.level or 1, cfg.duration)
+				BuffManager.applyPetBuff(otherId, cfg.buffId, cfg.duration)
 			end
 		end
 	elseif cfg.kind == "buff_others_multi" then
@@ -58,7 +57,7 @@ local function applyAbility(petPart: BasePart, petName: string, cfg)
 			local otherId = otherPart:GetAttribute("PetId")
 			if otherId then
 				for _, b in cfg.buffs do
-					BuffManager.applyPetBuff(otherId, b.buffId, b.level, b.duration)
+					BuffManager.applyPetBuff(otherId, b.buffId, b.duration)
 				end
 			end
 		end
@@ -67,7 +66,7 @@ local function applyAbility(petPart: BasePart, petName: string, cfg)
 		for _, p in nearby do
 			local pid = p:GetAttribute("PetId")
 			if pid then
-				BuffManager.applyPetBuff(pid, cfg.buffId, cfg.level or 1, cfg.duration)
+				BuffManager.applyPetBuff(pid, cfg.buffId, cfg.duration)
 			end
 		end
 	elseif cfg.kind == "buff_aoe_conditional" then
@@ -82,7 +81,7 @@ local function applyAbility(petPart: BasePart, petName: string, cfg)
 		for _, p in nearby do
 			local pid = p:GetAttribute("PetId")
 			if pid then
-				BuffManager.applyPetBuff(pid, cfg.buffId, cfg.level or 1, cfg.duration)
+				BuffManager.applyPetBuff(pid, cfg.buffId, cfg.duration)
 			end
 		end
 	elseif cfg.kind == "egg_pet" then

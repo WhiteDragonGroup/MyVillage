@@ -233,6 +233,28 @@ Constants.UpgradeState = {
 	Upgrading = "Upgrading",  -- 수리중
 }
 
+-- 펫 아이콘 단일 소스
+Constants.PET_ICONS = {
+	FarmerNewbie = "rbxassetid://81027089205705",
+	Skeleton     = "rbxassetid://98975694538465",
+	Ghost        = "rbxassetid://74296266333388",
+	SnowMole     = "",
+	Imp          = "rbxassetid://120103151200469",
+	Sunflowie    = "rbxassetid://74067294247667",
+	ZombieNewbie = "rbxassetid://82582138984708",
+	Yeti         = "rbxassetid://138245261408066",
+	Zipbit       = "rbxassetid://118946004690307",
+	CrystalGolem = "rbxassetid://124573801840418",
+	IceGolem     = "rbxassetid://101252516108209",
+	BabyDragon   = "rbxassetid://128586108536720",
+	Witch        = "rbxassetid://123425608059807",
+	Lumini       = "rbxassetid://112927662864008",
+}
+
+function Constants.getPetIcon(petName: string): string
+	return Constants.PET_ICONS[petName] or ""
+end
+
 -- 펫 카탈로그
 Constants.PETS = {
 	-- 일반

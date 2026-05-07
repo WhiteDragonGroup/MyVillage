@@ -318,14 +318,34 @@ local function movePetTo(petData, targetPos: Vector3): boolean
 end
 
 ----------------------------------------------------------------
+-- 행동 루프 중단 (외부에서 호출)
+----------------------------------------------------------------
+function PetManager.stopBehaviorLoop(petId: string)
+	_behaviorLoops[petId] = nil
+end
+
+----------------------------------------------------------------
 -- 일터 탐색 (petType과 building.workTypes 매칭)
 ----------------------------------------------------------------
 local function findWorkplace(plot, petData): BasePart?
 	local buildings = getAllBuildings(plot)
-	local petTypeKor = Constants.PetType[petData.petType]
-	if not petTypeKor then return nil end
 
-	local candidates = {}
+	-- 펫이 Construction 가능한지 판정
+	local canConstruct = false
+	local petCatalog = Constants.PETS[petData.petName]
+	if petCatalog and petCatalog.petTypes then
+		for _, pt in petCatalog.petTypes do
+			if pt == "Construction" then canConstruct = true; break end
+		end
+	elseif petData.petType == "Construction" then
+		canConstruct = true
+	end
+
+	-- workTypes 매칭용 (한글 키)
+	local petTypeKor = Constants.PetType[petData.petType]
+
+	local upgradeCandidates = {}
+	local workCandidates = {}
 
 	for _, building in buildings do
 		local itemName = building:GetAttribute("ItemName")
@@ -334,48 +354,50 @@ local function findWorkplace(plot, petData): BasePart?
 		local buildingInfo = Constants.BUILDINGS[itemName]
 		if not buildingInfo then continue end
 
-		local canWork = false
-		-- (1) Farm/Mine 등 workTypes 매칭
-		if buildingInfo.workTypes then
+		local buildingId = building:GetAttribute("BuildingId")
+		local upState = building:GetAttribute("UpgradeState") or ""
+		local isUpgrading = upState == Constants.UpgradeState.Upgrading
+		local occupants = _workplaceOccupancy[buildingId]
+		local occupantCount = occupants and #occupants or 0
+
+		-- 본인이 이미 점유 중이면 스킵
+		if occupants then
+			local already = false
+			for _, pid in occupants do
+				if pid == petData.petId then already = true; break end
+			end
+			if already then continue end
+		end
+
+		-- (1) 업그레이드 중 건물 (Construction 가능 펫만, 건물당 최대 3마리)
+		if isUpgrading then
+			if canConstruct and occupantCount < 3 then
+				table.insert(upgradeCandidates, building)
+			end
+			-- 업그레이드 중인 건물에서는 일반 작업 불가
+			continue
+		end
+
+		-- 일반 일터 점유 (1마리 한도)
+		if occupantCount >= 1 then continue end
+
+		-- 다른 펫이 이미 배정된 일반 일터 스킵 (legacy)
+		local assignedPetId = building:GetAttribute("AssignedPetId") or ""
+		if assignedPetId ~= "" and assignedPetId ~= petData.petId then continue end
+
+		-- (2) Farm/Mine 등 workTypes 매칭
+		if petTypeKor and buildingInfo.workTypes then
 			for _, wt in buildingInfo.workTypes do
 				if wt == petTypeKor then
-					canWork = true
+					table.insert(workCandidates, building)
 					break
 				end
 			end
 		end
-		-- (2) Construction 가능 펫: 업그레이드 중 건물 일터로 인정
-		if not canWork then
-			local petCatalog = Constants.PETS[petData.petName]
-			local canConstruct = false
-			if petCatalog and petCatalog.petTypes then
-				for _, pt in petCatalog.petTypes do
-					if pt == "Construction" then canConstruct = true; break end
-				end
-			elseif petData.petType == "Construction" then
-				canConstruct = true
-			end
-			if canConstruct then
-				local upState = building:GetAttribute("UpgradeState") or ""
-				if upState == Constants.UpgradeState.Upgrading then
-					canWork = true
-				end
-			end
-		end
-		if not canWork then continue end
-
-		-- 점유 확인 (일터당 최대 1마리)
-		local buildingId = building:GetAttribute("BuildingId")
-		local occupants = _workplaceOccupancy[buildingId]
-		if occupants and #occupants >= 1 then continue end
-
-		-- 업그레이드 건물은 이미 다른 펫 배정돼있는지 확인
-		local assignedPetId = building:GetAttribute("AssignedPetId") or ""
-		if assignedPetId ~= "" and assignedPetId ~= petData.petId then continue end
-
-		table.insert(candidates, building)
 	end
 
+	-- 업그레이드 후보 우선
+	local candidates = if #upgradeCandidates > 0 then upgradeCandidates else workCandidates
 	if #candidates == 0 then return nil end
 
 	-- 이전 일터 선호
@@ -594,6 +616,13 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 				petData.previousWorkId = buildingId
 				setPetState(petData, "Working")
 
+				-- 업그레이드 건물이면 작업자 카운트 증가 (UpgradeManager 진행도 트리거)
+				local isUpgradeWork = workplace:GetAttribute("UpgradeState") == Constants.UpgradeState.Upgrading
+				if isUpgradeWork then
+					local cur = workplace:GetAttribute("UpgradeWorkers") or 0
+					workplace:SetAttribute("UpgradeWorkers", cur + 1)
+				end
+
 				local workDuration = PetCfg.WORK_DURATION_MIN
 					+ math.random() * (PetCfg.WORK_DURATION_MAX - PetCfg.WORK_DURATION_MIN)
 				local workElapsed = 0
@@ -602,6 +631,11 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 				while workElapsed < workDuration and _behaviorLoops[petId] do
 					task.wait(1)
 					workElapsed = workElapsed + 1
+
+					-- 일터가 사라졌으면(저장/철거) 즉시 중단
+					if not workplace or not workplace.Parent then
+						break
+					end
 
 					-- 밤 전환 체크 (불면 아니면 중단)
 					if not TimeState.isDay() and not hasSleepless then
@@ -687,10 +721,10 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 				-- 작업 종료 → 점유 해제
 				vacateWorkplace(buildingId, petId)
 				petData.targetBuildingId = ""
-				-- 업그레이드 건물이라면 AssignedPetId 해제 (다른 펫이 이어서 일하도록)
-				if workplace.Parent and (workplace:GetAttribute("AssignedPetId") or "") == petId then
-					workplace:SetAttribute("AssignedPetId", "")
-					petData.assignedBuildingId = ""
+				-- 업그레이드 작업자 카운트 감소
+				if isUpgradeWork and workplace.Parent then
+					local cur = workplace:GetAttribute("UpgradeWorkers") or 0
+					workplace:SetAttribute("UpgradeWorkers", math.max(0, cur - 1))
 				end
 
 				if not _behaviorLoops[petId] then break end
@@ -941,31 +975,6 @@ function PetManager._spawnAllPets(player: Player)
 			else
 				pet.Parent = plot
 				petData.model = pet
-			end
-
-			-- ProximityPrompt for holding pet (E key)
-			local promptPart = petData.model
-			if promptPart and not promptPart:FindFirstChildWhichIsA("ProximityPrompt") then
-				local prompt = Instance.new("ProximityPrompt")
-				prompt.ActionText = "Hold"
-				prompt.ObjectText = petData.petName
-				prompt.MaxActivationDistance = 8
-				prompt.HoldDuration = 2
-				prompt.RequiresLineOfSight = false
-				prompt.Parent = promptPart
-
-				prompt.Triggered:Connect(function(triggerPlayer)
-					if triggerPlayer == player then
-						print("[PetPrompt] " .. player.Name .. " Hold " .. petData.petName)
-						local holdPrompt = remotes:FindFirstChild("PetHoldPrompt")
-						if not holdPrompt then
-							holdPrompt = Instance.new("RemoteEvent")
-							holdPrompt.Name = "PetHoldPrompt"
-							holdPrompt.Parent = remotes
-						end
-						holdPrompt:FireClient(player, petData.petId)
-					end
-				end)
 			end
 
 			-- 건물에 배치되지 않은 펫은 행동 AI 시작
@@ -1372,29 +1381,6 @@ function PetManager.returnPetToWorld(player: Player, petId: string, requestedPos
 		pet.Parent = plot
 		petData.model = pet
 	end
-
-	-- ProximityPrompt 다시 붙이기 (쿨다운 2초 후)
-	task.delay(2, function()
-	local promptPart = petData.model
-	if promptPart and not promptPart:FindFirstChildWhichIsA("ProximityPrompt") then
-		local prompt = Instance.new("ProximityPrompt")
-		prompt.ActionText = "Hold"
-		prompt.ObjectText = petData.petName
-		prompt.MaxActivationDistance = 8
-		prompt.HoldDuration = 2
-		prompt.RequiresLineOfSight = false
-		prompt.Parent = promptPart
-
-		prompt.Triggered:Connect(function(triggerPlayer)
-			if triggerPlayer == player then
-				local holdPrompt = remotes:FindFirstChild("PetHoldPrompt")
-				if holdPrompt then
-					holdPrompt:FireClient(player, petData.petId)
-				end
-			end
-		end)
-	end
-	end) -- task.delay end
 
 	-- Restart behavior
 	if petData.assignedBuildingId == "" then

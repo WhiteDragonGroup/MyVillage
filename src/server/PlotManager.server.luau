@@ -205,14 +205,29 @@ local function restoreBuildings(player, plot, savedBuildings: { any })
 			item.Parent = plot
 			mainPart.Anchored = true
 
-			-- Model 바닥 보정: 모델 바닥이 BuildZone 상단에 맞도록 Y 조정
+			-- Model 바닥 보정: 보이는 파트 기준 (CollisionBox/투명 파트 제외)
 			if buildZone then
 				local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
-				local bbCF, bbSize = item:GetBoundingBox()
-				local modelBottom = bbCF.Position.Y - bbSize.Y / 2
-				local yAdjust = buildZoneTop - modelBottom
-				if math.abs(yAdjust) > 0.01 then
-					item:PivotTo(item:GetPivot() + Vector3.new(0, yAdjust, 0))
+				local minY = math.huge
+				for _, part in item:GetDescendants() do
+					if not part:IsA("BasePart") then continue end
+					if part:GetAttribute("IsCollisionBox") then continue end
+					if part.Transparency >= 0.99 then continue end
+					local cf, s = part.CFrame, part.Size
+					for sx = -1, 1, 2 do
+						for sy = -1, 1, 2 do
+							for sz = -1, 1, 2 do
+								local p = cf:PointToWorldSpace(Vector3.new(sx*s.X/2, sy*s.Y/2, sz*s.Z/2))
+								if p.Y < minY then minY = p.Y end
+							end
+						end
+					end
+				end
+				if minY < math.huge then
+					local yAdjust = buildZoneTop - minY
+					if math.abs(yAdjust) > 0.01 then
+						item:PivotTo(item:GetPivot() + Vector3.new(0, yAdjust, 0))
+					end
 				end
 			end
 		end

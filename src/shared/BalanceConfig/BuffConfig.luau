@@ -19,7 +19,7 @@ BuffConfig.BUFFS = {
 		icon = "rbxassetid://7332675943101",
 		color = Color3.fromRGB(255, 100, 100),
 		effect = "workEfficiency",
-		levels = { [1] = 10, [2] = 20, [3] = 35 },
+		value = 10,
 	},
 	Haste = {
 		name = "Haste",
@@ -29,7 +29,7 @@ BuffConfig.BUFFS = {
 		icon = "rbxassetid://7359965909027",
 		color = Color3.fromRGB(120, 220, 255),
 		effect = "moveSpeed",
-		levels = { [1] = 10, [2] = 25, [3] = 50 },
+		value = 10,
 	},
 	Blessing = {
 		name = "Blessing",
@@ -39,7 +39,7 @@ BuffConfig.BUFFS = {
 		icon = "rbxassetid://75207170833091",
 		color = Color3.fromRGB(255, 220, 120),
 		effect = "workEfficiency",
-		levels = { [1] = 30, [2] = 50, [3] = 80 },
+		value = 30,
 	},
 	Fortune = {
 		name = "Fortune",
@@ -49,7 +49,7 @@ BuffConfig.BUFFS = {
 		icon = "rbxassetid://7196659985405",
 		color = Color3.fromRGB(180, 240, 130),
 		effect = "gemChance",
-		levels = { [1] = 25, [2] = 50, [3] = 100 },
+		value = 25,
 	},
 	Satiation = {
 		name = "Satiation",
@@ -59,7 +59,7 @@ BuffConfig.BUFFS = {
 		icon = "rbxassetid://9433611845158",
 		color = Color3.fromRGB(255, 180, 100),
 		effect = "workEfficiency",
-		levels = { [1] = 15, [2] = 30, [3] = 50 },
+		value = 15,
 	},
 	Energy = {
 		name = "Energy",
@@ -69,7 +69,7 @@ BuffConfig.BUFFS = {
 		icon = "rbxassetid://1318945478220",
 		color = Color3.fromRGB(255, 240, 100),
 		effect = "sleepless",
-		levels = { [1] = 1 },
+		value = 1,
 	},
 	Serenity = {
 		name = "Serenity",
@@ -79,7 +79,7 @@ BuffConfig.BUFFS = {
 		icon = "rbxassetid://7480292072562",
 		color = Color3.fromRGB(180, 220, 230),
 		effect = "workDuration",
-		levels = { [1] = 25, [2] = 50, [3] = 100 },
+		value = 25,
 	},
 
 	-- 펫 고유 버프
@@ -90,7 +90,7 @@ BuffConfig.BUFFS = {
 		icon = "rbxassetid://10535369273907",
 		color = Color3.fromRGB(255, 200, 200),
 		effect = "workEfficiency",
-		levels = { [1] = 15, [2] = 30 },
+		value = 15,
 	},
 	GhostsSong = {
 		name = "Ghost's Song",
@@ -99,7 +99,7 @@ BuffConfig.BUFFS = {
 		icon = "rbxassetid://7359965909027",
 		color = Color3.fromRGB(200, 200, 255),
 		effect = "workEfficiency",
-		levels = { [1] = 20 },
+		value = 20,
 	},
 	Charge = {
 		name = "Charge",
@@ -108,7 +108,7 @@ BuffConfig.BUFFS = {
 		icon = "rbxassetid://7280996972142",
 		color = Color3.fromRGB(255, 255, 130),
 		effect = "workEfficiency",
-		levels = { [1] = 25 },
+		value = 25,
 	},
 	DemonicPower = {
 		name = "Demonic Power",
@@ -117,7 +117,7 @@ BuffConfig.BUFFS = {
 		icon = "rbxassetid://11860226787052",
 		color = Color3.fromRGB(180, 60, 80),
 		effect = "workEfficiency",
-		levels = { [1] = 40 },
+		value = 40,
 	},
 	DragonsPower = {
 		name = "Dragon's Power",
@@ -126,7 +126,7 @@ BuffConfig.BUFFS = {
 		icon = "rbxassetid://7350697566332",
 		color = Color3.fromRGB(220, 100, 60),
 		effect = "workEfficiency",
-		levels = { [1] = 50 },
+		value = 50,
 	},
 	BurningHeart = {
 		name = "Burning Heart",
@@ -135,7 +135,7 @@ BuffConfig.BUFFS = {
 		icon = "rbxassetid://11168226756916",
 		color = Color3.fromRGB(255, 120, 80),
 		effect = "workEfficiency",
-		levels = { [1] = 35, [2] = 60 },
+		value = 35,
 	},
 }
 
@@ -143,11 +143,11 @@ BuffConfig.BUFFS = {
 -- buildingName: { buffId, level, durationSec, restDecayMultiplier? }
 BuffConfig.REST_BUILDING_BUFFS = {
 	HotSpring = {
-		buffId = "Serenity", level = 1, durationSec = 60,
+		buffId = "Serenity", durationSec = 60,
 		restDecayMultiplier = 1.5,  -- 남은 휴식 시간 1.5배 빠르게 줄어듦
 	},
 	Crystal = {
-		buffId = "Blessing", level = 1, durationSec = 90,
+		buffId = "Blessing", durationSec = 90,
 	},
 	-- TreeOfGrowth: 휴식 동안 경험치 5배 (별도 처리)
 	TreeOfGrowth = {
@@ -166,19 +166,19 @@ BuffConfig.GIANT_FURNACE = {
 	projectileSpeed = 60,
 	splashRadius = 12,
 	splashDurationSec = 1,
-	buffOnSplash = { buffId = "BurningHeart", level = 1, durationSec = 30 },
+	buffOnSplash = { buffId = "BurningHeart", durationSec = 30 },
 }
 
 -- 버프 효과 적용 헬퍼 (PetManager 등에서 호출)
--- 활성 버프 리스트에서 가장 높은 레벨의 effect 값을 합산
-function BuffConfig.computeEffect(activeBuffs: { [string]: number }, effectName: string): number
-	-- activeBuffs: { [buffId] = level }
-	-- effectName이 같은 모든 버프의 levels 합 (% 단위)
+-- 활성 버프 리스트에서 effect 값을 합산
+function BuffConfig.computeEffect(activeBuffs: { [string]: boolean | number }, effectName: string): number
+	-- activeBuffs: { [buffId] = true } 또는 { [buffId] = anything }
+	-- effectName이 같은 모든 버프의 value 합 (% 단위)
 	local total = 0
-	for buffId, level in activeBuffs do
+	for buffId, _ in activeBuffs do
 		local def = BuffConfig.BUFFS[buffId]
-		if def and def.effect == effectName and def.levels then
-			total = total + (def.levels[level] or 0)
+		if def and def.effect == effectName then
+			total = total + (def.value or 0)
 		end
 	end
 	return total

@@ -83,32 +83,46 @@ local function attach(building: BasePart)
 	print("[UpgradeVisual] attaching ConstructionLine to " .. (building:GetAttribute("ItemName") or "?"))
 
 	local clone = template:Clone()
-	-- 원본 라인의 바운딩박스
-	local origCF, origSize
-	if clone:IsA("Model") then
-		origCF, origSize = clone:GetBoundingBox()
-	elseif clone:IsA("BasePart") then
-		origCF, origSize = clone.CFrame, clone.Size
-	end
 
-	-- 건물 바운딩박스에 맞춰 스케일 계산
+	-- 건물 바운딩박스 (목표 크기)
 	local target = getBuildingModel(building)
 	local targetCF, targetSize = getBoundingBox(target)
-
-	-- 균등 스케일 (가장 큰 차원 기준 + 약간 여유)
-	local maxOrig = math.max(origSize.X, origSize.Y, origSize.Z)
-	local maxTarget = math.max(targetSize.X, targetSize.Y, targetSize.Z)
-	if maxOrig <= 0 then maxOrig = 1 end
-	local scaleFactor = (maxTarget / maxOrig) * 1.05
+	local margin = 1.05
 
 	if clone:IsA("Model") then
-		if clone.ScaleTo then clone:ScaleTo(scaleFactor) end
-		-- 바운딩박스 중심을 건물 바운딩박스 중심에 일치 + 건물 회전 적용
+		-- 원본 모델을 원점에 두고 축별 비율 스케일 적용
+		local origCF, origSize = clone:GetBoundingBox()
+		if origSize.X <= 0 or origSize.Y <= 0 or origSize.Z <= 0 then
+			clone:Destroy()
+			return
+		end
+		local sx = (targetSize.X / origSize.X) * margin
+		local sy = (targetSize.Y / origSize.Y) * margin
+		local sz = (targetSize.Z / origSize.Z) * margin
+		-- 원점 정렬: 각 파트에서 origCF.Position 빼고 축별 스케일 후 다시 더함
+		for _, p in clone:GetDescendants() do
+			if p:IsA("BasePart") then
+				local rel = p.Position - origCF.Position
+				local scaledPos = Vector3.new(rel.X * sx, rel.Y * sy, rel.Z * sz)
+				p.Size = Vector3.new(
+					math.max(0.05, p.Size.X * sx),
+					math.max(0.05, p.Size.Y * sy),
+					math.max(0.05, p.Size.Z * sz)
+				)
+				-- 회전 유지하면서 위치 갱신
+				p.CFrame = CFrame.new(origCF.Position + scaledPos) * (p.CFrame - p.Position)
+			end
+		end
+		-- 건물 위치/회전에 맞추기
 		local newCF, _ = clone:GetBoundingBox()
 		local relativePivot = newCF:Inverse() * clone:GetPivot()
 		clone:PivotTo(targetCF * relativePivot)
 	elseif clone:IsA("BasePart") then
-		clone.Size = origSize * scaleFactor
+		clone.Size = Vector3.new(
+			targetSize.X * margin,
+			targetSize.Y * margin,
+			targetSize.Z * margin
+		)
 		clone.CFrame = targetCF
 		clone.Anchored = true
 	end

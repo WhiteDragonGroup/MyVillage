@@ -29,6 +29,28 @@ local UpgradeManager = require(serverScript:WaitForChild("UpgradeManager"))
 -- 유틸리티
 ----------------------------------------------------------------
 
+-- 보이는 파트만 기준으로 모델 하단 Y 계산 (회전 고려)
+local function getVisibleBottomY(item: Instance): number?
+	local minY = math.huge
+	for _, part in item:GetDescendants() do
+		if not part:IsA("BasePart") then continue end
+		if part:GetAttribute("IsCollisionBox") then continue end
+		if part.Transparency >= 0.99 then continue end
+		local cf = part.CFrame
+		local s = part.Size
+		for sx = -1, 1, 2 do
+			for sy = -1, 1, 2 do
+				for sz = -1, 1, 2 do
+					local p = cf:PointToWorldSpace(Vector3.new(sx * s.X / 2, sy * s.Y / 2, sz * s.Z / 2))
+					if p.Y < minY then minY = p.Y end
+				end
+			end
+		end
+	end
+	if minY == math.huge then return nil end
+	return minY
+end
+
 -- 플레이어의 플롯 찾기
 local function getPlayerPlot(player: Player)
 	for _, plot in plotsFolder:GetChildren() do
@@ -258,17 +280,11 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, localCFrame,
 			end
 		end
 
-		-- 바닥 보정
+		-- 바닥 보정 (보이는 파트 기준)
 		local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
-		local lowestY = math.huge
-		for _, desc in item:GetDescendants() do
-			if desc:IsA("BasePart") and not desc:GetAttribute("IsCollisionBox") then
-				local bottom = desc.Position.Y - desc.Size.Y / 2
-				if bottom < lowestY then lowestY = bottom end
-			end
-		end
-		if lowestY < math.huge then
-			local yAdjust = buildZoneTop - lowestY
+		local modelBottom = getVisibleBottomY(item)
+		if modelBottom then
+			local yAdjust = buildZoneTop - modelBottom
 			if math.abs(yAdjust) > 0.01 then
 				for _, desc in item:GetDescendants() do
 					if desc:IsA("BasePart") then
@@ -285,25 +301,6 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, localCFrame,
 				desc.Anchored = true
 				desc.CastShadow = false
 			end
-		end
-
-		-- 바닥 보정: 모델 하단을 BuildZone 상단에 맞춤 (CollisionBox 제외)
-		local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
-		local removedParts = {}
-		for _, part in item:GetDescendants() do
-			if part:IsA("BasePart") and part:GetAttribute("IsCollisionBox") then
-				table.insert(removedParts, { part = part, parent = part.Parent })
-				part.Parent = nil
-			end
-		end
-		local bbCF, bbSize = item:GetBoundingBox()
-		for _, info in removedParts do
-			info.part.Parent = info.parent
-		end
-		local modelBottom = bbCF.Position.Y - bbSize.Y / 2
-		local yAdjust = buildZoneTop - modelBottom
-		if math.abs(yAdjust) > 0.01 then
-			item:PivotTo(item:GetPivot() + Vector3.new(0, yAdjust, 0))
 		end
 	end
 
@@ -409,23 +406,14 @@ moveBuildingEvent.OnServerEvent:Connect(function(player, buildingId, newCFrame)
 		local mainToPivot = building.CFrame:ToObjectSpace(pivotCF)
 		parentModel:PivotTo(newCFrame * mainToPivot)
 
-		-- Model 바닥 보정 (CollisionBox 임시 제거 후 GetBoundingBox)
+		-- Model 바닥 보정 (보이는 파트 기준)
 		local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
-		local removed = {}
-		for _, part in parentModel:GetDescendants() do
-			if part:IsA("BasePart") and part:GetAttribute("IsCollisionBox") then
-				table.insert(removed, { part = part, parent = part.Parent })
-				part.Parent = nil
+		local modelBottom = getVisibleBottomY(parentModel)
+		if modelBottom then
+			local yAdjust = buildZoneTop - modelBottom
+			if math.abs(yAdjust) > 0.01 then
+				parentModel:PivotTo(parentModel:GetPivot() + Vector3.new(0, yAdjust, 0))
 			end
-		end
-		local bbCF, bbSize = parentModel:GetBoundingBox()
-		for _, info in removed do
-			info.part.Parent = info.parent
-		end
-		local modelBottom = bbCF.Position.Y - bbSize.Y / 2
-		local yAdjust = buildZoneTop - modelBottom
-		if math.abs(yAdjust) > 0.01 then
-			parentModel:PivotTo(parentModel:GetPivot() + Vector3.new(0, yAdjust, 0))
 		end
 	else
 		-- 클라이언트에서 보정된 CFrame을 그대로 사용

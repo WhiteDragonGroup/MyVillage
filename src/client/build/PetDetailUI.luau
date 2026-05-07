@@ -6,6 +6,33 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
+local AbilityCfg = BalanceConfig.PetAbility
+local BuffCfg = BalanceConfig.Buff
+
+-- 펫이 부여하는 버프 ID 목록 (ABILITIES + PASSIVE 매핑)
+local PASSIVE_BUFF_MAP = {
+	CrystalGolem = { "Fortune" },     -- gemChanceBonus
+	IceGolem     = { "Vitality" },    -- snowEfficiencyBonus
+	ZombieNewbie = { "Vitality" },    -- nightWorkBonus
+}
+
+local function getPetBuffIds(petName: string): { string }
+	local ids = {}
+	local cfg = AbilityCfg.ABILITIES[petName]
+	if cfg then
+		if cfg.buffId then table.insert(ids, cfg.buffId) end
+		if cfg.buffs then
+			for _, b in cfg.buffs do
+				if b.buffId then table.insert(ids, b.buffId) end
+			end
+		end
+	end
+	local passive = PASSIVE_BUFF_MAP[petName]
+	if passive then
+		for _, id in passive do table.insert(ids, id) end
+	end
+	return ids
+end
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -307,11 +334,32 @@ function PetDetailUI.show(petData: { [string]: any })
 		infoFrame.Visible = true
 	end
 
-	-- Buffs (해/클로버) 임시 UI 제거
+	-- Buffs: 펫의 능력에 맞춰 아이콘 채우기
 	if iconFrame then
 		local buffsFrame = iconFrame:FindFirstChild("Buffs")
 		if buffsFrame then
-			buffsFrame.Visible = false
+			buffsFrame.Visible = true
+			local buffIds = getPetBuffIds(petData.petName)
+			-- 자식 ImageLabel/ImageButton 슬롯에 순서대로 매핑
+			local slots = {}
+			for _, child in buffsFrame:GetChildren() do
+				if child:IsA("ImageLabel") or child:IsA("ImageButton") then
+					table.insert(slots, child)
+				end
+			end
+			table.sort(slots, function(a, b) return a.Name < b.Name end)
+			for i, slot in slots do
+				local buffId = buffIds[i]
+				if buffId then
+					local iconId = (Constants.BUFF_ICONS and Constants.BUFF_ICONS[buffId])
+						or (BuffCfg.BUFFS[buffId] and BuffCfg.BUFFS[buffId].icon)
+						or ""
+					slot.Image = iconId
+					slot.Visible = true
+				else
+					slot.Visible = false
+				end
+			end
 		end
 	end
 

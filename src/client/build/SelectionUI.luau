@@ -31,7 +31,6 @@ function SelectionUI.init(callbacks: {
 	onMove: () -> (),
 	onUpgrade: () -> (),
 	onCancelUpgrade: () -> (),
-	onAssignPet: () -> (),
 })
 	_callbacks = callbacks
 
@@ -77,11 +76,8 @@ function SelectionUI.init(callbacks: {
 		_upgradeBtn.MouseButton1Click:Connect(function()
 			local textLabel = _upgradeBtn:FindFirstChild("TextLabel")
 			local btnText = textLabel and textLabel.Text or ""
-			if btnText == "Assign Pet" then
-				if _callbacks.onAssignPet then _callbacks.onAssignPet() end
-			else
-				if _callbacks.onUpgrade then _callbacks.onUpgrade() end
-			end
+			if btnText == "Assign Pet" then return end
+			if _callbacks.onUpgrade then _callbacks.onUpgrade() end
 		end)
 	end
 end

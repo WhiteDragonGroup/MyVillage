@@ -152,8 +152,18 @@ local _heldPets = {}
 holdPetEvent.OnServerEvent:Connect(function(player, petId)
 	if typeof(petId) ~= "string" then return end
 
+	-- 이미 같은 펫을 들고 있으면 무시 (재생성 사이클로 인한 복제 방지)
+	if _heldPets[player] and _heldPets[player].petId == petId then
+		local existingTool = _heldPets[player].tool
+		if existingTool and existingTool.Parent then
+			return
+		end
+	end
+
 	-- 기존 펫 Tool 전부 정리 (Backpack + Character 모두 검사하여 누락 방지)
+	-- _heldPets를 먼저 비워서 Tool destroy → AncestryChanged 리스너가 returnPetToWorld 이중 호출하는 것 방지
 	local function cleanupExisting()
+		_heldPets[player] = nil
 		local containers = { player:FindFirstChild("Backpack"), player.Character }
 		for _, c in containers do
 			if not c then continue end
@@ -167,7 +177,6 @@ holdPetEvent.OnServerEvent:Connect(function(player, petId)
 				end
 			end
 		end
-		_heldPets[player] = nil
 	end
 	cleanupExisting()
 
@@ -188,6 +197,7 @@ holdPetEvent.OnServerEvent:Connect(function(player, petId)
 
 	-- Stop behavior loop
 	petData.state = "Held"
+	PetManager.stopBehaviorLoop(petId)
 
 	-- Hide the world model
 	if petData._petModel and petData._petModel.Parent then
@@ -256,12 +266,6 @@ holdPetEvent.OnServerEvent:Connect(function(player, petId)
 	tool.Parent = player.Backpack
 
 	_heldPets[player] = { petId = petId, tool = tool }
-
-	-- Auto-equip
-	local humanoid = player.Character and player.Character:FindFirstChildWhichIsA("Humanoid")
-	if humanoid then
-		humanoid:EquipTool(tool)
-	end
 
 	-- When tool is removed (unequipped to backpack or destroyed), drop the pet
 	tool.AncestryChanged:Connect(function(_, newParent)

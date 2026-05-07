@@ -11,7 +11,6 @@ PetAbilityConfig.ABILITIES = {
 		cooldown = 30,
 		range = 5,
 		buffId = "AllyEncouragement",
-		levelByKinCount = true,
 		duration = 30,
 	},
 	-- 5스터드 내 다른 펫 발견 시 주술 → 악마의 힘 1
@@ -20,7 +19,6 @@ PetAbilityConfig.ABILITIES = {
 		cooldown = 40,
 		range = 5,
 		buffId = "DemonicPower",
-		level = 1,
 		duration = 30,
 	},
 	-- 5스터드 내 다른 펫 발견 시 전기 → Energy/Haste/Charge
@@ -29,9 +27,9 @@ PetAbilityConfig.ABILITIES = {
 		cooldown = 30,
 		range = 5,
 		buffs = {
-			{ buffId = "Energy", level = 1, duration = 60 },
-			{ buffId = "Haste", level = 2, duration = 60 },
-			{ buffId = "Charge", level = 1, duration = 60 },
+			{ buffId = "Energy", duration = 60 },
+			{ buffId = "Haste", duration = 60 },
+			{ buffId = "Charge", duration = 60 },
 		},
 	},
 	-- 7스터드 내 다른 펫 발견 시 투사체 → 용의 힘 1
@@ -40,7 +38,6 @@ PetAbilityConfig.ABILITIES = {
 		cooldown = 40,
 		range = 7,
 		buffId = "DragonsPower",
-		level = 1,
 		duration = 30,
 	},
 	-- 일정시간마다 노래 → 음파 범위 내 펫
@@ -49,7 +46,6 @@ PetAbilityConfig.ABILITIES = {
 		cooldown = 25,
 		range = 8,
 		buffId = "GhostsSong",
-		level = 1,
 		duration = 20,
 	},
 	-- 맑은 날씨 + 일하지 않을 때 해바라기 심기 → 활력
@@ -58,7 +54,6 @@ PetAbilityConfig.ABILITIES = {
 		cooldown = 45,
 		range = 6,
 		buffId = "Vitality",
-		level = 1,
 		duration = 30,
 		requireWeather = "Sunny",
 		requireIdle = true,

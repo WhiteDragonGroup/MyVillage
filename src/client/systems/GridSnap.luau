@@ -42,29 +42,26 @@ function GridSnap.snapToGrid(buildZone: BasePart, worldPosition: Vector3, object
 	return bzCFrame * CFrame.new(snappedLocal)
 end
 
--- Model 바닥 보정: Model 배치 후 바닥이 buildZone 위에 놓이도록 Y 보정
--- GetBoundingBox 사용 (회전 고려), CollisionBox는 임시 제외
+-- Model 바닥 보정: 보이는 파트 기준 (CollisionBox/투명 제외, 회전 고려)
 function GridSnap.adjustModelY(model: Model, mainPart: BasePart, buildZone: BasePart)
 	local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
-
-	-- CollisionBox 임시 제거 (GetBoundingBox에서 제외)
-	local removed = {}
+	local minY = math.huge
 	for _, part in model:GetDescendants() do
-		if part:IsA("BasePart") and part:GetAttribute("IsCollisionBox") then
-			table.insert(removed, { part = part, parent = part.Parent })
-			part.Parent = nil
+		if not part:IsA("BasePart") then continue end
+		if part:GetAttribute("IsCollisionBox") then continue end
+		if part.Transparency >= 0.99 then continue end
+		local cf, s = part.CFrame, part.Size
+		for sx = -1, 1, 2 do
+			for sy = -1, 1, 2 do
+				for sz = -1, 1, 2 do
+					local p = cf:PointToWorldSpace(Vector3.new(sx*s.X/2, sy*s.Y/2, sz*s.Z/2))
+					if p.Y < minY then minY = p.Y end
+				end
+			end
 		end
 	end
-
-	local bbCF, bbSize = model:GetBoundingBox()
-
-	-- CollisionBox 복원
-	for _, info in removed do
-		info.part.Parent = info.parent
-	end
-
-	local currentBottom = bbCF.Position.Y - bbSize.Y / 2
-	local yAdjust = buildZoneTop - currentBottom
+	if minY == math.huge then return end
+	local yAdjust = buildZoneTop - minY
 	if math.abs(yAdjust) > 0.01 then
 		model:PivotTo(model:GetPivot() + Vector3.new(0, yAdjust, 0))
 	end
