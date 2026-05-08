@@ -197,7 +197,7 @@ local function createPetModel(petData, position: Vector3): BasePart
 		mainPart = mainPart or firstPart
 
 		if mainPart then
-			-- 2. 최종 위치로 이동 (PrimaryPart가 중심이라 모델 전체가 중앙에 모임)
+			-- 2. 최종 위치로 이동 (회전은 ServerStorage 템플릿 PrimaryPart 기준 정자세)
 			pet:PivotTo(CFrame.new(position + Vector3.new(0, PetCfg.PET_HEIGHT, 0)))
 
 			-- 3. 모든 파트 weld + Anchored 처리
@@ -600,6 +600,10 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 			if workplace then
 				local buildingId = workplace:GetAttribute("BuildingId")
 
+				-- 즉시 점유 예약 (이동 중 다른 펫이 같은 일터를 잡지 못하게)
+				occupyWorkplace(buildingId, petId)
+				petData.targetBuildingId = buildingId
+
 				-- 일터로 이동
 				local targetPos = workplace.Position + Vector3.new(
 					(math.random() * 2 - 1) * 2,
@@ -607,12 +611,18 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 					(math.random() * 2 - 1) * 2
 				)
 
-				if not movePetTo(petData, targetPos) then break end
-				if not _behaviorLoops[petId] then break end
+				if not movePetTo(petData, targetPos) then
+					vacateWorkplace(buildingId, petId)
+					petData.targetBuildingId = ""
+					break
+				end
+				if not _behaviorLoops[petId] then
+					vacateWorkplace(buildingId, petId)
+					petData.targetBuildingId = ""
+					break
+				end
 
 				-- 2. 작업 시작
-				occupyWorkplace(buildingId, petId)
-				petData.targetBuildingId = buildingId
 				petData.previousWorkId = buildingId
 				setPetState(petData, "Working")
 

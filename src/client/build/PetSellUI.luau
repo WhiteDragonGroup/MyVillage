@@ -109,62 +109,80 @@ local function setPetIcon(slot: GuiObject, pet)
 	local iconHost = findFirst(slot, { "Icon", "PetIcon", "Image" })
 	if not iconHost then return end
 
-	-- 기존 박혀있는 ImageLabel/Image 비우기
-	if iconHost:IsA("ImageLabel") then
-		iconHost.Image = ""
-	end
-	-- 기존 ViewportFrame 제거
+	-- 기존 ViewportFrame 잔재 제거
 	local oldVP = iconHost:FindFirstChild("_PetSellVP")
 	if oldVP then oldVP:Destroy() end
-	-- 슬롯에 박혀있는 다른 ImageLabel(예: 마녀 박힌)도 숨기기
-	for _, desc in iconHost:GetDescendants() do
-		if desc:IsA("ImageLabel") and desc.Image ~= "" then
-			desc.Image = ""
+
+	local iconId = Constants.getPetIcon and Constants.getPetIcon(pet.petName) or ""
+	if iconHost:IsA("ImageLabel") or iconHost:IsA("ImageButton") then
+		iconHost.Image = iconId
+		iconHost.ScaleType = Enum.ScaleType.Stretch
+	else
+		local img = iconHost:FindFirstChild("_PetSellIcon")
+		if not img then
+			img = Instance.new("ImageLabel")
+			img.Name = "_PetSellIcon"
+			img.Size = UDim2.new(1, 0, 1, 0)
+			img.BackgroundTransparency = 1
+			img.ScaleType = Enum.ScaleType.Stretch
+			img.ZIndex = 5
+			img.Parent = iconHost
 		end
+		img.Image = iconId
 	end
-
-	local model = findPetModelByPetId(pet.petId)
-	if not model or not model:IsA("Model") then return end
-
-	local vpf = Instance.new("ViewportFrame")
-	vpf.Name = "_PetSellVP"
-	vpf.Size = UDim2.new(1, 0, 1, 0)
-	vpf.BackgroundTransparency = 1
-	vpf.LightDirection = Vector3.new(-0.4, -1, -0.3).Unit
-	vpf.Ambient = Color3.fromRGB(160, 160, 160)
-	vpf.ZIndex = 5
-	vpf.Parent = iconHost
-
-	local clone = model:Clone()
-	for _, p in clone:GetDescendants() do
-		if p:IsA("BasePart") then
-			p.Anchored = true
-			p.CanCollide = false
-		end
-	end
-	clone.Parent = vpf
-
-	local camera = Instance.new("Camera")
-	vpf.CurrentCamera = camera
-	camera.Parent = vpf
-
-	local cf, size = clone:GetBoundingBox()
-	local maxDim = math.max(size.X, size.Y, size.Z)
-	camera.CFrame = CFrame.lookAt(
-		cf.Position + Vector3.new(maxDim * 0.6, maxDim * 0.3, maxDim * 0.9),
-		cf.Position
-	)
 end
 
 local function populateSlot(slot: GuiObject, pet, sellPrice: number)
 	local petInfo = Constants.PETS[pet.petName]
 	local displayName = (petInfo and petInfo.name) or pet.petName
+	local rarityText = pet.rarity or "Common"
 
-	setText(slot, { "NameText", "Name", "PetName", "TitleText" }, displayName)
-	setText(slot, { "RarityText", "Rarity" }, pet.rarity or "Common")
-	setText(slot, { "PriceText", "Price", "SellPriceText" }, "$" .. sellPrice)
-	setText(slot, { "LevelText", "Level" }, "Lv." .. (pet.level or 1))
-	setText(slot, { "WeightText", "Weight" }, string.format("%.1fkg", pet.weight or 0))
+	-- Name + Shadow
+	local nameLabel = slot:FindFirstChild("NameText")
+	if nameLabel and (nameLabel:IsA("TextLabel") or nameLabel:IsA("TextButton")) then
+		nameLabel.Text = displayName
+	end
+	local nameShadow = slot:FindFirstChild("NameTextShadow")
+	if nameShadow and nameShadow:IsA("TextLabel") then
+		nameShadow.Text = displayName
+	end
+
+	-- Rarity (Frame > TextLabel)
+	local rarityFrame = slot:FindFirstChild("Rarity")
+	if rarityFrame then
+		local rarityLabel = rarityFrame:FindFirstChildWhichIsA("TextLabel")
+		if rarityLabel then rarityLabel.Text = rarityText end
+	end
+
+	-- Level / Weight
+	local levelLabel = slot:FindFirstChild("LevelText")
+	if levelLabel and levelLabel:IsA("TextLabel") then
+		levelLabel.Text = string.format("Level : %d", pet.level or 1)
+	end
+	local weightLabel = slot:FindFirstChild("WeightText")
+	if weightLabel and weightLabel:IsA("TextLabel") then
+		weightLabel.Text = string.format("Weight : %.1fkg", pet.weight or 0)
+	end
+
+	-- Mutation
+	local mutLabel = slot:FindFirstChild("MutationText")
+	if mutLabel and mutLabel:IsA("TextLabel") then
+		local mutText = "None"
+		if pet.mutations and #pet.mutations > 0 then
+			local names = {}
+			for _, m in pet.mutations do
+				table.insert(names, (Constants.MUTATION_NAMES and Constants.MUTATION_NAMES[m]) or m)
+			end
+			mutText = table.concat(names, ", ")
+		end
+		mutLabel.Text = "Mutations : " .. mutText
+	end
+
+	-- Price (디자인 라벨명 AcountText / AmountText / PriceText)
+	local priceLabel = slot:FindFirstChild("AcountText") or slot:FindFirstChild("AmountText") or slot:FindFirstChild("PriceText")
+	if priceLabel and priceLabel:IsA("TextLabel") then
+		priceLabel.Text = "$" .. sellPrice
+	end
 
 	setPetIcon(slot, pet)
 
@@ -198,8 +216,19 @@ function PetSellUI._refreshTotals()
 			end
 		end
 	end
-	setText(_sellFrame, { "TotalCountText", "TotalText", "Count" }, "Total Pets: " .. count)
-	setText(_sellFrame, { "TotalCashText", "CashText", "TotalPrice" }, "Total Cash: $" .. total)
+	local bottomFrame = _sellFrame:FindFirstChild("Bottom")
+	if bottomFrame then
+		for _, c in bottomFrame:GetChildren() do
+			if c:IsA("TextLabel") then
+				local lt = (c.Text or ""):lower()
+				if lt:find("cash") then
+					c.Text = "Total cash : $" .. total
+				elseif lt:find("pets") then
+					c.Text = "Total Pets : " .. count
+				end
+			end
+		end
+	end
 end
 
 function PetSellUI.init(callbacks: { onSold: (() -> ())? }?)
@@ -265,16 +294,28 @@ function PetSellUI.show()
 	local allPets = getPetsFunc:InvokeServer()
 	if not allPets then allPets = {} end
 
-	-- 미배정 펫만 필터
+	-- 인벤토리(Backpack/Character의 Pet Tool)에 있는 펫만 표시
+	local heldPetIds = {} :: { [string]: boolean }
+	local containers = { player:FindFirstChild("Backpack"), player.Character }
+	for _, c in containers do
+		if not c then continue end
+		for _, child in c:GetChildren() do
+			if child:IsA("Tool") then
+				local pid = child:GetAttribute("PetId")
+				if pid then heldPetIds[pid] = true end
+			end
+		end
+	end
 	local sellablePets = {}
 	for _, pet in allPets do
-		if pet.assignedBuildingId == "" or pet.assignedBuildingId == nil then
+		if heldPetIds[pet.petId] then
 			table.insert(sellablePets, pet)
 		end
 	end
 
 	-- 슬롯 템플릿 캡처 (최초 1회)
 	getOrCaptureSlotTemplate()
+
 	-- 기존 슬롯 제거
 	clearSlots()
 
@@ -282,8 +323,21 @@ function PetSellUI.show()
 	local totalCash = 0
 	local totalCount = #sellablePets
 
+	-- ScrollingFrame에 UIListLayout 보장 (슬롯 세로 정렬)
+	local listLayout = _scrollFrame:FindFirstChildWhichIsA("UIListLayout")
+	if not listLayout and not _scrollFrame:FindFirstChildWhichIsA("UIGridLayout") then
+		listLayout = Instance.new("UIListLayout")
+		listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		listLayout.Padding = UDim.new(0, 4)
+		listLayout.Parent = _scrollFrame
+	end
+	-- 캔버스 자동 확장
+	_scrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	_scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+
 	-- 슬롯 채우기
 	if _slotTemplate then
+		local slotH = _slotHeight or 80
 		for i, pet in sellablePets do
 			local sellPrice = calcSellPrice(pet)
 			totalCash = totalCash + sellPrice
@@ -292,18 +346,30 @@ function PetSellUI.show()
 			slot.Name = "Slot_" .. i
 			slot.LayoutOrder = i
 			slot.Visible = true
+			-- 슬롯 높이 고정 + 위치는 UIListLayout이 결정
+			slot.Size = UDim2.new(1, 0, 0, slotH)
+			slot.Position = UDim2.new(0, 0, 0, 0)
 			slot.Parent = _scrollFrame
-			if _slotHeight then
-				slot.Size = UDim2.new(slot.Size.X.Scale, slot.Size.X.Offset, 0, _slotHeight)
-			end
 
 			populateSlot(slot, pet, sellPrice)
 		end
 	end
 
 	-- 합계 텍스트
-	setText(_sellFrame, { "TotalCountText", "TotalText", "Count" }, "Total Pets: " .. totalCount)
-	setText(_sellFrame, { "TotalCashText", "CashText", "TotalPrice" }, "Total Cash: $" .. totalCash)
+	-- Bottom 영역 합계 (디자인이 두 라벨 모두 NameText로 같은 이름 → 현재 텍스트 패턴으로 구분)
+	local bottomFrame = _sellFrame:FindFirstChild("Bottom")
+	if bottomFrame then
+		for _, c in bottomFrame:GetChildren() do
+			if c:IsA("TextLabel") then
+				local lt = (c.Text or ""):lower()
+				if lt:find("cash") then
+					c.Text = "Total cash : $" .. totalCash
+				elseif lt:find("pets") then
+					c.Text = "Total Pets : " .. totalCount
+				end
+			end
+		end
+	end
 
 	_sellFrame.Visible = true
 end

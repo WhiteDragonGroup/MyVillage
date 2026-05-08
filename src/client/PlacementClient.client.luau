@@ -1260,15 +1260,13 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 										end
 										if heldId then
 											local getPriceFunc = remotes:FindFirstChild("GetPetSellPrice")
+											local price = 0
 											if getPriceFunc then
-												local price = getPriceFunc:InvokeServer(heldId)
-												DialogUI.showResponse("Hmm, let me take a look...", 1)
-												task.delay(1, function()
-													DialogUI.showResponse("This one's worth $" .. price .. ".", 3)
-												end)
+												price = getPriceFunc:InvokeServer(heldId) or 0
 											end
+											DialogUI.showResponse("Let me take a look... this one's worth $" .. price .. "!", 4)
 										else
-											DialogUI.showResponse("I can't see anything...", 2)
+											DialogUI.showResponse("You're not holding a pet.", 2)
 										end
 									elseif choiceId == "petinfo" then
 										DialogUI.showResponse("Here's what we have!", 1)
@@ -1841,7 +1839,9 @@ ShopUI.init({
 				if bubble.Parent then bubble:Destroy() end
 			end)
 		end
-		buyEggEvent:FireServer(eggType)
+		pcall(function()
+			buyEggEvent:InvokeServer(eggType)
+		end)
 	end,
 	onOpen = function()
 		-- 열고 닫을 때 리프레시
@@ -1871,9 +1871,18 @@ EggShopUI.init({
 		EggShopUI.hide()
 	end,
 })
-showEggBuyPopup.OnClientEvent:Connect(function(slotName, eggName)
-	EggShopUI.show(slotName, eggName)
-end)
+-- 모든 ShowEggBuyPopup 인스턴스에서 듣기 (중복 인스턴스 대응)
+local function _bindShowEggBuyPopup(child)
+	if child.Name == "ShowEggBuyPopup" and child:IsA("RemoteEvent") then
+		child.OnClientEvent:Connect(function(slotName, eggName)
+			EggShopUI.show(slotName, eggName)
+		end)
+	end
+end
+for _, child in remotes:GetChildren() do
+	_bindShowEggBuyPopup(child)
+end
+remotes.ChildAdded:Connect(_bindShowEggBuyPopup)
 
 -- 메인 HUD 초기화 (탭 전환)
 MainHUD.init({
@@ -2299,6 +2308,7 @@ local function startNpcDistanceCheck(npcPart: BasePart)
 			stopNpcDistanceCheck()
 			DialogUI.hide()
 			ShopUI.hide()
+			PetSellUI.hide()
 			return
 		end
 		local dist = (hrp.Position - npcPart.Position).Magnitude
@@ -2306,6 +2316,7 @@ local function startNpcDistanceCheck(npcPart: BasePart)
 			stopNpcDistanceCheck()
 			DialogUI.hide()
 			ShopUI.hide()
+			PetSellUI.hide()
 		end
 	end)
 end
@@ -2371,15 +2382,14 @@ if openShopEvent then
 
 					if heldPetId then
 						local getPriceFunc = remotes:FindFirstChild("GetPetSellPrice")
+						local price = 0
 						if getPriceFunc then
-							local price = getPriceFunc:InvokeServer(heldPetId)
-							DialogUI.showResponse("Hmm, let me take a look...", 1)
-							task.delay(1, function()
-								DialogUI.showResponse("This one's worth $" .. price .. ".", 3)
-							end)
+							price = getPriceFunc:InvokeServer(heldPetId) or 0
 						end
+						print("[PetWorth] petId=" .. tostring(heldPetId) .. " price=" .. tostring(price))
+						DialogUI.showResponse("Let me take a look... this one's worth $" .. price .. "!", 4)
 					else
-						DialogUI.showResponse("I can't see anything...", 2)
+						DialogUI.showResponse("You're not holding a pet.", 2)
 					end
 				elseif choiceId == "petinfo" then
 					DialogUI.showResponse("Here's what we have!", 1)

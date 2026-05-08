@@ -67,8 +67,13 @@ EggManager.setPetFunction(function(player, petData)
 	PetManager.addPetDirect(player, fullPetData)
 end)
 
+-- 중복 ShowEggBuyPopup 인스턴스가 있을 수 있으니 모두에 fire
 EggManager.setShowEggBuyPopup(function(player, slotName, eggName)
-	showEggBuyPopup:FireClient(player, slotName, eggName)
+	for _, child in remotes:GetChildren() do
+		if child.Name == "ShowEggBuyPopup" and child:IsA("RemoteEvent") then
+			child:FireClient(player, slotName, eggName)
+		end
+	end
 end)
 
 -- ProximityPrompt에서 부화 트리거 → hatchEggEvent와 동일 처리
@@ -87,53 +92,46 @@ end)
 ----------------------------------------------------------------
 
 -- 알 구매
--- Rojo 클래스 변경 시 잔존 잘못된 인스턴스 정리 후 RemoteFunction 보장
-do
-	local desired = nil
-	for _, child in remotes:GetChildren() do
-		if child.Name == "BuyEgg" then
-			if child:IsA("RemoteFunction") and not desired then
-				desired = child
-			elseif child ~= desired then
-				child:Destroy()
-			end
-		end
+-- 모든 BuyEgg RemoteFunction 인스턴스에 핸들러 바인딩 (rojo 클래스 변경/중복 인스턴스 대응)
+local function _buyEggHandler(player, slotName, eggName)
+	if typeof(slotName) ~= "string" then return "Invalid slot" end
+	local success, msg = EggManager.buyEgg(player, slotName, eggName)
+	if success then
+		print(player.Name .. " - 알 구매: " .. slotName)
+		if _G.SyncEggTools then _G.SyncEggTools(player) end
+	else
+		warn(player.Name .. " - 알 구매 실패: " .. tostring(msg))
 	end
-	if not desired then
-		desired = Instance.new("RemoteFunction")
-		desired.Name = "BuyEgg"
-		desired.Parent = remotes
-	end
-	buyEggEvent = desired
+	eggUpdateEvent:FireClient(player, "inventory", EggManager.getEggInventory(player))
+	return msg
 end
 
--- BuyEgg가 추후 교체될 경우 재바인딩
-local _bindBuyEgg
+local function bindBuyEggInstance(rf: RemoteFunction)
+	rf.OnServerInvoke = _buyEggHandler
+	buyEggEvent = rf
+end
+
+do
+	local anyFound = false
+	for _, child in remotes:GetChildren() do
+		if child.Name == "BuyEgg" and child:IsA("RemoteFunction") then
+			anyFound = true
+			bindBuyEggInstance(child)
+		end
+	end
+	if not anyFound then
+		local rf = Instance.new("RemoteFunction")
+		rf.Name = "BuyEgg"
+		rf.Parent = remotes
+		bindBuyEggInstance(rf)
+	end
+end
+
 remotes.ChildAdded:Connect(function(child)
-	if child.Name == "BuyEgg" and child:IsA("RemoteFunction") and child ~= buyEggEvent then
-		buyEggEvent = child
-		_bindBuyEgg()
+	if child.Name == "BuyEgg" and child:IsA("RemoteFunction") then
+		bindBuyEggInstance(child)
 	end
 end)
-
-_bindBuyEgg = function()
-	buyEggEvent.OnServerInvoke = function(player, slotName, eggName)
-		if typeof(slotName) ~= "string" then return "Invalid slot" end
-
-		local success, msg = EggManager.buyEgg(player, slotName, eggName)
-		if success then
-			print(player.Name .. " - 알 구매: " .. slotName)
-			-- 인벤토리 알을 Backpack Tool로 즉시 동기화
-			if _G.SyncEggTools then _G.SyncEggTools(player) end
-		else
-			warn(player.Name .. " - 알 구매 실패: " .. tostring(msg))
-		end
-
-		eggUpdateEvent:FireClient(player, "inventory", EggManager.getEggInventory(player))
-		return msg
-	end
-end
-_bindBuyEgg()
 
 -- 알 배치
 placeEggEvent.OnServerEvent:Connect(function(player, eggType, position)
