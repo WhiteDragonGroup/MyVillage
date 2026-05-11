@@ -911,6 +911,7 @@ function PetManager.initPlayer(player: Player, savedPets: { any }?)
 				state = "Idle",
 				targetBuildingId = "",
 				previousWorkId = "",
+				inInventory = savedPet.inInventory or false,
 			}
 
 			-- Ensure FarmerNewbie always has Insomnia
@@ -977,6 +978,11 @@ function PetManager._spawnAllPets(player: Player)
 	if not pets then return end
 
 	for petId, petData in pets do
+		-- 인벤토리 보관 펫은 월드 스폰 안 함 (PetServer가 별도로 Tool 생성)
+		if petData.inInventory then
+			petData.state = "Held"
+			continue
+		end
 		if not petData.model or not petData.model.Parent then
 			local pet = createPetModel(petData, buildZone.Position)
 			-- Model이면 _petModel을 plot에 배치
@@ -1026,6 +1032,7 @@ function PetManager.getPets(player: Player): { any }
 			xp = petData.xp,
 			state = petData.state,
 			mutations = mutationsList,
+			inInventory = petData.inInventory or false,
 		})
 	end
 	return result
@@ -1252,6 +1259,7 @@ function PetManager.getSaveData(player: Player): { any }
 			weightMult = petData.weightMult,
 			level = petData.level,
 			xp = petData.xp,
+			inInventory = petData.inInventory or false,
 		})
 	end
 	return result
@@ -1343,6 +1351,7 @@ function PetManager.returnPetToWorld(player: Player, petId: string, requestedPos
 	local petData = pets[petId]
 	print("[ReturnPet] Returning: " .. petData.petName)
 	petData.state = "Idle"
+	petData.inInventory = false
 
 	local plot = getPlayerPlot(player)
 	if not plot then

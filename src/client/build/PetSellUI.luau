@@ -116,7 +116,7 @@ local function setPetIcon(slot: GuiObject, pet)
 	local iconId = Constants.getPetIcon and Constants.getPetIcon(pet.petName) or ""
 	if iconHost:IsA("ImageLabel") or iconHost:IsA("ImageButton") then
 		iconHost.Image = iconId
-		iconHost.ScaleType = Enum.ScaleType.Stretch
+		iconHost.ScaleType = Enum.ScaleType.Crop
 	else
 		local img = iconHost:FindFirstChild("_PetSellIcon")
 		if not img then
@@ -124,7 +124,7 @@ local function setPetIcon(slot: GuiObject, pet)
 			img.Name = "_PetSellIcon"
 			img.Size = UDim2.new(1, 0, 1, 0)
 			img.BackgroundTransparency = 1
-			img.ScaleType = Enum.ScaleType.Stretch
+			img.ScaleType = Enum.ScaleType.Crop
 			img.ZIndex = 5
 			img.Parent = iconHost
 		end

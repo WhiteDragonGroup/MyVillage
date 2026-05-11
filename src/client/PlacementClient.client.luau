@@ -52,6 +52,8 @@ local WorkBuildingDisplay = require(clientScript:WaitForChild("systems"):WaitFor
 WorkBuildingDisplay.init()
 local UpgradeVisual = require(clientScript:WaitForChild("systems"):WaitForChild("UpgradeVisual"))
 UpgradeVisual.init()
+local HarvestEffect = require(clientScript:WaitForChild("systems"):WaitForChild("HarvestEffect"))
+HarvestEffect.init()
 local BuffUI = require(clientScript:WaitForChild("build"):WaitForChild("BuffUI"))
 BuffUI.init()
 local BuildingInfoUI = require(clientScript:WaitForChild("build"):WaitForChild("BuildingInfoUI"))
@@ -1641,10 +1643,9 @@ task.spawn(function()
 		end
 	end
 
-	-- 업그레이드 게이지 + 펫 비주얼 + 레벨 뱃지 감시 시작
+	-- 업그레이드 게이지 + 펫 비주얼 감시 시작 (건물 레벨 뱃지는 제거)
 	UpgradeDisplay.scanPlot(myPlot)
 	PetVisuals.scanPlot(myPlot)
-	LevelBadge.scanPlot(myPlot)
 
 	-- 마을 표지판 업데이트 (StarterGui/VillageSigns)
 	local villageSigns = playerGui:FindFirstChild("VillageSigns")

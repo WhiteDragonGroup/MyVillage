@@ -160,48 +160,13 @@ local function findPetTool(player: Player, petId: string): Tool?
 	return nil
 end
 
-holdPetEvent.OnServerEvent:Connect(function(player, petId)
-	if typeof(petId) ~= "string" then return end
-
-	-- 이미 같은 펫 Tool이 있으면 무시 (다른 펫 Tool들은 그대로 유지)
-	if findPetTool(player, petId) then
-		return
-	end
-
-	local petData = PetManager.getPetData(player, petId)
-	if not petData then
-		warn("[HoldPet] Pet not found: " .. petId)
-		return
-	end
-
-	-- Can't hold assigned pets (e.g., 업그레이드/작업 중)
-	if petData.assignedBuildingId and petData.assignedBuildingId ~= "" then
-		warn("[HoldPet] Pet is assigned")
-		holdPetEvent:FireClient(player, "error", "Pet is busy with a building.")
-		return
-	end
-
-	print("[HoldPet] Holding: " .. petData.petName)
-
-	-- Stop behavior loop
-	petData.state = "Held"
-	PetManager.stopBehaviorLoop(petId)
-
-	-- Hide the world model
-	if petData._petModel and petData._petModel.Parent then
-		petData._petModel.Parent = nil
-	elseif petData.model and petData.model.Parent then
-		petData.model.Parent = nil
-	end
-
-	-- Create Tool
+-- Tool 생성 (HoldPet과 재접속 복원에서 공통 사용)
+local function createPetTool(player: Player, petData)
 	local tool = Instance.new("Tool")
 	tool.Name = "Pet_" .. petData.petName
 	tool.CanBeDropped = false
 	tool.RequiresHandle = true
 
-	-- Create handle from pet model clone
-	local petInfo = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants")).PETS[petData.petName]
 	local handle = Instance.new("Part")
 	handle.Name = "Handle"
 	handle.Size = Vector3.new(2, 2, 2)
@@ -210,7 +175,6 @@ holdPetEvent.OnServerEvent:Connect(function(player, petId)
 	handle.Massless = true
 	handle.Parent = tool
 
-	-- Clone pet visual into tool
 	local serverPetsFolder = game:GetService("ServerStorage"):FindFirstChild("Pets")
 	if serverPetsFolder then
 		local petFolder = serverPetsFolder:FindFirstChild(petData.petName)
@@ -249,18 +213,52 @@ holdPetEvent.OnServerEvent:Connect(function(player, petId)
 		end
 	end
 
-	tool:SetAttribute("PetId", petId)
+	tool:SetAttribute("PetId", petData.petId)
 	tool:SetAttribute("PetName", petData.petName)
 	tool.Parent = player.Backpack
+	return tool
+end
 
-	-- Tool이 백팩/캐릭터에서 빠짐(소실/캐릭터 리스폰) → 펫을 월드로 복귀
-	-- 같은 Tool이 그냥 destroy되는 경우엔 dropPetEvent가 명시적으로 호출하여 복귀 처리
-	tool.AncestryChanged:Connect(function(_, newParent)
-		if newParent == nil and not tool:GetAttribute("_DroppedExplicit") then
-			-- 캐릭터 리스폰 등으로 Tool이 사라진 경우만 자동 복귀
-			PetManager.returnPetToWorld(player, petId)
-		end
-	end)
+holdPetEvent.OnServerEvent:Connect(function(player, petId)
+	if typeof(petId) ~= "string" then return end
+
+	-- 이미 같은 펫 Tool이 있으면 무시 (다른 펫 Tool들은 그대로 유지)
+	if findPetTool(player, petId) then
+		return
+	end
+
+	local petData = PetManager.getPetData(player, petId)
+	if not petData then
+		warn("[HoldPet] Pet not found: " .. petId)
+		return
+	end
+
+	-- Can't hold assigned pets (e.g., 업그레이드/작업 중)
+	if petData.assignedBuildingId and petData.assignedBuildingId ~= "" then
+		warn("[HoldPet] Pet is assigned")
+		holdPetEvent:FireClient(player, "error", "Pet is busy with a building.")
+		return
+	end
+
+	print("[HoldPet] Holding: " .. petData.petName)
+
+	-- Stop behavior loop
+	petData.state = "Held"
+	petData.inInventory = true
+	PetManager.stopBehaviorLoop(petId)
+
+	-- Hide the world model
+	if petData._petModel and petData._petModel.Parent then
+		petData._petModel.Parent = nil
+	elseif petData.model and petData.model.Parent then
+		petData.model.Parent = nil
+	end
+
+	local tool = createPetTool(player, petData)
+
+	-- 캐릭터 리스폰 등으로 Tool이 사라져도 inInventory=true 유지
+	-- (CharacterAdded 핸들러가 Tool을 다시 생성)
+	-- 명시적 드롭(dropPetEvent)에서만 returnPetToWorld 호출됨
 end)
 
 dropPetEvent.OnServerEvent:Connect(function(player, position, petIdParam)
@@ -294,21 +292,36 @@ dropPetEvent.OnServerEvent:Connect(function(player, position, petIdParam)
 	PetManager.returnPetToWorld(player, petId, validPos)
 end)
 
--- Cleanup: 플레이어 나갈 때 들고 있던 펫 모두 월드로 복귀
-game:GetService("Players").PlayerRemoving:Connect(function(player)
-	local containers = { player:FindFirstChild("Backpack"), player.Character }
-	for _, c in containers do
-		if not c then continue end
-		for _, child in c:GetChildren() do
-			if child:IsA("Tool") and child:GetAttribute("PetId") then
-				local pid = child:GetAttribute("PetId")
-				child:Destroy()
-				if pid then
-					PetManager.returnPetToWorld(player, pid)
-				end
+-- 재접속 시 inInventory=true 펫에 대해 Tool 자동 복원
+local function restoreHeldPets(player: Player)
+	local pets = PetManager.getPets(player)
+	if not pets then return end
+	for _, pet in pets do
+		if pet.inInventory and not findPetTool(player, pet.petId) then
+			local petData = PetManager.getPetData(player, pet.petId)
+			if petData then
+				createPetTool(player, petData)
 			end
 		end
 	end
+end
+
+game:GetService("Players").PlayerAdded:Connect(function(player)
+	-- PetManager.initPlayer 후 _spawnAllPets가 task.wait(1) 후 실행되므로 그 후에 복원
+	task.delay(2, function()
+		if player.Parent then restoreHeldPets(player) end
+	end)
+	-- 캐릭터 리스폰 시에도 다시 복원 (Tool은 캐릭터 리스폰 시 사라질 수 있음)
+	player.CharacterAdded:Connect(function()
+		task.wait(0.5)
+		if player.Parent then restoreHeldPets(player) end
+	end)
 end)
+-- 이미 접속 중인 플레이어 (스튜디오 hot reload 대응)
+for _, player in game:GetService("Players"):GetPlayers() do
+	task.delay(2, function()
+		if player.Parent then restoreHeldPets(player) end
+	end)
+end
 
 print("PetServer 로드됨")

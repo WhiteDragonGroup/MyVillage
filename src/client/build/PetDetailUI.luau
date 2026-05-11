@@ -9,13 +9,8 @@ local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForCh
 local AbilityCfg = BalanceConfig.PetAbility
 local BuffCfg = BalanceConfig.Buff
 
--- 펫이 부여하는 버프 ID 목록 (ABILITIES + PASSIVE 매핑)
-local PASSIVE_BUFF_MAP = {
-	CrystalGolem = { "Fortune" },     -- gemChanceBonus
-	IceGolem     = { "Vitality" },    -- snowEfficiencyBonus
-	ZombieNewbie = { "Vitality" },    -- nightWorkBonus
-}
-
+-- 펫이 부여하는 버프 ID 목록 (ABILITIES에 정의된 것만)
+-- 나머지 버프는 쉼터(Rest 건물)에서 부여되므로 펫 슬롯에는 안 들어감
 local function getPetBuffIds(petName: string): { string }
 	local ids = {}
 	local cfg = AbilityCfg.ABILITIES[petName]
@@ -26,10 +21,6 @@ local function getPetBuffIds(petName: string): { string }
 				if b.buffId then table.insert(ids, b.buffId) end
 			end
 		end
-	end
-	local passive = PASSIVE_BUFF_MAP[petName]
-	if passive then
-		for _, id in passive do table.insert(ids, id) end
 	end
 	return ids
 end

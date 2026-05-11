@@ -9,7 +9,16 @@ local serverScript = script.Parent
 local CurrencyManager = require(serverScript:WaitForChild("CurrencyManager"))
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
 
-local HARVEST_COOLDOWN = 0.3 -- 동일 플레이어가 같은 건물에 연속 터치 시 디바운스
+local HARVEST_COOLDOWN = 2 -- 같은 건물에서 다음 수확까지 대기 시간 (초)
+
+-- 수확 이펙트 RemoteEvent
+local remotes = ReplicatedStorage:WaitForChild("Remotes")
+local harvestEffectEvent = remotes:FindFirstChild("HarvestEffect")
+if not harvestEffectEvent then
+	harvestEffectEvent = Instance.new("RemoteEvent")
+	harvestEffectEvent.Name = "HarvestEffect"
+	harvestEffectEvent.Parent = remotes
+end
 
 local function isWorkBuilding(building: BasePart): boolean
 	local itemName = building:GetAttribute("ItemName")
@@ -46,6 +55,13 @@ local function tryHarvest(player: Player, building: BasePart)
 		CurrencyManager.addGems(player, gems)
 		building:SetAttribute("StoredGems", 0)
 	end
+
+	-- 클라이언트 이펙트
+	harvestEffectEvent:FireClient(player, {
+		coins = stored,
+		gems = gems,
+		position = building.Position + Vector3.new(0, building.Size.Y / 2 + 1, 0),
+	})
 end
 
 local function attachTouchHandler(building: BasePart)
