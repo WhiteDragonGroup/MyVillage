@@ -74,6 +74,65 @@ local function getPlayerFromPetData(petData): Player?
 end
 
 ----------------------------------------------------------------
+-- 펫 상태 → 애니메이션 이름 매핑
+-- 모델의 ServerStorage/Pets/{Name}/Animations 폴더 안 Animation 인스턴스 이름과 매칭.
+-- 없으면 Idle로 폴백.
+----------------------------------------------------------------
+-- 애니메이션은 "{petName}_{action}" 형식으로 저장됨 (예: sunflowie_Plant, iceGolem_Idle).
+-- 상태 → 액션 접미사 매핑 (대소문자 무시).
+local STATE_TO_ANIM = {
+	Idle = "Idle",
+	Wandering = "Walk",
+	Walking = "Walk",
+	Working = "Work",
+	Mining = "Mine",
+	Farming = "Plant",
+	Construction = "Build",
+	Sleeping = "Sleep",
+	Resting = "Rest",
+	Chatting = "Idle",
+	Fatigued = "Idle",
+	Assigned = "Idle",
+	Held = "Idle",
+	SearchingForWork = "Walk",
+}
+
+-- 액션 폴백 순서 (지정 액션이 없으면 차례로 시도)
+local ACTION_FALLBACK = {
+	Mine = { "Work", "Idle" },
+	Plant = { "Work", "Idle" },
+	Build = { "Work", "Idle" },
+	Work = { "Idle" },
+	Walk = { "Idle" },
+	Sleep = { "Rest", "Idle" },
+	Rest = { "Idle" },
+}
+
+local function playAnimationForState(petData, newState: string)
+	local tracks = petData._animTracks
+	if not tracks then return end
+	local action = STATE_TO_ANIM[newState] or "Idle"
+	local target = tracks[action]
+	if not target then
+		local fallback = ACTION_FALLBACK[action]
+		if fallback then
+			for _, name in fallback do
+				target = tracks[name]
+				if target then break end
+			end
+		end
+		target = target or tracks["Idle"]
+	end
+	if not target then return end
+	if petData._currentTrack == target then return end
+	if petData._currentTrack then
+		pcall(function() petData._currentTrack:Stop(0.2) end)
+	end
+	pcall(function() target:Play(0.2) end)
+	petData._currentTrack = target
+end
+
+----------------------------------------------------------------
 -- 펫 상태 변경 (Attribute + 클라이언트 알림)
 ----------------------------------------------------------------
 local function setPetState(petData, newState: string)
@@ -81,6 +140,7 @@ local function setPetState(petData, newState: string)
 	if petData.model and petData.model.Parent then
 		petData.model:SetAttribute("PetState", newState)
 	end
+	playAnimationForState(petData, newState)
 	local player = getPlayerFromPetData(petData)
 	if player then
 		petUpdateEvent:FireClient(player, "stateChanged", {
@@ -158,6 +218,17 @@ local function createPetModel(petData, position: Vector3): BasePart
 		pet.Shape = Enum.PartType.Ball
 	end
 
+	-- Motor6D 있으면 리그드 모델로 간주 (weld 스킵, 애니메이션이 파츠 위치 구동)
+	local hasMotor6D = false
+	if pet:IsA("Model") then
+		for _, desc in pet:GetDescendants() do
+			if desc:IsA("Motor6D") then
+				hasMotor6D = true
+				break
+			end
+		end
+	end
+
 	-- Model이면 mainPart 찾기 + 모든 파트 weld
 	local mainPart
 	if pet:IsA("Model") then
@@ -200,7 +271,7 @@ local function createPetModel(petData, position: Vector3): BasePart
 			-- 2. 최종 위치로 이동 (회전은 ServerStorage 템플릿 PrimaryPart 기준 정자세)
 			pet:PivotTo(CFrame.new(position + Vector3.new(0, PetCfg.PET_HEIGHT, 0)))
 
-			-- 3. 모든 파트 weld + Anchored 처리
+			-- 3. 모든 파트 weld + Anchored 처리 (리그드면 weld 스킵)
 			for _, desc in pet:GetDescendants() do
 				if desc:IsA("BasePart") then
 					desc.CanCollide = false
@@ -209,7 +280,7 @@ local function createPetModel(petData, position: Vector3): BasePart
 					desc.CollisionGroup = "Pets"
 					if desc ~= mainPart then
 						desc.Anchored = false
-						if not desc:FindFirstChildOfClass("WeldConstraint") then
+						if not hasMotor6D and not desc:FindFirstChildOfClass("WeldConstraint") then
 							local weld = Instance.new("WeldConstraint")
 							weld.Part0 = mainPart
 							weld.Part1 = desc
@@ -270,6 +341,52 @@ local function createPetModel(petData, position: Vector3): BasePart
 		end
 	end
 	target:SetAttribute("Mutations", table.concat(mutList, ","))
+
+	-- 리그드 모델: AnimationController + Animator + 애니메이션 트랙 로드
+	-- 애니메이션 소스: ServerStorage/Pets/{PetName}/Animations/*
+	if hasMotor6D and pet:IsA("Model") then
+		local animController = pet:FindFirstChildOfClass("AnimationController")
+		if not animController then
+			animController = Instance.new("AnimationController")
+			animController.Parent = pet
+		end
+		local animator = animController:FindFirstChildOfClass("Animator")
+		if not animator then
+			animator = Instance.new("Animator")
+			animator.Parent = animController
+		end
+
+		local animFolder = nil
+		if serverPetsFolder then
+			local petFolder = serverPetsFolder:FindFirstChild(petName)
+			if petFolder then
+				animFolder = petFolder:FindFirstChild("Animations")
+			end
+		end
+
+		if animFolder then
+			-- "{petName}_Action" → tracks["Action"] 로 저장. 매칭 안 되면 원본 이름 그대로 저장.
+			local tracks = {}
+			for _, anim in animFolder:GetChildren() do
+				if anim:IsA("Animation") then
+					local ok, track = pcall(function() return animator:LoadAnimation(anim) end)
+					if ok and track then
+						track.Looped = true
+						local key = anim.Name:match("^[^_]+_(.+)$") or anim.Name
+						tracks[key] = track
+					end
+				end
+			end
+			petData._animTracks = tracks
+			petData._animator = animator
+			-- 즉시 Idle 시동
+			local idle = tracks["Idle"]
+			if idle then
+				pcall(function() idle:Play(0) end)
+				petData._currentTrack = idle
+			end
+		end
+	end
 
 	return target
 end
