@@ -299,14 +299,40 @@ function PetDetailUI.show(petData: { [string]: any })
 			table.sort(slots, function(a, b) return a.Name < b.Name end)
 			for i, slot in slots do
 				local buffId = buffIds[i]
+				local slotInfo = slot:FindFirstChild("Info")
 				if buffId then
+					local buffDef = BuffCfg.BUFFS[buffId]
 					local iconId = (Constants.BUFF_ICONS and Constants.BUFF_ICONS[buffId])
-						or (BuffCfg.BUFFS[buffId] and BuffCfg.BUFFS[buffId].icon)
+						or (buffDef and buffDef.icon)
 						or ""
 					slot.Image = iconId
 					slot.Visible = true
+
+					-- Info 툴팁: description 채우고 호버 연결
+					if slotInfo and slotInfo:IsA("GuiObject") then
+						local descLabel = slotInfo:FindFirstChildWhichIsA("TextLabel", true)
+						if descLabel and buffDef then
+							local desc = buffDef.description or ""
+							desc = desc:gsub("{n}", tostring(buffDef.value or ""))
+							local title = buffDef.name or buffId
+							descLabel.Text = title .. "\n" .. desc
+						end
+						slotInfo.Visible = false
+						if not slot:GetAttribute("_HoverWired") then
+							slot:SetAttribute("_HoverWired", true)
+							slot.MouseEnter:Connect(function()
+								if slotInfo and slotInfo.Parent then slotInfo.Visible = true end
+							end)
+							slot.MouseLeave:Connect(function()
+								if slotInfo and slotInfo.Parent then slotInfo.Visible = false end
+							end)
+						end
+					end
 				else
 					slot.Visible = false
+					if slotInfo and slotInfo:IsA("GuiObject") then
+						slotInfo.Visible = false
+					end
 				end
 			end
 		end
