@@ -78,16 +78,16 @@ end
 -- 모델의 ServerStorage/Pets/{Name}/Animations 폴더 안 Animation 인스턴스 이름과 매칭.
 -- 없으면 Idle로 폴백.
 ----------------------------------------------------------------
--- 애니메이션은 "{petName}_{action}" 형식으로 저장됨 (예: sunflowie_Plant, iceGolem_Idle).
--- 상태 → 액션 접미사 매핑 (대소문자 무시).
+-- 애니메이션은 "{petName}_{action}" 형식 (예: Imp_Construction, sunflowie_Plant).
+-- 상태 → 액션 접미사 매핑.
 local STATE_TO_ANIM = {
 	Idle = "Idle",
 	Wandering = "Walk",
 	Walking = "Walk",
 	Working = "Work",
-	Mining = "Mine",
-	Farming = "Plant",
-	Construction = "Build",
+	Mining = "Mining",
+	Farming = "Farming",
+	Construction = "Construction",
 	Sleeping = "Sleep",
 	Resting = "Rest",
 	Chatting = "Idle",
@@ -99,19 +99,23 @@ local STATE_TO_ANIM = {
 
 -- 액션 폴백 순서 (지정 액션이 없으면 차례로 시도)
 local ACTION_FALLBACK = {
-	Mine = { "Work", "Idle" },
-	Plant = { "Work", "Idle" },
-	Build = { "Work", "Idle" },
+	Mining = { "Mine", "Work", "Idle" },
+	Farming = { "Plant", "Work", "Idle" },
+	Construction = { "Build", "Work", "Idle" },
 	Work = { "Idle" },
-	Walk = { "Idle" },
-	Sleep = { "Rest", "Idle" },
-	Rest = { "Idle" },
+	Walk = { "Walking", "Idle" },
+	Sleep = { "Sleeping", "Rest", "Idle" },
+	Rest = { "Resting", "Idle" },
 }
 
 local function playAnimationForState(petData, newState: string)
 	local tracks = petData._animTracks
 	if not tracks then return end
 	local action = STATE_TO_ANIM[newState] or "Idle"
+	-- Working은 펫 타입에 따라 구체 액션으로 치환 (Farming/Mining/Construction)
+	if newState == "Working" and petData.petType then
+		action = STATE_TO_ANIM[petData.petType] or action
+	end
 	local target = tracks[action]
 	if not target then
 		local fallback = ACTION_FALLBACK[action]
