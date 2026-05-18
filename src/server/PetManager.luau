@@ -78,40 +78,40 @@ end
 -- 모델의 ServerStorage/Pets/{Name}/Animations 폴더 안 Animation 인스턴스 이름과 매칭.
 -- 없으면 Idle로 폴백.
 ----------------------------------------------------------------
--- 애니메이션은 "{petName}_{action}" 형식 (예: Imp_Construction, sunflowie_Plant).
--- 상태 → 액션 접미사 매핑.
+-- 애니메이션은 "{petName}_{action}" 형식 (예: Imp_Construction, sunflowie_Plant, IceGolem_idle).
+-- 키는 소문자로 정규화하여 대소문자 무시 매칭.
 local STATE_TO_ANIM = {
-	Idle = "Idle",
-	Wandering = "Walk",
-	Walking = "Walk",
-	Working = "Work",
-	Mining = "Mining",
-	Farming = "Farming",
-	Construction = "Construction",
-	Sleeping = "Sleep",
-	Resting = "Rest",
-	Chatting = "Idle",
-	Fatigued = "Idle",
-	Assigned = "Idle",
-	Held = "Idle",
-	SearchingForWork = "Walk",
+	Idle = "idle",
+	Wandering = "move",
+	Walking = "move",
+	Working = "work",
+	Mining = "mine",
+	Farming = "plant",
+	Construction = "construction",
+	Sleeping = "sleep",
+	Resting = "rest",
+	Chatting = "idle",
+	Fatigued = "idle",
+	Assigned = "idle",
+	Held = "idle",
+	SearchingForWork = "move",
 }
 
--- 액션 폴백 순서 (지정 액션이 없으면 차례로 시도)
+-- 액션 폴백 순서 (지정 액션이 없으면 차례로 시도). 모두 소문자.
 local ACTION_FALLBACK = {
-	Mining = { "Mine", "Work", "Idle" },
-	Farming = { "Plant", "Work", "Idle" },
-	Construction = { "Build", "Work", "Idle" },
-	Work = { "Idle" },
-	Walk = { "Walking", "Idle" },
-	Sleep = { "Sleeping", "Rest", "Idle" },
-	Rest = { "Resting", "Idle" },
+	mine    = { "mining", "work", "make", "idle" },
+	plant   = { "farming", "fields", "work", "idle" },
+	construction = { "build", "make", "work", "idle" },
+	work    = { "make", "magic", "idle" },
+	move    = { "walk", "walking", "run", "idle" },
+	sleep   = { "sleeping", "rest", "fields", "idle" },
+	rest    = { "resting", "fields", "idle" },
 }
 
 local function playAnimationForState(petData, newState: string)
 	local tracks = petData._animTracks
 	if not tracks then return end
-	local action = STATE_TO_ANIM[newState] or "Idle"
+	local action = STATE_TO_ANIM[newState] or "idle"
 	-- Working은 펫 타입에 따라 구체 액션으로 치환 (Farming/Mining/Construction)
 	if newState == "Working" and petData.petType then
 		action = STATE_TO_ANIM[petData.petType] or action
@@ -125,7 +125,7 @@ local function playAnimationForState(petData, newState: string)
 				if target then break end
 			end
 		end
-		target = target or tracks["Idle"]
+		target = target or tracks["idle"]
 	end
 	if not target then return end
 	if petData._currentTrack == target then return end
@@ -369,7 +369,7 @@ local function createPetModel(petData, position: Vector3): BasePart
 		end
 
 		if animFolder then
-			-- "{petName}_Action" → tracks["Action"] 로 저장. 매칭 안 되면 원본 이름 그대로 저장.
+			-- "{petName}_Action" → tracks[lower("Action")] 로 저장 (대소문자 무시).
 			local tracks = {}
 			for _, anim in animFolder:GetChildren() do
 				if anim:IsA("Animation") then
@@ -377,14 +377,14 @@ local function createPetModel(petData, position: Vector3): BasePart
 					if ok and track then
 						track.Looped = true
 						local key = anim.Name:match("^[^_]+_(.+)$") or anim.Name
-						tracks[key] = track
+						tracks[key:lower()] = track
 					end
 				end
 			end
 			petData._animTracks = tracks
 			petData._animator = animator
 			-- 즉시 Idle 시동
-			local idle = tracks["Idle"]
+			local idle = tracks["idle"]
 			if idle then
 				pcall(function() idle:Play(0) end)
 				petData._currentTrack = idle
