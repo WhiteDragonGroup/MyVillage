@@ -247,11 +247,6 @@ function PetDetailUI.show(petData: { [string]: any })
 			end
 		end
 
-		-- Debug: print job frame children
-		for _, child in jobsFrame:GetChildren() do
-			print("[PetDetail] Job child: " .. child.Name .. " (" .. child.ClassName .. ")")
-		end
-
 		setJobTransparency(jobsFrame:FindFirstChild("Farming"), petTypes["Farming"] == true)
 		setJobTransparency(jobsFrame:FindFirstChild("Mining"), petTypes["Mining"] == true)
 		setJobTransparency(jobsFrame:FindFirstChild("Building"), petTypes["Construction"] == true)

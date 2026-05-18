@@ -415,7 +415,7 @@ end
 ----------------------------------------------------------------
 -- 쉼터 탐색
 ----------------------------------------------------------------
-local function findRestPlace(plot): BasePart?
+local function findRestPlace(plot, petData): BasePart?
 	local buildings = getAllBuildings(plot)
 	local candidates = {}
 
@@ -434,9 +434,23 @@ local function findRestPlace(plot): BasePart?
 				break
 			end
 		end
-		if isRest then
-			table.insert(candidates, building)
+		if not isRest then continue end
+
+		-- 점유 확인 (쉼터당 1마리)
+		local buildingId = building:GetAttribute("BuildingId")
+		local occupants = _workplaceOccupancy[buildingId]
+		local occupantCount = occupants and #occupants or 0
+		-- 본인이 이미 점유 중이면 스킵
+		if occupants and petData then
+			local already = false
+			for _, pid in occupants do
+				if pid == petData.petId then already = true; break end
+			end
+			if already then continue end
 		end
+		if occupantCount >= 1 then continue end
+
+		table.insert(candidates, building)
 	end
 
 	if #candidates == 0 then return nil end
@@ -548,8 +562,43 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 		return
 	end
 
+	-- 글로벌 XP 틱 (모든 펫이 매초 +1 XP, 쉼터에서 배율 적용 가능)
+	-- petData._xpMultiplier가 nil이면 1.0으로 간주
 	task.spawn(function()
-		-- XP 업데이트 타이머
+		local xpClientTimer = 0
+		while _behaviorLoops[petId] do
+			task.wait(1)
+			if not _behaviorLoops[petId] then break end
+			local mult = petData._xpMultiplier or 1
+			petData.xp = petData.xp + PetCfg.XP_PER_SECOND * mult
+			local req = PetCfg.XP_REQUIRED[petData.level]
+			if req and petData.xp >= req and petData.level < PetCfg.MAX_LEVEL then
+				petData.level = petData.level + 1
+				petData.xp = 0
+				if petData.model and petData.model.Parent then
+					petData.model:SetAttribute("PetLevel", petData.level)
+				end
+				petUpdateEvent:FireClient(player, "levelup", {
+					petId = petId,
+					petName = petData.petName,
+					newLevel = petData.level,
+				})
+			end
+			-- 클라 10초마다 동기화
+			xpClientTimer = xpClientTimer + 1
+			if xpClientTimer >= 10 then
+				xpClientTimer = 0
+				petUpdateEvent:FireClient(player, "xpUpdate", {
+					petId = petId,
+					xp = petData.xp,
+					level = petData.level,
+				})
+			end
+		end
+	end)
+
+	task.spawn(function()
+		-- (기존 work-loop의 클라 xp 동기화 변수는 더 이상 필요 없음)
 		local xpUpdateTimer = 0
 
 		while _behaviorLoops[petId] do
@@ -574,9 +623,12 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 				print("[Pet] " .. petData.petName .. " sleeping (isDay=" .. tostring(TimeState.isDay()) .. ", insomnia=" .. tostring(hasSleepless) .. ")")
 				setPetState(petData, "Sleeping")
 
-				-- 쉼터로 이동 (있으면)
-				local restPlace = findRestPlace(plot)
+				-- 쉼터로 이동 (있으면, 1마리 한도라 점유 즉시 잠금)
+				local restPlace = findRestPlace(plot, petData)
+				local restBuildingId = nil
 				if restPlace then
+					restBuildingId = restPlace:GetAttribute("BuildingId")
+					occupyWorkplace(restBuildingId, petId)
 					local targetPos = restPlace.Position + Vector3.new(
 						(math.random() * 2 - 1) * 2,
 						PetCfg.PET_HEIGHT,
@@ -588,6 +640,11 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 				-- 아침까지 대기
 				while not TimeState.isDay() and _behaviorLoops[petId] do
 					task.wait(1)
+				end
+
+				-- 수면 종료 → 점유 해제
+				if restBuildingId then
+					vacateWorkplace(restBuildingId, petId)
 				end
 
 				if not _behaviorLoops[petId] then break end
@@ -701,32 +758,7 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 						end
 					end
 
-					-- XP 획득
-					petData.xp = petData.xp + PetCfg.XP_PER_SECOND
-					local required = PetCfg.XP_REQUIRED[petData.level]
-					if required and petData.xp >= required and petData.level < PetCfg.MAX_LEVEL then
-						petData.level = petData.level + 1
-						petData.xp = 0
-						if petData.model and petData.model.Parent then
-							petData.model:SetAttribute("PetLevel", petData.level)
-						end
-						petUpdateEvent:FireClient(player, "levelup", {
-							petId = petId,
-							petName = petData.petName,
-							newLevel = petData.level,
-						})
-					end
-
-					-- XP 주기적 업데이트 (10초마다)
-					xpUpdateTimer = xpUpdateTimer + 1
-					if xpUpdateTimer >= 10 then
-						xpUpdateTimer = 0
-						petUpdateEvent:FireClient(player, "xpUpdate", {
-							petId = petId,
-							xp = petData.xp,
-							level = petData.level,
-						})
-					end
+					-- XP는 글로벌 XP 틱이 처리
 				end
 
 				-- 작업 종료 → 점유 해제
@@ -757,18 +789,28 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 				local doWalk = math.random() < PetCfg.WALK_CHANCE
 				local restPlace = nil
 				if not doWalk then
-					restPlace = findRestPlace(plot)
+					restPlace = findRestPlace(plot, petData)
 				end
 
 				if restPlace then
+					-- 쉼터 점유 즉시 잠금 (1마리 한도)
+					local restBuildingId = restPlace:GetAttribute("BuildingId")
+					occupyWorkplace(restBuildingId, petId)
+
 					-- 쉼터 이동 → 휴식
 					local restPos = restPlace.Position + Vector3.new(
 						(math.random() * 2 - 1) * 2,
 						PetCfg.PET_HEIGHT,
 						(math.random() * 2 - 1) * 2
 					)
-					if not movePetTo(petData, restPos) then break end
-					if not _behaviorLoops[petId] then break end
+					if not movePetTo(petData, restPos) then
+						vacateWorkplace(restBuildingId, petId)
+						break
+					end
+					if not _behaviorLoops[petId] then
+						vacateWorkplace(restBuildingId, petId)
+						break
+					end
 
 					setPetState(petData, "Resting")
 
@@ -786,31 +828,20 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 						if restCfg.restDecayMultiplier and restCfg.restDecayMultiplier > 0 then
 							restDuration = restDuration / restCfg.restDecayMultiplier
 						end
-						-- TreeOfGrowth XP 배율 처리
+						-- TreeOfGrowth XP 배율: 글로벌 XP 틱이 자동 적용
 						if restCfg.xpMultiplier and restCfg.xpMultiplier > 1 then
-							local elapsed = 0
-							while elapsed < restDuration and _behaviorLoops[petId] do
-								task.wait(1)
-								elapsed = elapsed + 1
-								-- 휴식 중 XP 획득 (TreeOfGrowth)
-								petData.xp = petData.xp + PetCfg.XP_PER_SECOND * restCfg.xpMultiplier
-								local req = PetCfg.XP_REQUIRED[petData.level]
-								if req and petData.xp >= req and petData.level < PetCfg.MAX_LEVEL then
-									petData.level = petData.level + 1
-									petData.xp = 0
-									petUpdateEvent:FireClient(player, "levelup", {
-										petId = petId,
-										petName = petData.petName,
-										newLevel = petData.level,
-									})
-								end
-							end
+							petData._xpMultiplier = restCfg.xpMultiplier
+							task.wait(restDuration)
+							petData._xpMultiplier = 1
 						else
 							task.wait(restDuration)
 						end
 					else
 						task.wait(restDuration)
 					end
+
+					-- 휴식 종료 → 점유 해제
+					vacateWorkplace(restBuildingId, petId)
 				else
 					-- 산책
 					setPetState(petData, "Wandering")

@@ -74,6 +74,19 @@ end
 ----------------------------------------------------------------
 -- SellPet: sell a single pet
 ----------------------------------------------------------------
+-- Pet Tool 삭제 (판매 후 잔존 Tool 정리)
+local function destroyPetTool(player: Player, petId: string)
+	local containers = { player:FindFirstChild("Backpack"), player.Character }
+	for _, c in containers do
+		if not c then continue end
+		for _, child in c:GetChildren() do
+			if child:IsA("Tool") and child:GetAttribute("PetId") == petId then
+				child:Destroy()
+			end
+		end
+	end
+end
+
 sellPetEvent.OnServerInvoke = function(player, petId)
 	if typeof(petId) ~= "string" then return false, "Invalid petId" end
 
@@ -84,6 +97,7 @@ sellPetEvent.OnServerInvoke = function(player, petId)
 	local ok, reason = PetManager.removePet(player, petId)
 	if not ok then return false, reason end
 
+	destroyPetTool(player, petId)
 	CurrencyManager.addCoins(player, price)
 	return true, price
 end
@@ -92,20 +106,30 @@ end
 -- SellAllPets: sell all unassigned pets
 ----------------------------------------------------------------
 sellAllPetsEvent.OnServerInvoke = function(player)
-	local pets = PetManager.getPets(player)
+	-- 인벤토리(Backpack/Character의 Pet Tool)에 있는 펫 ID 수집
+	local heldPetIds: { [string]: boolean } = {}
+	local containers = { player:FindFirstChild("Backpack"), player.Character }
+	for _, c in containers do
+		if not c then continue end
+		for _, child in c:GetChildren() do
+			if child:IsA("Tool") then
+				local pid = child:GetAttribute("PetId")
+				if pid then heldPetIds[pid] = true end
+			end
+		end
+	end
+
 	local totalPrice = 0
 	local soldCount = 0
-
-	for _, pet in pets do
-		if pet.assignedBuildingId == "" or pet.assignedBuildingId == nil then
-			local petData = PetManager.getPetData(player, pet.petId)
-			if petData then
-				local price = PetManager.getSellPrice(petData)
-				local ok = PetManager.removePet(player, pet.petId)
-				if ok then
-					totalPrice = totalPrice + price
-					soldCount = soldCount + 1
-				end
+	for petId, _ in heldPetIds do
+		local petData = PetManager.getPetData(player, petId)
+		if petData and (petData.assignedBuildingId == "" or petData.assignedBuildingId == nil) then
+			local price = PetManager.getSellPrice(petData)
+			local ok = PetManager.removePet(player, petId)
+			if ok then
+				destroyPetTool(player, petId)
+				totalPrice = totalPrice + price
+				soldCount = soldCount + 1
 			end
 		end
 	end
@@ -246,6 +270,14 @@ holdPetEvent.OnServerEvent:Connect(function(player, petId)
 	petData.state = "Held"
 	petData.inInventory = true
 	PetManager.stopBehaviorLoop(petId)
+
+	-- 즉시 DataStore 저장 (재접속 시 인벤토리 유지)
+	task.spawn(function()
+		local ok, DataStoreManager = pcall(require, script.Parent:WaitForChild("DataStoreManager"))
+		if ok and DataStoreManager.savePlayer then
+			DataStoreManager.savePlayer(player)
+		end
+	end)
 
 	-- Hide the world model
 	if petData._petModel and petData._petModel.Parent then

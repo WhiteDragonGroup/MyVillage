@@ -263,9 +263,9 @@ function PetSellUI.init(callbacks: { onSold: (() -> ())? }?)
 		end)
 	end
 
-	-- Sell All 버튼 (Bottom 영역)
+	-- Sell All 버튼 (Bottom 영역; 디자인에서는 Bottom.Sell로 명명됨)
 	local bottom = _sellFrame:FindFirstChild("Bottom")
-	local sellAllBtn = (bottom and (bottom:FindFirstChild("SellAll") or bottom:FindFirstChild("SellAllButton")))
+	local sellAllBtn = (bottom and (bottom:FindFirstChild("Sell") or bottom:FindFirstChild("SellAll") or bottom:FindFirstChild("SellAllButton")))
 		or _sellFrame:FindFirstChild("SellAll", true)
 	if sellAllBtn and sellAllBtn:IsA("GuiButton") then
 		sellAllBtn.MouseButton1Click:Connect(function()
