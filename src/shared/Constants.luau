@@ -284,6 +284,30 @@ Constants.PETS = {
 	["Lumini"]        = { name = "Lumini",          petTypes = {"Farming", "Buff"},          rarity = "Legendary", size = "Small" },
 }
 
+-- 펫 모델 배치 시 적용할 회전 오프셋 (템플릿 모델이 누어있을 때 보정용).
+-- PetManager가 PivotTo 시 CFrame.new(pos) * 이 오프셋 으로 배치.
+Constants.PET_ORIENTATION_OFFSET = {
+	-- Sunflowie 상하반전 상태라 X축 180도로 뒤집기. 안 맞으면 X→Z로 축 변경.
+	Sunflowie = CFrame.Angles(math.pi, 0, 0),
+}
+
+function Constants.getPetOrientationOffset(petName: string): CFrame
+	return Constants.PET_ORIENTATION_OFFSET[petName] or CFrame.new()
+end
+
+-- 펫 모델 정면이 제각각이라 이동 방향 바라보기용 Y축 보정각(도). lookAt(-Z 기준)에 더해짐.
+-- 대부분의 펫이 정면 -X라 기본 -90. 정면이면 90, 옆이면 0/180 등으로 예외만 등록.
+Constants.PET_FACING_YAW = {
+	IceGolem  = 0,  -- 옆으로 걷던 것 → 90° 보정 (반대 옆이면 180)
+	Sunflowie = 90, -- X180 상하반전 보정 탓에 정면이 반대 → 180° 더함
+}
+
+function Constants.getPetFacingYaw(petName: string): number
+	local y = Constants.PET_FACING_YAW[petName]
+	if y == nil then return -90 end -- 기본: 정면 -X
+	return y
+end
+
 -- ============================================================
 -- BUFF TYPES: Pet buffs (replaces old Mutation system)
 -- Common buffs (above X line) + Unique buffs (below X line)

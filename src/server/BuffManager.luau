@@ -69,6 +69,20 @@ function BuffManager.removePetBuffs(petId: string)
 	_petBuffs[petId] = nil
 end
 
+-- 펫의 활성 버프 상세 (클라 동기화/표시용): { { buffId, remaining } }
+function BuffManager.getPetBuffsDetailed(petId: string): { { buffId: string, remaining: number } }
+	local petTable = _petBuffs[petId]
+	if not petTable then return {} end
+	local now = tick()
+	local result = {}
+	for buffId, expire in petTable do
+		if expire > now then
+			table.insert(result, { buffId = buffId, remaining = expire - now })
+		end
+	end
+	return result
+end
+
 ----------------------------------------------------------------
 -- 플레이어 단위
 ----------------------------------------------------------------

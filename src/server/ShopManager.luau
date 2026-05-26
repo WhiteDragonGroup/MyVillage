@@ -43,8 +43,8 @@ function ShopManager.setInventoryFunction(addFn)
 end
 
 -- Build full item list from Constants.BUILDINGS + ShopConfig overrides
--- Excludes TownHall (starter building, not for sale)
-local EXCLUDED_BUILDINGS = { TownHall = true }
+-- Excludes TownHall (starter building) + ClockTower (튜토리얼 1회 지급, 삭제·재구매 불가)
+local EXCLUDED_BUILDINGS = { TownHall = true, ClockTower = true }
 
 local RARITY_DEFAULT_PRICE = {
 	["Common"] = 50,

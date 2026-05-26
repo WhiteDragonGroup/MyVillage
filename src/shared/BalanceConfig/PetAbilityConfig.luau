@@ -24,12 +24,12 @@ PetAbilityConfig.ABILITIES = {
 	-- 5스터드 내 다른 펫 발견 시 전기 → Energy/Haste/Charge
 	Zipbit = {
 		kind = "buff_others_multi",
-		cooldown = 30,
+		cooldown = 45, -- 쿨다운 > 지속이라 버프가 끊겼다 재적용됨 (고정 느낌 제거)
 		range = 5,
 		buffs = {
-			{ buffId = "Energy", duration = 60 },
-			{ buffId = "Haste", duration = 60 },
-			{ buffId = "Charge", duration = 60 },
+			{ buffId = "Energy", duration = 20 },
+			{ buffId = "Haste", duration = 20 },
+			{ buffId = "Charge", duration = 20 },
 		},
 	},
 	-- 7스터드 내 다른 펫 발견 시 투사체 → 용의 힘 1

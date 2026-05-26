@@ -263,6 +263,13 @@ function ShopUI._renderItems()
 			if rarityLabel then rarityLabel.Text = building.rarity end
 		end
 
+		-- Icon (레벨 1 이미지)
+		local iconLabel = slot:FindFirstChild("Icon", true)
+		if iconLabel and (iconLabel:IsA("ImageLabel") or iconLabel:IsA("ImageButton")) and Constants.getBuildingIcon then
+			local iconId = Constants.getBuildingIcon(item.itemName, 1)
+			if iconId ~= "" then iconLabel.Image = iconId end
+		end
+
 		-- BuyDollar
 		local buyDollar = slot:FindFirstChild("BuyDollar")
 		if buyDollar and buyDollar:IsA("GuiButton") then

@@ -19,6 +19,9 @@ local _eggInventories = {}
 -- 플레이어별 배치된 알 { [Player]: { [eggId]: { eggType, placedTime, position } } }
 local _placedEggs = {}
 
+-- 저장된 배치 알 복원 대기 큐 (PlotManager가 플롯 배정 후 restorePlacedEggs로 소비)
+local _pendingPlacedEggs = {}
+
 -- 펫 추가 함수 (외부 주입)
 local _addPet = nil
 function EggManager.setPetFunction(addFn)
@@ -46,12 +49,24 @@ end
 ----------------------------------------------------------------
 -- 초기화
 ----------------------------------------------------------------
-function EggManager.initPlayer(player: Player, savedEggs: { any }?)
+function EggManager.initPlayer(player: Player, savedEggs: any?)
 	_eggInventories[player] = {}
 	_placedEggs[player] = {}
+	_pendingPlacedEggs[player] = nil
 
-	if savedEggs then
-		for _, egg in savedEggs do
+	if not savedEggs then return end
+
+	-- 구 형식: 배열({eggType,count}...) / 신 형식: {inventory={...}, placed={...}}
+	local inventory, placed
+	if savedEggs.inventory ~= nil or savedEggs.placed ~= nil then
+		inventory = savedEggs.inventory
+		placed = savedEggs.placed
+	else
+		inventory = savedEggs
+	end
+
+	if inventory then
+		for _, egg in inventory do
 			if egg.eggType and egg.count then
 				table.insert(_eggInventories[player], {
 					eggType = egg.eggType,
@@ -60,6 +75,10 @@ function EggManager.initPlayer(player: Player, savedEggs: { any }?)
 			end
 		end
 	end
+
+	if placed and #placed > 0 then
+		_pendingPlacedEggs[player] = placed
+	end
 end
 
 function EggManager.removePlayer(player: Player)
@@ -67,13 +86,15 @@ function EggManager.removePlayer(player: Player)
 	local placed = _placedEggs[player]
 	if placed then
 		for eggId, data in placed do
-			if data.model and data.model.Parent then
-				data.model:Destroy()
+			local model = data.eggModel or data.model
+			if model and model.Parent then
+				model:Destroy()
 			end
 		end
 	end
 	_eggInventories[player] = nil
 	_placedEggs[player] = nil
+	_pendingPlacedEggs[player] = nil
 end
 
 ----------------------------------------------------------------
@@ -255,6 +276,105 @@ end
 ----------------------------------------------------------------
 -- 알 배치 (마을에 설치)
 ----------------------------------------------------------------
+-- 알 모델 생성 + 배치 (인벤토리/제한 검사 없음). placeEgg와 restorePlacedEggs에서 공용.
+-- restorePivotCF가 주어지면 그 CFrame으로 직접 PivotTo (바닥 높이 보정 스킵).
+-- 그렇지 않으면 groundPos.Y에 모델 높이/2를 더해 중심을 올림.
+local function _spawnPlacedEgg(player: Player, eggType: string, groundPos: Vector3?, restorePivotCF: CFrame?): string?
+	local eggInfo = EggCfg.EGGS[eggType]
+	if not eggInfo then return nil end
+
+	local eggFolder = ReplicatedStorage:FindFirstChild("Egg")
+	local template = eggFolder and eggFolder:FindFirstChild(eggType)
+
+	local eggModel
+	if template then
+		eggModel = template:Clone()
+	else
+		eggModel = Instance.new("Part")
+		eggModel.Size = Vector3.new(2, 3, 2)
+		eggModel.Shape = Enum.PartType.Ball
+		eggModel.Color = Color3.fromRGB(255, 230, 180)
+		eggModel.Material = Enum.Material.SmoothPlastic
+	end
+
+	-- 크기 4배 확대
+	local SCALE = 4
+	if eggModel:IsA("Model") then
+		eggModel:ScaleTo(SCALE)
+	elseif eggModel:IsA("BasePart") then
+		eggModel.Size = eggModel.Size * SCALE
+	end
+
+	local eggId = HttpService:GenerateGUID(false)
+
+	-- 위치 설정
+	local mainPart
+	if eggModel:IsA("Model") then
+		mainPart = eggModel.PrimaryPart or eggModel:FindFirstChildWhichIsA("BasePart")
+	elseif eggModel:IsA("BasePart") then
+		mainPart = eggModel
+	end
+
+	local pivotCF: CFrame
+	if restorePivotCF then
+		pivotCF = restorePivotCF
+	else
+		local pos = groundPos or Vector3.zero
+		local height = 0
+		if eggModel:IsA("Model") then
+			local _, sz = eggModel:GetBoundingBox()
+			height = sz.Y
+		elseif eggModel:IsA("BasePart") then
+			height = eggModel.Size.Y
+		end
+		pivotCF = CFrame.new(pos.X, pos.Y + height / 2, pos.Z)
+	end
+
+	if eggModel:IsA("Model") then
+		eggModel:PivotTo(pivotCF)
+	elseif eggModel:IsA("BasePart") then
+		eggModel.CFrame = pivotCF
+	end
+
+	if mainPart then
+		mainPart.Anchored = true
+		mainPart.CanCollide = false
+		mainPart.CanQuery = true
+	end
+
+	-- 속성 설정
+	local target = mainPart or eggModel
+	target:SetAttribute("EggId", eggId)
+	target:SetAttribute("EggType", eggType)
+	target:SetAttribute("OwnerId", player.UserId)
+	target:SetAttribute("PlacedTime", tick())
+	target:SetAttribute("HatchTime", eggInfo.hatchTime)
+	target:SetAttribute("HatchProgress", 0)
+	target:SetAttribute("IsEgg", true)
+
+	-- 플롯에 배치
+	local plot = EggManager._getPlayerPlot(player)
+	if plot then
+		eggModel.Parent = plot
+	else
+		eggModel.Parent = workspace
+	end
+
+	-- 배치 데이터 저장
+	local placed = _placedEggs[player]
+	if not placed then placed = {}; _placedEggs[player] = placed end
+
+	placed[eggId] = {
+		eggType = eggType,
+		placedTime = tick(),
+		model = mainPart or eggModel,
+		eggModel = eggModel, -- 저장 시 GetPivot 호출용
+		eggId = eggId,
+	}
+
+	return eggId
+end
+
 function EggManager.placeEgg(player: Player, eggType: string, position: Vector3): (boolean, string)
 	local eggInfo = EggCfg.EGGS[eggType]
 	if not eggInfo then return false, "Egg not found" end
@@ -285,92 +405,11 @@ function EggManager.placeEgg(player: Player, eggType: string, position: Vector3)
 	-- 인벤토리에서 차감
 	EggManager.removeEgg(player, eggType, 1)
 
-	-- 알 모델 생성
-	local eggFolder = ReplicatedStorage:FindFirstChild("Egg")
-	local template = eggFolder and eggFolder:FindFirstChild(eggType)
-
-	local eggModel
-	if template then
-		eggModel = template:Clone()
-	else
-		-- 폴백: 기본 파트
-		eggModel = Instance.new("Part")
-		eggModel.Size = Vector3.new(2, 3, 2)
-		eggModel.Shape = Enum.PartType.Ball
-		eggModel.Color = Color3.fromRGB(255, 230, 180)
-		eggModel.Material = Enum.Material.SmoothPlastic
-	end
-
-	-- 크기 4배 확대
-	local SCALE = 4
-	if eggModel:IsA("Model") then
-		eggModel:ScaleTo(SCALE)
-	elseif eggModel:IsA("BasePart") then
-		eggModel.Size = eggModel.Size * SCALE
-	end
-
-	local eggId = HttpService:GenerateGUID(false)
-
-	-- 모델 높이 측정해서 바닥 위에 올리기
-	local function getModelHeight(): number
-		if eggModel:IsA("Model") then
-			local _, sz = eggModel:GetBoundingBox()
-			return sz.Y
-		elseif eggModel:IsA("BasePart") then
-			return eggModel.Size.Y
-		end
-		return 0
-	end
-	local height = getModelHeight()
-	-- position은 클릭 지점(주로 바닥). 알 중심을 바닥+(height/2)로
-	local placePos = Vector3.new(position.X, position.Y + height / 2, position.Z)
-
-	-- 위치 설정
-	local mainPart
-	if eggModel:IsA("Model") then
-		mainPart = eggModel.PrimaryPart or eggModel:FindFirstChildWhichIsA("BasePart")
-		if mainPart then
-			eggModel:PivotTo(CFrame.new(placePos))
-		end
-	elseif eggModel:IsA("BasePart") then
-		eggModel.CFrame = CFrame.new(placePos)
-		mainPart = eggModel
-	end
-
-	if mainPart then
-		mainPart.Anchored = true
-		mainPart.CanCollide = false
-		mainPart.CanQuery = true
-	end
-
-	-- 속성 설정
-	local target = mainPart or eggModel
-	target:SetAttribute("EggId", eggId)
-	target:SetAttribute("EggType", eggType)
-	target:SetAttribute("OwnerId", player.UserId)
-	target:SetAttribute("PlacedTime", tick())
-	target:SetAttribute("HatchTime", eggInfo.hatchTime)
-	target:SetAttribute("HatchProgress", 0)
-	target:SetAttribute("IsEgg", true)
-
-	-- 플롯에 배치
-	local plot = EggManager._getPlayerPlot(player)
-	if plot then
-		eggModel.Parent = plot
-	else
-		eggModel.Parent = workspace
-	end
-
-	-- 배치 데이터 저장
-	placed[eggId] = {
-		eggType = eggType,
-		placedTime = tick(),
-		model = mainPart or eggModel,
-		eggId = eggId,
-	}
+	local eggId = _spawnPlacedEgg(player, eggType, position, nil)
+	if not eggId then return false, "Spawn failed" end
 
 	-- 부화 타이머 시작
-	EggManager._startHatchTimer(player, eggId)
+	EggManager._startHatchTimer(player, eggId, 0)
 
 	print(player.Name .. " - egg placed: " .. eggType .. " (ID: " .. eggId .. ")")
 	return true, eggId
@@ -431,7 +470,8 @@ local function getLaboratoryHatchBoost(player: Player): number
 	return maxBoost
 end
 
-function EggManager._startHatchTimer(player: Player, eggId: string)
+-- initialProgress: 0..1 (이미 진행된 비율). 복원 시 사용.
+function EggManager._startHatchTimer(player: Player, eggId: string, initialProgress: number?)
 	local placed = _placedEggs[player]
 	if not placed or not placed[eggId] then return end
 
@@ -442,6 +482,8 @@ function EggManager._startHatchTimer(player: Player, eggId: string)
 	-- Laboratory 부화 속도 부스트 (실제 부화 시간 단축)
 	local boost = getLaboratoryHatchBoost(player)
 	local effectiveHatchTime = eggInfo.hatchTime / (1 + boost)
+	local startProgress = math.clamp(initialProgress or 0, 0, 1)
+	local startElapsed = effectiveHatchTime * startProgress
 
 	-- 머리 위 타이머 BillboardGui 부착
 	local timerLabel: TextLabel? = nil
@@ -451,11 +493,11 @@ function EggManager._startHatchTimer(player: Player, eggId: string)
 			target = target.PrimaryPart
 		end
 		timerLabel = EggManager._createHatchBillboard(target)
-		timerLabel.Text = formatTime(effectiveHatchTime)
+		timerLabel.Text = formatTime(math.max(0, effectiveHatchTime - startElapsed))
 	end
 
 	task.spawn(function()
-		local elapsed = 0
+		local elapsed = startElapsed
 		while elapsed < effectiveHatchTime do
 			task.wait(1)
 			elapsed = elapsed + 1
@@ -635,9 +677,74 @@ function EggManager.getPlacedEggs(player: Player): { any }
 	return result
 end
 
--- 저장 데이터
-function EggManager.getSaveData(player: Player): { any }
-	return EggManager.getEggInventory(player)
+-- 저장 데이터: 인벤토리 + 배치된 알 (BuildZone 기준 상대 CFrame + 부화 진행도)
+function EggManager.getSaveData(player: Player): any
+	local placedSave = {}
+	local plot = EggManager._getPlayerPlot(player)
+	local buildZone = plot and plot:FindFirstChild("BuildZone", true)
+	local placed = _placedEggs[player]
+	if placed then
+		for _, data in placed do
+			local model = data.eggModel or data.model
+			if model and model.Parent then
+				local cf: CFrame
+				if model:IsA("Model") then
+					cf = model:GetPivot()
+				elseif model:IsA("BasePart") then
+					cf = model.CFrame
+				end
+				if cf then
+					local saveCF = if buildZone then buildZone.CFrame:ToObjectSpace(cf) else cf
+					local progress = 0
+					if data.model and data.model.Parent then
+						progress = data.model:GetAttribute("HatchProgress") or 0
+					end
+					table.insert(placedSave, {
+						eggType = data.eggType,
+						cframe = { saveCF:GetComponents() },
+						progress = progress,
+					})
+				end
+			end
+		end
+	end
+
+	return {
+		inventory = EggManager.getEggInventory(player),
+		placed = placedSave,
+	}
+end
+
+-- PlotManager가 플롯 배정/건물 복원 후 호출. _pendingPlacedEggs를 소비해 알을 다시 스폰.
+function EggManager.restorePlacedEggs(player: Player)
+	local pending = _pendingPlacedEggs[player]
+	_pendingPlacedEggs[player] = nil
+	if not pending or #pending == 0 then return end
+
+	local plot = EggManager._getPlayerPlot(player)
+	local buildZone = plot and plot:FindFirstChild("BuildZone", true)
+
+	for _, eggData in pending do
+		local eggType = eggData.eggType
+		if not eggType then continue end
+		local eggInfo = EggCfg.EGGS[eggType]
+		if not eggInfo then continue end
+
+		local cf
+		if eggData.cframe and #eggData.cframe >= 12 then
+			local savedCF = CFrame.new(unpack(eggData.cframe))
+			cf = if buildZone then buildZone.CFrame:ToWorldSpace(savedCF) else savedCF
+		end
+		if not cf then continue end
+
+		local eggId = _spawnPlacedEgg(player, eggType, nil, cf)
+		if not eggId then continue end
+
+		local progress = math.clamp(eggData.progress or 0, 0, 1)
+		EggManager._startHatchTimer(player, eggId, progress)
+
+		print(player.Name .. " - egg restored: " .. eggType .. " (progress " .. math.floor(progress * 100) .. "%)")
+	end
 end
 
 -- 플레이어 플롯 찾기

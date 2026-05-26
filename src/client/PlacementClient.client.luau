@@ -164,6 +164,7 @@ local _lastCollisionDebug = nil    -- 디버그 출력 쓰로틀
 local inventory = {}               -- 로컬 인벤토리 캐시
 local _dragPaused = false          -- 드래그 일시 정지 (클릭으로 토글)
 local _mainToPivotOffset = CFrame.new() -- mainPart→Pivot 오프셋 (createPreview에서 저장)
+local _pendingUpgradeBuildingId = nil -- 업그레이드 확인창에서 확정 시 업그레이드할 건물 ID
 
 -- 렌더 연결
 local renderConnection = nil
@@ -284,6 +285,18 @@ end
 -- 파트가 배치된 건물인지 확인 (BuildingId 속성으로 식별, 조상 탐색)
 local function isBuildingPart(part: BasePart): boolean
 	return findBuildingMainPart(part) ~= nil
+end
+
+-- BuildingId로 건물 메인파트 찾기 (Plots 전체 스캔)
+local function findBuildingPartById(buildingId: string): BasePart?
+	local plots = workspace:FindFirstChild("Plots")
+	if not plots then return nil end
+	for _, desc in plots:GetDescendants() do
+		if desc:IsA("BasePart") and desc:GetAttribute("BuildingId") == buildingId then
+			return desc
+		end
+	end
+	return nil
 end
 
 -- 파트가 내 건물인지 확인 (조상 탐색)
@@ -954,6 +967,7 @@ SelectionUI.init({
 			local itemName = selectedBuilding:GetAttribute("ItemName")
 			local buildingInfo = Constants.BUILDINGS[itemName]
 			local displayName = buildingInfo and buildingInfo.name or itemName
+			_pendingUpgradeBuildingId = selectedBuilding:GetAttribute("BuildingId")
 			UpgradeUI.show(level, displayName)
 		end
 	end,
@@ -974,18 +988,22 @@ SelectionUI.init({
 -- UpgradeUI: 업그레이드 확인 다이얼로그
 UpgradeUI.init({
 	onConfirm = function()
-		if selectedBuilding then
-			local buildingId = selectedBuilding:GetAttribute("BuildingId")
-			if buildingId then
-				startUpgradeEvent:FireServer(buildingId)
-			end
+		local buildingId = _pendingUpgradeBuildingId
+			or (selectedBuilding and selectedBuilding:GetAttribute("BuildingId"))
+		if buildingId then
+			startUpgradeEvent:FireServer(buildingId)
 		end
+		_pendingUpgradeBuildingId = nil
 		UpgradeUI.hide()
-		HighlightSystem.clear()
-		toBuildMode()
+		-- 선택 흐름에서만 빌드모드로 복귀 (BuildingInfoUI 흐름은 그대로 유지)
+		if currentState == BuildState.Selected then
+			HighlightSystem.clear()
+			toBuildMode()
+		end
 	end,
 
 	onCancel = function()
+		_pendingUpgradeBuildingId = nil
 		UpgradeUI.hide()
 	end,
 })
@@ -2283,10 +2301,15 @@ PetSellUI.init()
 EggInfoUI.init()
 BuildingInfoUI.init({
 	onUpgrade = function(buildingId)
-		local startUpgradeEvent = remotes:FindFirstChild("StartUpgrade")
-		if startUpgradeEvent then
-			startUpgradeEvent:FireServer(buildingId)
-		end
+		-- 바로 업그레이드하지 않고 확인 다이얼로그를 띄움
+		local part = findBuildingPartById(buildingId)
+		if not part then return end
+		local level = part:GetAttribute("Level") or 1
+		local itemName = part:GetAttribute("ItemName")
+		local buildingInfo = Constants.BUILDINGS[itemName]
+		local displayName = buildingInfo and buildingInfo.name or itemName
+		_pendingUpgradeBuildingId = buildingId
+		UpgradeUI.show(level, displayName)
 	end,
 })
 

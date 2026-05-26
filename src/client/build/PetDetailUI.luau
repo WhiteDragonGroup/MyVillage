@@ -6,24 +6,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
-local AbilityCfg = BalanceConfig.PetAbility
 local BuffCfg = BalanceConfig.Buff
 
--- 펫이 부여하는 버프 ID 목록 (ABILITIES에 정의된 것만)
--- 나머지 버프는 쉼터(Rest 건물)에서 부여되므로 펫 슬롯에는 안 들어감
-local function getPetBuffIds(petName: string): { string }
-	local ids = {}
-	local cfg = AbilityCfg.ABILITIES[petName]
-	if cfg then
-		if cfg.buffId then table.insert(ids, cfg.buffId) end
-		if cfg.buffs then
-			for _, b in cfg.buffs do
-				if b.buffId then table.insert(ids, b.buffId) end
-			end
-		end
-	end
-	return ids
-end
+local remotes = ReplicatedStorage:WaitForChild("Remotes")
+local getPetBuffsFunc = remotes:WaitForChild("GetPetBuffs")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -35,6 +21,106 @@ local _visible = false
 local _currentPetId = nil
 local _onHold = nil
 local _pickUpFrames = {} -- 표시/숨김 동기화용
+local _buffPollToken = 0 -- 버프 폴링 루프 토큰 (재진입 방지)
+
+-- 현재 활성 버프 목록을 Buffs 슬롯에 렌더 (아이콘 + 남은시간 + 툴팁).
+-- activeList: { { buffId, remaining }, ... } — 비어있으면 모든 슬롯 숨김.
+local function renderBuffSlots(activeList: { { buffId: string, remaining: number } })
+	if not petInfoFrame then return end
+	local frame = petInfoFrame:FindFirstChild("Frame")
+	if not frame then return end
+	local iconFrame = frame:FindFirstChild("Icon")
+	if not iconFrame then return end
+	local buffsFrame = iconFrame:FindFirstChild("Buffs")
+	if not buffsFrame then return end
+	buffsFrame.Visible = true
+
+	local slots = {}
+	for _, child in buffsFrame:GetChildren() do
+		if child:IsA("ImageLabel") or child:IsA("ImageButton") then
+			table.insert(slots, child)
+		end
+	end
+	table.sort(slots, function(a, b) return a.Name < b.Name end)
+
+	for i, slot in slots do
+		local entry = activeList[i]
+		local slotInfo = slot:FindFirstChild("Info")
+		local timeLabel = slot:FindFirstChild("_TimeLabel")
+		if entry then
+			local buffId = entry.buffId
+			local buffDef = BuffCfg.BUFFS[buffId]
+			local iconId = (Constants.BUFF_ICONS and Constants.BUFF_ICONS[buffId])
+				or (buffDef and buffDef.icon) or ""
+			slot.Image = iconId
+			slot.Visible = true
+
+			-- 남은시간 라벨 (없으면 생성)
+			if not timeLabel then
+				timeLabel = Instance.new("TextLabel")
+				timeLabel.Name = "_TimeLabel"
+				timeLabel.Size = UDim2.new(1, 0, 0.35, 0)
+				timeLabel.Position = UDim2.new(0, 0, 0.65, 0)
+				timeLabel.BackgroundTransparency = 1
+				timeLabel.TextScaled = true
+				timeLabel.Font = Enum.Font.GothamBold
+				timeLabel.TextColor3 = Color3.new(1, 1, 1)
+				timeLabel.TextStrokeTransparency = 0.4
+				timeLabel.ZIndex = 10
+				timeLabel.Parent = slot
+			end
+			timeLabel.Visible = true
+			timeLabel.Text = tostring(math.ceil(entry.remaining)) .. "s"
+
+			-- 툴팁 (호버 시 설명)
+			if slotInfo and slotInfo:IsA("GuiObject") then
+				local descLabel = slotInfo:FindFirstChildWhichIsA("TextLabel", true)
+				if descLabel and buffDef then
+					local desc = (buffDef.description or ""):gsub("{n}", tostring(buffDef.value or ""))
+					descLabel.Text = (buffDef.name or buffId) .. "\n" .. desc
+				end
+				slotInfo.Visible = false
+				if not slot:GetAttribute("_HoverWired") then
+					slot:SetAttribute("_HoverWired", true)
+					slot.MouseEnter:Connect(function()
+						if slotInfo and slotInfo.Parent then slotInfo.Visible = true end
+					end)
+					slot.MouseLeave:Connect(function()
+						if slotInfo and slotInfo.Parent then slotInfo.Visible = false end
+					end)
+				end
+			end
+		else
+			slot.Visible = false
+			if timeLabel then timeLabel.Visible = false end
+			if slotInfo and slotInfo:IsA("GuiObject") then slotInfo.Visible = false end
+		end
+	end
+end
+
+-- 서버에서 현재 펫의 활성 버프를 조회해 렌더
+local function refreshActiveBuffs()
+	if not _currentPetId then return end
+	local petId = _currentPetId
+	local ok, list = pcall(function()
+		return getPetBuffsFunc:InvokeServer(petId)
+	end)
+	if ok and type(list) == "table" and _currentPetId == petId then
+		renderBuffSlots(list)
+	end
+end
+
+-- 상세 UI가 열려있는 동안 1초마다 버프 새로고침 (카운트다운/만료 반영)
+local function startBuffPolling()
+	_buffPollToken += 1
+	local myToken = _buffPollToken
+	task.spawn(function()
+		while _visible and _currentPetId and myToken == _buffPollToken do
+			refreshActiveBuffs()
+			task.wait(1)
+		end
+	end)
+end
 
 function PetDetailUI.init(callbacks: { onHold: ((string) -> ())? }?)
 	_onHold = callbacks and callbacks.onHold or nil
@@ -283,60 +369,8 @@ function PetDetailUI.show(petData: { [string]: any })
 		infoFrame.Visible = true
 	end
 
-	-- Buffs: 펫의 능력에 맞춰 아이콘 채우기
-	if iconFrame then
-		local buffsFrame = iconFrame:FindFirstChild("Buffs")
-		if buffsFrame then
-			buffsFrame.Visible = true
-			local buffIds = getPetBuffIds(petData.petName)
-			-- 자식 ImageLabel/ImageButton 슬롯에 순서대로 매핑
-			local slots = {}
-			for _, child in buffsFrame:GetChildren() do
-				if child:IsA("ImageLabel") or child:IsA("ImageButton") then
-					table.insert(slots, child)
-				end
-			end
-			table.sort(slots, function(a, b) return a.Name < b.Name end)
-			for i, slot in slots do
-				local buffId = buffIds[i]
-				local slotInfo = slot:FindFirstChild("Info")
-				if buffId then
-					local buffDef = BuffCfg.BUFFS[buffId]
-					local iconId = (Constants.BUFF_ICONS and Constants.BUFF_ICONS[buffId])
-						or (buffDef and buffDef.icon)
-						or ""
-					slot.Image = iconId
-					slot.Visible = true
-
-					-- Info 툴팁: description 채우고 호버 연결
-					if slotInfo and slotInfo:IsA("GuiObject") then
-						local descLabel = slotInfo:FindFirstChildWhichIsA("TextLabel", true)
-						if descLabel and buffDef then
-							local desc = buffDef.description or ""
-							desc = desc:gsub("{n}", tostring(buffDef.value or ""))
-							local title = buffDef.name or buffId
-							descLabel.Text = title .. "\n" .. desc
-						end
-						slotInfo.Visible = false
-						if not slot:GetAttribute("_HoverWired") then
-							slot:SetAttribute("_HoverWired", true)
-							slot.MouseEnter:Connect(function()
-								if slotInfo and slotInfo.Parent then slotInfo.Visible = true end
-							end)
-							slot.MouseLeave:Connect(function()
-								if slotInfo and slotInfo.Parent then slotInfo.Visible = false end
-							end)
-						end
-					end
-				else
-					slot.Visible = false
-					if slotInfo and slotInfo:IsA("GuiObject") then
-						slotInfo.Visible = false
-					end
-				end
-			end
-		end
-	end
+	-- Buffs: 현재 활성 버프를 실시간 표시 (1초마다 폴링, 남은시간 카운트다운)
+	startBuffPolling()
 
 	-- 하위 Fortune Info 숨기기
 	for _, desc in frame:GetDescendants() do

@@ -10,9 +10,11 @@ local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForCh
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
 local TimeState = require(ServerScriptService:WaitForChild("Server"):WaitForChild("TimeState"))
 local WeatherState = require(ServerScriptService:WaitForChild("Server"):WaitForChild("WeatherState"))
+local BuffManager = require(ServerScriptService:WaitForChild("Server"):WaitForChild("BuffManager"))
 
 local PetCfg = BalanceConfig.Pet
 local WeatherCfg = BalanceConfig.Weather
+local BuffCfg = BalanceConfig.Buff
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local petUpdateEvent = remotes:WaitForChild("PetUpdate")
@@ -73,6 +75,13 @@ local function getPlayerFromPetData(petData): Player?
 	return nil
 end
 
+-- 펫의 활성 버프 중 특정 effect의 합산 % 반환 (예: workEfficiency 10 = +10%)
+local function getPetBuffPercent(petData, effectName: string): number
+	if not petData or not petData.petId then return 0 end
+	local active = BuffManager.getPetActiveBuffs(petData.petId)
+	return BuffCfg.computeEffect(active, effectName)
+end
+
 ----------------------------------------------------------------
 -- 펫 상태 → 애니메이션 이름 매핑
 -- 모델의 ServerStorage/Pets/{Name}/Animations 폴더 안 Animation 인스턴스 이름과 매칭.
@@ -90,22 +99,25 @@ local STATE_TO_ANIM = {
 	Construction = "construction",
 	Sleeping = "sleep",
 	Resting = "rest",
-	Chatting = "idle",
+	Chatting = "greeting",
 	Fatigued = "idle",
 	Assigned = "idle",
-	Held = "idle",
+	Held = "pet",
 	SearchingForWork = "move",
 }
 
 -- 액션 폴백 순서 (지정 액션이 없으면 차례로 시도). 모두 소문자.
+-- 실제 보유 키 예: idle, move, make, field, pet, greeting (펫별로 일부만 존재).
 local ACTION_FALLBACK = {
-	mine    = { "mining", "work", "make", "idle" },
-	plant   = { "farming", "fields", "work", "idle" },
+	mine         = { "mining", "make", "work", "idle" },
+	plant        = { "farming", "field", "fields", "make", "work", "idle" },
 	construction = { "build", "make", "work", "idle" },
-	work    = { "make", "magic", "idle" },
-	move    = { "walk", "walking", "run", "idle" },
-	sleep   = { "sleeping", "rest", "fields", "idle" },
-	rest    = { "resting", "fields", "idle" },
+	work         = { "make", "magic", "idle" },
+	move         = { "walk", "walking", "run", "idle" },
+	sleep        = { "sleeping", "rest", "field", "idle" },
+	rest         = { "resting", "field", "idle" },
+	greeting     = { "greet", "greetin", "idle" },
+	pet          = { "petting", "idle" },
 }
 
 local function playAnimationForState(petData, newState: string)
@@ -272,8 +284,10 @@ local function createPetModel(petData, position: Vector3): BasePart
 		mainPart = mainPart or firstPart
 
 		if mainPart then
-			-- 2. 최종 위치로 이동 (회전은 ServerStorage 템플릿 PrimaryPart 기준 정자세)
-			pet:PivotTo(CFrame.new(position + Vector3.new(0, PetCfg.PET_HEIGHT, 0)))
+			-- 2. 최종 위치로 이동 (회전은 ServerStorage 템플릿 PrimaryPart 기준 정자세).
+			-- 누어있는 모델은 Constants.PET_ORIENTATION_OFFSET[petName]로 보정.
+			petData._modelRotation = Constants.getPetOrientationOffset and Constants.getPetOrientationOffset(petName) or CFrame.new()
+			pet:PivotTo(CFrame.new(position + Vector3.new(0, PetCfg.PET_HEIGHT, 0)) * petData._modelRotation)
 
 			-- 3. 모든 파트 weld + Anchored 처리 (리그드면 weld 스킵)
 			for _, desc in pet:GetDescendants() do
@@ -282,6 +296,10 @@ local function createPetModel(petData, position: Vector3): BasePart
 					desc.CanQuery = true
 					desc.CanTouch = false
 					desc.CollisionGroup = "Pets"
+					-- HumanoidRootPart는 애니메이션으로 안 움직여서 몸이 움직이면 드러남 → 항상 투명.
+					if desc.Name == "HumanoidRootPart" then
+						desc.Transparency = 1
+					end
 					if desc ~= mainPart then
 						desc.Anchored = false
 						if not hasMotor6D and not desc:FindFirstChildOfClass("WeldConstraint") then
@@ -346,18 +364,26 @@ local function createPetModel(petData, position: Vector3): BasePart
 	end
 	target:SetAttribute("Mutations", table.concat(mutList, ","))
 
-	-- 리그드 모델: AnimationController + Animator + 애니메이션 트랙 로드
+	-- 리그드 모델: Animator + 애니메이션 트랙 로드
 	-- 애니메이션 소스: ServerStorage/Pets/{PetName}/Animations/*
 	if hasMotor6D and pet:IsA("Model") then
-		local animController = pet:FindFirstChildOfClass("AnimationController")
-		if not animController then
-			animController = Instance.new("AnimationController")
-			animController.Parent = pet
+		-- 컨트롤러는 하나만 사용 (Humanoid + AnimationController 공존 시 충돌해 애니 안 먹힘).
+		-- Humanoid가 있으면 그걸 쓰고(Roblox 권장), 없으면 AnimationController 생성.
+		local controller = pet:FindFirstChildOfClass("Humanoid")
+		if controller then
+			local strayAC = pet:FindFirstChildOfClass("AnimationController")
+			if strayAC then strayAC:Destroy() end
+		else
+			controller = pet:FindFirstChildOfClass("AnimationController")
+			if not controller then
+				controller = Instance.new("AnimationController")
+				controller.Parent = pet
+			end
 		end
-		local animator = animController:FindFirstChildOfClass("Animator")
+		local animator = controller:FindFirstChildOfClass("Animator")
 		if not animator then
 			animator = Instance.new("Animator")
-			animator.Parent = animController
+			animator.Parent = controller
 		end
 
 		local animFolder = nil
@@ -408,11 +434,30 @@ local function movePetTo(petData, targetPos: Vector3): boolean
 
 	local startPos = mainPart.Position
 	local distance = (targetPos - startPos).Magnitude
-	local duration = distance / PetCfg.MOVE_SPEED
+	-- Haste 버프: 이동 속도 증가
+	local moveSpeed = PetCfg.MOVE_SPEED * (1 + getPetBuffPercent(petData, "moveSpeed") / 100)
+	local duration = distance / moveSpeed
+
+	local rotation = petData._modelRotation or CFrame.new()
+
+	-- 이동 방향(수평) 바라보기. lookAt은 -Z를 방향에 맞추고, 펫별 정면 보정각을 더함.
+	-- 보정각은 Constants.PET_FACING_YAW (기본 90 = 정면 +X).
+	local FACE_YAW = math.rad(Constants.getPetFacingYaw(petData.petName))
+	local flatDir = Vector3.new(targetPos.X - startPos.X, 0, targetPos.Z - startPos.Z)
+	local faceRot = nil
+	if flatDir.Magnitude > 0.05 then
+		faceRot = CFrame.lookAt(Vector3.zero, flatDir.Unit) * CFrame.Angles(0, FACE_YAW, 0)
+	end
+	local function poseAt(pos: Vector3): CFrame
+		if faceRot then
+			return CFrame.new(pos) * faceRot * rotation
+		end
+		return CFrame.new(pos) * rotation
+	end
 
 	if duration < 0.1 then
 		if useModel then
-			wholeModel:PivotTo(CFrame.new(targetPos))
+			wholeModel:PivotTo(poseAt(targetPos))
 		else
 			mainPart.Position = targetPos
 		end
@@ -427,7 +472,7 @@ local function movePetTo(petData, targetPos: Vector3): boolean
 		if mainPart.Parent then
 			local newPos = startPos:Lerp(targetPos, alpha)
 			if useModel then
-				wholeModel:PivotTo(CFrame.new(newPos))
+				wholeModel:PivotTo(poseAt(newPos))
 			else
 				mainPart.Position = newPos
 			end
@@ -629,10 +674,26 @@ local function findChatPartner(petData, plot): { any }?
 	return nil
 end
 
+-- 인사(Chatting) 시 발동하는 버프. 같은 종끼리 인사하면 kin 버프를 임시로 부여.
+-- (PetAbilityConfig의 buff_kin 능력. 프록시미티가 아닌 실제 인사 시점에 적용.)
+local function applyGreetingBuffs(petA, petB)
+	local AbilityCfg = BalanceConfig.PetAbility
+	local function tryKin(selfPet, otherPet)
+		local cfg = AbilityCfg.ABILITIES[selfPet.petName]
+		if cfg and cfg.kind == "buff_kin" and cfg.buffId and otherPet.petName == selfPet.petName then
+			BuffManager.applyPetBuff(selfPet.petId, cfg.buffId, cfg.duration or 30)
+		end
+	end
+	tryKin(petA, petB)
+	tryKin(petB, petA)
+end
+
 ----------------------------------------------------------------
 -- 배회 (산책 모드)
 ----------------------------------------------------------------
 local function doWander(petData, buildZone: BasePart, duration: number)
+	-- 호출자가 지정한 이동 상태(Wandering / SearchingForWork). 이동 중에만 적용.
+	local moveState = petData.state
 	local elapsed = 0
 	while elapsed < duration and _behaviorLoops[petData.petId] do
 		-- 랜덤 목표
@@ -642,6 +703,8 @@ local function doWander(petData, buildZone: BasePart, duration: number)
 		local targetZ = center.Z + (math.random() * 2 - 1) * math.min(halfSize.Z, PetCfg.WANDER_RADIUS)
 		local targetPos = Vector3.new(targetX, center.Y + PetCfg.PET_HEIGHT, targetZ)
 
+		-- 이동 시작 → move 애니
+		if petData.state ~= moveState then setPetState(petData, moveState) end
 		movePetTo(petData, targetPos)
 		if not _behaviorLoops[petData.petId] then break end
 
@@ -652,10 +715,8 @@ local function doWander(petData, buildZone: BasePart, duration: number)
 			if partner then
 				setPetState(petData, "Chatting")
 				setPetState(partner, "Chatting")
+				applyGreetingBuffs(petData, partner) -- 같은 종끼리 인사 시 kin 버프
 				task.wait(PetCfg.CHAT_DURATION)
-				if _behaviorLoops[petData.petId] then
-					setPetState(petData, "Wandering")
-				end
 				if _behaviorLoops[partner.petId] then
 					setPetState(partner, "Wandering")
 				end
@@ -663,6 +724,8 @@ local function doWander(petData, buildZone: BasePart, duration: number)
 			end
 		end
 
+		-- 도착 후 정지하는 동안은 Idle 애니 (looped move가 제자리에서 계속 도는 것 방지)
+		setPetState(petData, "Idle")
 		local waitTime = PetCfg.WANDER_INTERVAL + math.random() * 2
 		task.wait(waitTime)
 		elapsed = elapsed + waitTime
@@ -728,7 +791,7 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 				break
 			end
 
-			-- 불면 특성 체크
+			-- 불면 특성 체크 (+ Energy 버프 활성 시 잠 안 잠)
 			local hasSleepless = false
 			if petData.traits then
 				for k, v in petData.traits do
@@ -737,6 +800,9 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 						break
 					end
 				end
+			end
+			if not hasSleepless and getPetBuffPercent(petData, "sleepless") > 0 then
+				hasSleepless = true
 			end
 
 			-- 밤이고 불면 아닌 경우 → 수면
@@ -782,13 +848,14 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 				occupyWorkplace(buildingId, petId)
 				petData.targetBuildingId = buildingId
 
-				-- 일터로 이동
+				-- 일터로 이동 (이동 중엔 move 애니)
 				local targetPos = workplace.Position + Vector3.new(
 					(math.random() * 2 - 1) * 2,
 					PetCfg.PET_HEIGHT,
 					(math.random() * 2 - 1) * 2
 				)
 
+				setPetState(petData, "Walking")
 				if not movePetTo(petData, targetPos) then
 					vacateWorkplace(buildingId, petId)
 					petData.targetBuildingId = ""
@@ -813,6 +880,8 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 
 				local workDuration = PetCfg.WORK_DURATION_MIN
 					+ math.random() * (PetCfg.WORK_DURATION_MAX - PetCfg.WORK_DURATION_MIN)
+				-- Serenity 버프: 휴식 전까지 더 오래 일함
+				workDuration = workDuration * (1 + getPetBuffPercent(petData, "workDuration") / 100)
 				local workElapsed = 0
 				xpUpdateTimer = 0
 
@@ -859,6 +928,8 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 										effMult = effMult * (1 + passive.nightWorkBonus)
 									end
 								end
+								-- 활성 버프: 일 효율 증가 (Vitality/Blessing/AllyEncouragement 등)
+								effMult = effMult * (1 + getPetBuffPercent(petData, "workEfficiency") / 100)
 
 								local incomeAmount = math.ceil(incomeCfg.rate * effMult)
 								local stored = workplace:GetAttribute("StoredCoins") or 0
@@ -866,11 +937,12 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 									workplace:SetAttribute("StoredCoins", math.min(cap, stored + incomeAmount))
 								end
 
-								-- 보석 (Mine 등) + 크리스탈 골렘 보너스
+								-- 보석 (Mine 등) + 크리스탈 골렘 보너스 + Fortune 버프
 								local effectiveGemChance = incomeCfg.gemChance
 								if passive and passive.gemChanceBonus then
 									effectiveGemChance = effectiveGemChance * (1 + passive.gemChanceBonus)
 								end
+								effectiveGemChance = effectiveGemChance * (1 + getPetBuffPercent(petData, "gemChance") / 100)
 								if effectiveGemChance > 0 and math.random() < effectiveGemChance then
 									local storedGems = workplace:GetAttribute("StoredGems") or 0
 									workplace:SetAttribute("StoredGems", storedGems + 1)
@@ -918,12 +990,13 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 					local restBuildingId = restPlace:GetAttribute("BuildingId")
 					occupyWorkplace(restBuildingId, petId)
 
-					-- 쉼터 이동 → 휴식
+					-- 쉼터 이동 → 휴식 (이동 중엔 move 애니)
 					local restPos = restPlace.Position + Vector3.new(
 						(math.random() * 2 - 1) * 2,
 						PetCfg.PET_HEIGHT,
 						(math.random() * 2 - 1) * 2
 					)
+					setPetState(petData, "Walking")
 					if not movePetTo(petData, restPos) then
 						vacateWorkplace(restBuildingId, petId)
 						break
@@ -1240,8 +1313,9 @@ function PetManager.assignPet(player: Player, petId: string, buildingId: string)
 	-- 펫 모델을 건물 옆으로 이동
 	if petData.model and petData.model.Parent then
 		local targetPos = building.Position + Vector3.new(building.Size.X / 2 + 1.5, PetCfg.PET_HEIGHT, 0)
+		local rotation = petData._modelRotation or CFrame.new()
 		if petData._petModel and petData._petModel:IsA("Model") then
-			petData._petModel:PivotTo(CFrame.new(targetPos))
+			petData._petModel:PivotTo(CFrame.new(targetPos) * rotation)
 		else
 			petData.model.Position = targetPos
 		end

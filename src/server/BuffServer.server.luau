@@ -10,6 +10,7 @@ local BuffManager = require(serverScript:WaitForChild("BuffManager"))
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local buffUpdateEvent = remotes:WaitForChild("BuffUpdate")
 local getBuffsFunc = remotes:WaitForChild("GetBuffs")
+local getPetBuffsFunc = remotes:WaitForChild("GetPetBuffs")
 
 BuffManager.setBuffsChangedHandler(function(player, buffs)
 	buffUpdateEvent:FireClient(player, buffs)
@@ -17,6 +18,12 @@ end)
 
 getBuffsFunc.OnServerInvoke = function(player)
 	return BuffManager.getBuffs(player)
+end
+
+-- 펫별 활성 버프 조회 (상세 UI가 1초마다 폴링)
+getPetBuffsFunc.OnServerInvoke = function(player, petId)
+	if typeof(petId) ~= "string" then return {} end
+	return BuffManager.getPetBuffsDetailed(petId)
 end
 
 Players.PlayerAdded:Connect(function(player)

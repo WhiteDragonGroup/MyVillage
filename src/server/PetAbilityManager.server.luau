@@ -38,11 +38,8 @@ local function applyAbility(petPart: BasePart, petName: string, cfg)
 	if not petId then return end
 
 	if cfg.kind == "buff_kin" then
-		local kin = findNearbyPets(petPart, cfg.range, petName, petId)
-		if #kin > 0 then
-				-- 자기 자신에게 적용 (같은 종 발견 시 자기가 인사받음)
-			BuffManager.applyPetBuff(petId, cfg.buffId, cfg.duration)
-		end
+		-- buff_kin은 PetManager의 인사(Chatting) 시점에서 처리 (applyGreetingBuffs). 여기선 스킵.
+		return
 	elseif cfg.kind == "buff_others" then
 		local others = findNearbyPets(petPart, cfg.range, nil, petId)
 		for _, otherPart in others do
@@ -74,7 +71,7 @@ local function applyAbility(petPart: BasePart, petName: string, cfg)
 			return
 		end
 		if cfg.requireIdle then
-			local state = petPart:GetAttribute("State")
+			local state = petPart:GetAttribute("PetState")
 			if state == "Working" then return end
 		end
 		local nearby = findNearbyPets(petPart, cfg.range, nil, nil)

@@ -86,7 +86,7 @@ function UpgradeUI.show(level: number, itemName: string)
 
 		if textLabels[1] then textLabels[1].Text = itemName end
 		if textLabels[2] then
-			textLabels[2].Text = "Lv." .. level .. " → Lv." .. (level + 1) .. "\nCost: " .. cost .. " coins | Work: " .. work
+			textLabels[2].Text = "정말 업그레이드 하시겠습니까?\nLv." .. level .. " → Lv." .. (level + 1) .. "\nCost: " .. cost .. " coins | Work: " .. work
 		end
 	end
 

@@ -389,6 +389,9 @@ Players.PlayerAdded:Connect(function(player)
 		-- 4. 저장된 건물 복원
 		restoreBuildings(player, plot, savedData.buildings)
 
+		-- 4-1. 저장된 배치 알 복원 (플롯 배정 후)
+		EggManager.restorePlacedEggs(player)
+
 		-- 5. 플레이어가 스폰되면 자기 땅으로 이동
 		local function teleportToPlot(character)
 			task.wait(BalanceConfig.Spawn.DELAY)
