@@ -8,6 +8,10 @@ local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild(
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
 local EggCfg = BalanceConfig.Egg
 
+-- 빌딩샵과 동일한 카메라 줌 효과를 에그샵에도 적용
+local clientScript = script.Parent.Parent
+local CameraManager = require(clientScript:WaitForChild("systems"):WaitForChild("CameraManager"))
+
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -83,16 +87,20 @@ function EggInfoUI.init()
 	end
 end
 
--- Match a frame to an egg ID based on name/text
+-- Match a frame to an egg ID based on name + ALL descendant text (more robust).
 function EggInfoUI._matchEggId(frame): string?
-	local name = frame.Name:lower()
-	local textLabel = frame:FindFirstChildWhichIsA("TextLabel", true)
-	local text = textLabel and textLabel.Text:lower() or ""
+	local hay = frame.Name:lower()
+	for _, d in frame:GetDescendants() do
+		if d:IsA("TextLabel") or d:IsA("TextButton") then
+			hay = hay .. " " .. d.Text:lower()
+		end
+	end
 
-	if name:find("common") or text:find("common") then return "Egg_Common" end
-	if name:find("legendary") or text:find("legendary") then return "Egg_Legendary" end
-	if name:find("epic") or text:find("epic") then return "Egg_Epic" end
-	if name:find("rare") or text:find("rare") then return "Egg_Rare" end
+	-- legendary/epic/rare를 common보다 먼저 검사 (부분 매칭 오인 방지)
+	if hay:find("legendary") then return "Egg_Legendary" end
+	if hay:find("epic") then return "Egg_Epic" end
+	if hay:find("rare") then return "Egg_Rare" end
+	if hay:find("common") then return "Egg_Common" end
 
 	return nil
 end
@@ -271,6 +279,8 @@ function EggInfoUI.show()
 	if not hatchRatesFrame then return end
 	_visible = true
 	hatchRatesFrame.Visible = true
+	-- 빌딩샵 샵 오픈과 동일한 줌 인 (FOV 55)
+	CameraManager.TweenFOV(TweenInfo.new(1.8, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), 55)
 end
 
 function EggInfoUI.hide()
@@ -279,6 +289,8 @@ function EggInfoUI.hide()
 		hatchRatesFrame.Visible = false
 	end
 	EggInfoUI._hideOdds()
+	-- 닫을 때 FOV 원복 (빌딩샵 ShopUI.hide와 동일)
+	CameraManager.ResetFOV(TweenInfo.new(1, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out))
 end
 
 function EggInfoUI.isVisible(): boolean

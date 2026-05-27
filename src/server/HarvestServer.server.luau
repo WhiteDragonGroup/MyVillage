@@ -61,6 +61,7 @@ local function tryHarvest(player: Player, building: BasePart)
 		coins = stored,
 		gems = gems,
 		position = building.Position + Vector3.new(0, building.Size.Y / 2 + 1, 0),
+		building = building, -- 수확 시 건물 초록 하이라이트용
 	})
 end
 

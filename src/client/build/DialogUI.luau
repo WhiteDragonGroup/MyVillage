@@ -104,6 +104,29 @@ function DialogUI._animateGreeting(greeting: string, greetLabel: TextLabel, call
 	-- Clear previous text
 end
 
+-- 범용 타이프라이터: 임의의 TextLabel에 글자 한 자씩 출력 (말풍선 종류 무관).
+-- 라벨이 부모에서 떨어지거나 새 애니메이션이 시작되면 자동 중단.
+function DialogUI._typewrite(label: TextLabel, fullText: string, callback: (() -> ())?)
+	_currentAnimateId += 1
+	local thisId = _currentAnimateId
+	local len = utf8.len(fullText) or #fullText
+	label.Text = ""
+	local startTick = tick()
+	local connection
+	connection = RunService.RenderStepped:Connect(function()
+		if _currentAnimateId ~= thisId or not label.Parent then
+			connection:Disconnect()
+			return
+		end
+		local n = math.min(math.floor((tick() - startTick) / 0.02), len)
+		label.Text = fullText:sub(1, utf8.offset(fullText, n + 1) - 1)
+		if n >= len then
+			connection:Disconnect()
+			if callback then callback() end
+		end
+	end)
+end
+
 function DialogUI.show(npcName: string, greeting: string, choices: { { text: string, id: string } }, onChoice: (string) -> (), npcAdornee: BasePart?, choiceDelay: number?, onGreetingAnimationDone: () -> ()?)
 	DialogUI.hide()
 	_visible = true
@@ -248,12 +271,14 @@ function DialogUI.showPlayerChoice(choices: { { text: string, id: string } }, on
 			sayLabel.BackgroundTransparency = 1
 			sayLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 			sayLabel.TextSize = 13
-			sayLabel.Font = Enum.Font.GothamBold
+			-- 게임 메인 폰트로 통일 (기존 GothamBold → 다른 말풍선과 동일 폰트)
+			sayLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 			sayLabel.TextStrokeTransparency = 0.5
 			sayLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-			sayLabel.Text = _choices[index].text
 			sayLabel.TextWrapped = true
 			sayLabel.Parent = _playerBillboard
+			-- 플레이어 대사도 글자 한 자씩 (타이프라이터)
+			DialogUI._typewrite(sayLabel, _choices[index].text)
 		end
 
 		-- After delay, fire callback
@@ -332,13 +357,13 @@ function DialogUI.showResponse(text: string, duration: number?)
 		_keyConnection = nil
 	end
 
-	-- Update NPC bubble text
+	-- Update NPC bubble text (2번째 대사도 글자 한 자씩 타이프라이터 적용)
 	if _npcBillboard then
 		local frame = _npcBillboard:FindFirstChild("DialogFrame")
 		if frame then
 			for _, child in frame:GetChildren() do
 				if child:IsA("TextLabel") and child.Position.Y.Offset > 20 then
-					child.Text = text
+					DialogUI._typewrite(child, text)
 					break
 				end
 			end

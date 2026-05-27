@@ -117,9 +117,44 @@ local function spawnFloatingText(position: Vector3, text: string, color: Color3)
 	task.delay(1.3, function() if part.Parent then part:Destroy() end end)
 end
 
+-- 수확 시 해당 건물을 순간적으로 밝은 초록색으로 하이라이트
+local function flashGreen(target: Instance?)
+	if not target then return end
+	local adornee = target:FindFirstAncestorWhichIsA("Model") or target
+	-- 중복 방지: 이미 하이라이트 중이면 제거 후 새로
+	local existing = adornee:FindFirstChild("_HarvestHighlight")
+	if existing then existing:Destroy() end
+
+	local hl = Instance.new("Highlight")
+	hl.Name = "_HarvestHighlight"
+	hl.FillColor = Color3.fromRGB(80, 255, 120)
+	hl.FillTransparency = 0.45
+	hl.OutlineColor = Color3.fromRGB(150, 255, 180)
+	hl.OutlineTransparency = 0
+	hl.Adornee = adornee
+	hl.Parent = adornee
+
+	task.spawn(function()
+		task.wait(0.15)
+		if not hl.Parent then return end
+		local tween = TweenService:Create(hl, TweenInfo.new(0.45), {
+			FillTransparency = 1,
+			OutlineTransparency = 1,
+		})
+		tween:Play()
+		tween.Completed:Wait()
+		hl:Destroy()
+	end)
+end
+
 function HarvestEffect.init()
 	harvestEffectEvent.OnClientEvent:Connect(function(data)
 		if not data or not data.position then return end
+
+		-- 건물 초록 하이라이트
+		if data.building then
+			flashGreen(data.building)
+		end
 
 		if data.coins and data.coins > 0 then
 			spawnFloatingText(data.position, "+$" .. data.coins, Color3.fromRGB(255, 230, 80))
