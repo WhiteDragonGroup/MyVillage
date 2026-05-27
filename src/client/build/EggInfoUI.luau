@@ -43,15 +43,22 @@ function EggInfoUI.init()
 			end
 		end
 
-		-- Find egg slots and connect info (!) buttons
-		for _, child in hatchRatesFrame:GetChildren() do
-			if child:IsA("GuiObject") and child.Name ~= "Header" and child.Name ~= "Shadows" then
-				local infoBtn = child:FindFirstChildWhichIsA("ImageButton", true)
-					or child:FindFirstChildWhichIsA("TextButton", true)
-				if infoBtn then
-					local eggId = EggInfoUI._matchEggId(child)
-					if eggId then
-						infoBtn.MouseButton1Click:Connect(function()
+		-- 알 슬롯은 PetHatchRates > Frame 안의 CommonEgg/RareEgg/EpicEgg/LegendaryEgg.
+		-- 각 슬롯의 버튼(Sell = 정보 'i' 버튼)을 해당 알 확률창에 연결. (이전엔 첫 버튼 1개만 연결돼 Common만 동작)
+		for _, slot in hatchRatesFrame:GetDescendants() do
+			if slot:IsA("GuiObject") then
+				local n = slot.Name:lower()
+				local eggId = (n:find("legendary") and "Egg_Legendary")
+					or (n:find("epic") and "Egg_Epic")
+					or (n:find("rare") and "Egg_Rare")
+					or (n:find("common") and "Egg_Common")
+					or nil
+				if eggId then
+					local btn = slot:FindFirstChild("Sell")
+						or slot:FindFirstChildWhichIsA("ImageButton", true)
+						or slot:FindFirstChildWhichIsA("TextButton", true)
+					if btn and btn:IsA("GuiButton") then
+						btn.MouseButton1Click:Connect(function()
 							EggInfoUI._showOdds(eggId)
 						end)
 					end
