@@ -8,9 +8,32 @@ local RunService = game:GetService("RunService")
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
 
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
 local WorkBuildingDisplay = {}
 
 local _tracked: { [BasePart]: { gui: BillboardGui, coinLabel: TextLabel, gemLabel: TextLabel } } = {}
+
+-- HUD(좌측 하단) Diamond 아이콘 에셋을 한 번 읽어 재사용 (게임 공용 다이아 아이콘).
+local _diamondIcon: string? = nil
+local function getDiamondIcon(): string
+	if _diamondIcon ~= nil then return _diamondIcon end
+	_diamondIcon = ""
+	local normal = playerGui:FindFirstChild("Normal")
+	local d = normal and normal:FindFirstChild("Diamond")
+	if d then
+		if (d:IsA("ImageLabel") or d:IsA("ImageButton")) and d.Image ~= "" then
+			_diamondIcon = d.Image
+		else
+			local img = d:FindFirstChildWhichIsA("ImageLabel") or d:FindFirstChildWhichIsA("ImageButton")
+			if img and img.Image ~= "" then
+				_diamondIcon = img.Image
+			end
+		end
+	end
+	return _diamondIcon
+end
 
 local function isWorkBuilding(building: BasePart): boolean
 	local itemName = building:GetAttribute("ItemName")
@@ -54,6 +77,7 @@ local function createDisplay(building: BasePart)
 	gemLabel.BackgroundTransparency = 1
 	-- 폰트 통일 (GothamBold → 게임 메인 폰트)
 	gemLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
+	gemLabel.RichText = true -- 다이아 아이콘을 <img>로 인라인 표시
 	gemLabel.TextSize = 28
 	gemLabel.TextColor3 = Color3.fromRGB(180, 220, 255)
 	gemLabel.TextStrokeTransparency = 0
@@ -80,7 +104,12 @@ local function updateDisplay(building: BasePart, info)
 	info.coinLabel.Text = string.format("$%d / $%d", stored, cap)
 
 	if gems > 0 then
-		info.gemLabel.Text = "💎 " .. gems
+		local icon = getDiamondIcon()
+		if icon ~= "" then
+			info.gemLabel.Text = '<img src="' .. icon .. '"/> ' .. tostring(gems)
+		else
+			info.gemLabel.Text = "💎 " .. gems -- HUD 아이콘 못 찾을 때 폴백
+		end
 		info.gemLabel.Visible = true
 	else
 		info.gemLabel.Visible = false
