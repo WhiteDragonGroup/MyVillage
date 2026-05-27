@@ -433,6 +433,23 @@ local function createPetModel(petData, position: Vector3): BasePart
 		end
 	end
 
+	-- HumanoidRootPart(몸 가운데 박스)는 부모 설정 후 Humanoid가 다시 드러내거나
+	-- 이름이 달라 못 숨기는 경우가 있어, 다음 프레임에 루트 파트를 확실히 투명 처리.
+	if pet:IsA("Model") then
+		task.defer(function()
+			if not pet or not pet.Parent then return end
+			for _, d in pet:GetDescendants() do
+				if d:IsA("BasePart") and d.Name == "HumanoidRootPart" then
+					d.Transparency = 1
+				end
+			end
+			local hum = pet:FindFirstChildOfClass("Humanoid")
+			if hum and hum.RootPart then
+				hum.RootPart.Transparency = 1
+			end
+		end)
+	end
+
 	return target
 end
 
@@ -842,6 +859,16 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 						(math.random() * 2 - 1) * 2
 					)
 					movePetTo(petData, targetPos)
+				else
+					-- 쉼터 없으면 빌드존 안 랜덤 위치로 흩어져 잠 (센터에 몰리지 않게, 펫마다 랜덤)
+					local center = buildZone.Position
+					local half = buildZone.Size / 2
+					local sleepPos = Vector3.new(
+						center.X + (math.random() * 2 - 1) * math.max(0, half.X - 2),
+						center.Y + half.Y + petYOffset(petData),
+						center.Z + (math.random() * 2 - 1) * math.max(0, half.Z - 2)
+					)
+					movePetTo(petData, sleepPos)
 				end
 
 				-- 아침까지 대기

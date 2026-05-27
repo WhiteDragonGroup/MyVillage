@@ -260,7 +260,7 @@ function DialogUI.showPlayerChoice(choices: { { text: string, id: string } }, on
 		if head then
 			_playerBillboard = Instance.new("BillboardGui")
 			_playerBillboard.Name = "PlayerSayBubble"
-			_playerBillboard.Size = UDim2.new(0, 200, 0, 40)
+			_playerBillboard.Size = UDim2.new(0, 260, 0, 60)
 			_playerBillboard.StudsOffset = Vector3.new(0, 1.5, 0)
 			_playerBillboard.AlwaysOnTop = true
 			_playerBillboard.Adornee = head
@@ -270,7 +270,7 @@ function DialogUI.showPlayerChoice(choices: { { text: string, id: string } }, on
 			sayLabel.Size = UDim2.new(1, 0, 1, 0)
 			sayLabel.BackgroundTransparency = 1
 			sayLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-			sayLabel.TextSize = 13
+			sayLabel.TextSize = 24
 			-- 게임 메인 폰트로 통일 (기존 GothamBold → 다른 말풍선과 동일 폰트)
 			sayLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 			sayLabel.TextStrokeTransparency = 0.5
