@@ -216,6 +216,10 @@ local function createPetTool(player: Player, petData)
 								part.CanCollide = false
 								part.Massless = true
 								part.Anchored = false
+								-- HumanoidRootPart(가슴 부분 박스)는 항상 투명 처리 (createPetModel과 동일)
+								if part.Name == "HumanoidRootPart" then
+									part.Transparency = 1
+								end
 								local weld = Instance.new("WeldConstraint")
 								weld.Part0 = handle
 								weld.Part1 = part

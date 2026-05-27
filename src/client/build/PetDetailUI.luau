@@ -43,10 +43,28 @@ local function renderBuffSlots(activeList: { { buffId: string, remaining: number
 	end
 	table.sort(slots, function(a, b) return a.Name < b.Name end)
 
+	-- 일부 슬롯에만 Info(툴팁)가 있는 경우 대비: 있는 슬롯에서 템플릿을 떠 둔다.
+	local infoTemplate = nil
+	for _, slot in slots do
+		local info = slot:FindFirstChild("Info")
+		if info then
+			infoTemplate = info
+			break
+		end
+	end
+
 	for i, slot in slots do
 		local entry = activeList[i]
 		local slotInfo = slot:FindFirstChild("Info")
-		local timeLabel = slot:FindFirstChild("_TimeLabel")
+		-- Info가 없는 슬롯엔 템플릿을 복제해 넣어 호버/설명이 모두 동작하게 함.
+		if not slotInfo and infoTemplate and slot ~= infoTemplate.Parent then
+			slotInfo = infoTemplate:Clone()
+			slotInfo.Name = "Info"
+			slotInfo.Parent = slot
+		end
+		-- 디자인 슬롯에 이미 있는 시간 라벨(직속 TextLabel) 재사용. 없을 때만 _TimeLabel 생성.
+		-- (Info 안의 설명 TextLabel은 직속이 아니라 안 잡힘 → 시간 라벨 중복 방지)
+		local timeLabel = slot:FindFirstChild("_TimeLabel") or slot:FindFirstChild("TextLabel")
 		if entry then
 			local buffId = entry.buffId
 			local buffDef = BuffCfg.BUFFS[buffId]
