@@ -167,6 +167,15 @@ local function setPetState(petData, newState: string)
 end
 
 ----------------------------------------------------------------
+-- 펫 기준점(피벗/중심)에서 모델 바닥까지 거리 + 설정 높이.
+-- PET_HEIGHT=0이면 모델 바닥이 지면에 딱 닿고, 양수면 그만큼 떠오른다.
+-- _pivotToBottom은 createPetModel에서 모델 크기에 맞춰 계산해 둔다.
+----------------------------------------------------------------
+local function petYOffset(petData): number
+	return (petData._pivotToBottom or 0) + PetCfg.PET_HEIGHT
+end
+
+----------------------------------------------------------------
 -- 펫 모델 생성
 ----------------------------------------------------------------
 local function createPetModel(petData, position: Vector3): BasePart
@@ -287,7 +296,12 @@ local function createPetModel(petData, position: Vector3): BasePart
 			-- 2. 최종 위치로 이동 (회전은 ServerStorage 템플릿 PrimaryPart 기준 정자세).
 			-- 누어있는 모델은 Constants.PET_ORIENTATION_OFFSET[petName]로 보정.
 			petData._modelRotation = Constants.getPetOrientationOffset and Constants.getPetOrientationOffset(petName) or CFrame.new()
-			pet:PivotTo(CFrame.new(position + Vector3.new(0, PetCfg.PET_HEIGHT, 0)) * petData._modelRotation)
+			-- 회전 먼저 적용 후 바운딩박스로 피벗→바닥 거리 측정 (모델마다 키가 달라 동적 계산).
+			pet:PivotTo(CFrame.new(position) * petData._modelRotation)
+			local bboxCF, bboxSize = pet:GetBoundingBox()
+			petData._pivotToBottom = pet:GetPivot().Position.Y - (bboxCF.Position.Y - bboxSize.Y / 2)
+			-- 모델 바닥이 지면(+PET_HEIGHT)에 오도록 최종 배치.
+			pet:PivotTo(CFrame.new(position + Vector3.new(0, petYOffset(petData), 0)) * petData._modelRotation)
 
 			-- 3. 모든 파트 weld + Anchored 처리 (리그드면 weld 스킵)
 			for _, desc in pet:GetDescendants() do
@@ -327,11 +341,12 @@ local function createPetModel(petData, position: Vector3): BasePart
 		pet.CanQuery = true
 		pet.CanTouch = false
 		pet.CollisionGroup = "Pets"
-		pet.Position = position + Vector3.new(0, PetCfg.PET_HEIGHT, 0)
 
 		-- 무게 배율에 따른 크기 조정
 		local scale = math.clamp(petData.weightMult or 1.0, 0.7, 2.0)
 		pet.Size = PetCfg.PET_SIZE * scale
+		petData._pivotToBottom = pet.Size.Y / 2
+		pet.Position = position + Vector3.new(0, petYOffset(petData), 0)
 
 		-- 등급별 색상
 		local rarityColor = PetCfg.RARITY_COLORS[petData.rarity]
@@ -691,22 +706,27 @@ end
 ----------------------------------------------------------------
 -- 배회 (산책 모드)
 ----------------------------------------------------------------
-local function doWander(petData, buildZone: BasePart, duration: number)
+local function doWander(petData, buildZone: BasePart, duration: number, hasSleepless: boolean?)
 	-- 호출자가 지정한 이동 상태(Wandering / SearchingForWork). 이동 중에만 적용.
 	local moveState = petData.state
 	local elapsed = 0
 	while elapsed < duration and _behaviorLoops[petData.petId] do
+		-- 밤이 되면(불면 아니면) 배회 중단 → 행동 루프 상단에서 수면 처리.
+		if not TimeState.isDay() and not hasSleepless then break end
 		-- 랜덤 목표
 		local center = buildZone.Position
 		local halfSize = buildZone.Size / 2
 		local targetX = center.X + (math.random() * 2 - 1) * math.min(halfSize.X, PetCfg.WANDER_RADIUS)
 		local targetZ = center.Z + (math.random() * 2 - 1) * math.min(halfSize.Z, PetCfg.WANDER_RADIUS)
-		local targetPos = Vector3.new(targetX, center.Y + PetCfg.PET_HEIGHT, targetZ)
+		-- 지면 = BuildZone 윗면 (center는 중심이므로 halfSize.Y 더함).
+		local targetPos = Vector3.new(targetX, center.Y + halfSize.Y + petYOffset(petData), targetZ)
 
 		-- 이동 시작 → move 애니
 		if petData.state ~= moveState then setPetState(petData, moveState) end
 		movePetTo(petData, targetPos)
 		if not _behaviorLoops[petData.petId] then break end
+		-- 이동 직후 밤 체크 → 곧장 잠자리로 (도착 후 더 배회하지 않음).
+		if not TimeState.isDay() and not hasSleepless then break end
 
 		-- 대화 상대 탐색
 		local plot = buildZone.Parent
@@ -818,7 +838,7 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 					occupyWorkplace(restBuildingId, petId)
 					local targetPos = restPlace.Position + Vector3.new(
 						(math.random() * 2 - 1) * 2,
-						PetCfg.PET_HEIGHT,
+						petYOffset(petData),
 						(math.random() * 2 - 1) * 2
 					)
 					movePetTo(petData, targetPos)
@@ -851,7 +871,7 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 				-- 일터로 이동 (이동 중엔 move 애니)
 				local targetPos = workplace.Position + Vector3.new(
 					(math.random() * 2 - 1) * 2,
-					PetCfg.PET_HEIGHT,
+					petYOffset(petData),
 					(math.random() * 2 - 1) * 2
 				)
 
@@ -993,7 +1013,7 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 					-- 쉼터 이동 → 휴식 (이동 중엔 move 애니)
 					local restPos = restPlace.Position + Vector3.new(
 						(math.random() * 2 - 1) * 2,
-						PetCfg.PET_HEIGHT,
+						petYOffset(petData),
 						(math.random() * 2 - 1) * 2
 					)
 					setPetState(petData, "Walking")
@@ -1039,14 +1059,14 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 				else
 					-- 산책
 					setPetState(petData, "Wandering")
-					doWander(petData, buildZone, restDuration)
+					doWander(petData, buildZone, restDuration, hasSleepless)
 				end
 			else
 				-- 일터 없음 → 일자리 찾기 모드 (Wandering과 구분)
 				setPetState(petData, Constants.PetState.SearchingForWork)
 				local wanderDuration = PetCfg.REST_DURATION_MIN
 					+ math.random() * (PetCfg.REST_DURATION_MAX - PetCfg.REST_DURATION_MIN)
-				doWander(petData, buildZone, wanderDuration)
+				doWander(petData, buildZone, wanderDuration, hasSleepless)
 			end
 
 			if not _behaviorLoops[petId] then break end
@@ -1209,7 +1229,9 @@ function PetManager._spawnAllPets(player: Player)
 			continue
 		end
 		if not petData.model or not petData.model.Parent then
-			local pet = createPetModel(petData, buildZone.Position)
+			-- 지면 = BuildZone 윗면
+			local groundPos = buildZone.Position + Vector3.new(0, buildZone.Size.Y / 2, 0)
+			local pet = createPetModel(petData, groundPos)
 			-- Model이면 _petModel을 plot에 배치
 			if petData._petModel then
 				petData._petModel.Parent = plot
@@ -1312,7 +1334,7 @@ function PetManager.assignPet(player: Player, petId: string, buildingId: string)
 
 	-- 펫 모델을 건물 옆으로 이동
 	if petData.model and petData.model.Parent then
-		local targetPos = building.Position + Vector3.new(building.Size.X / 2 + 1.5, PetCfg.PET_HEIGHT, 0)
+		local targetPos = building.Position + Vector3.new(building.Size.X / 2 + 1.5, petYOffset(petData), 0)
 		local rotation = petData._modelRotation or CFrame.new()
 		if petData._petModel and petData._petModel:IsA("Model") then
 			petData._petModel:PivotTo(CFrame.new(targetPos) * rotation)
@@ -1433,7 +1455,9 @@ function PetManager.addPetDirect(player: Player, petData)
 	if plot then
 		local buildZone = plot:FindFirstChild("BuildZone", true)
 		if buildZone then
-			local pet = createPetModel(petData, buildZone.Position)
+			-- 지면 = BuildZone 윗면
+			local groundPos = buildZone.Position + Vector3.new(0, buildZone.Size.Y / 2, 0)
+			local pet = createPetModel(petData, groundPos)
 			-- Model이면 wrapping Model을 plot에 넣어야 모든 파트가 함께 보임
 			if petData._petModel then
 				petData._petModel.Parent = plot

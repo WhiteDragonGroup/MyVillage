@@ -11,7 +11,7 @@ PetConfig.BUILD_SPEED = 30 -- 기본 30/초 (Lv1→2: 1500/30=50초)
 PetConfig.WANDER_RADIUS = 8       -- 배회 반경 (stud)
 PetConfig.WANDER_INTERVAL = 3     -- 배회 이동 간격 (초)
 PetConfig.WANDER_SPEED = 8        -- 배회 이동 속도 (stud/s)
-PetConfig.PET_HEIGHT = 3          -- 지면 위 떠다니는 높이 (stud)
+PetConfig.PET_HEIGHT = 0          -- 지면 위 떠다니는 높이 (stud)
 
 -- 펫 외형
 PetConfig.PET_SIZE = Vector3.new(2, 2, 2)

@@ -175,7 +175,10 @@ function ShopUI.updateShop(shopData: { any }, restockTime: number)
 end
 
 local _shopSlotTemplate = nil
-local _shopSlotHeight = nil
+local _shopSlotHeightPx = nil  -- 원본 슬롯의 렌더된 픽셀 높이 (최초 1회 측정)
+-- UIListLayout이 세로 스택·간격·캔버스를 처리한다. 슬롯 높이는 픽셀로 고정해야 스크롤이 정확.
+local SHOP_SLOT_WIDTH = 0.94   -- 슬롯 너비 (스케일, 가운데 정렬)
+local SHOP_SLOT_GAP = 10       -- 슬롯 간 세로 간격(px)
 
 function ShopUI._renderItems()
 	if not buildingsShopFrame then return end
@@ -183,22 +186,30 @@ function ShopUI._renderItems()
 	local scrollFrame = buildingsShopFrame:FindFirstChild("ScrollingFrame")
 	if not scrollFrame then return end
 
-	-- 슬롯 템플릿 저장 (최초 1회) + 원본 높이 기록
+	-- 슬롯 판별: 이름이 Slot_* 이거나 BuyDollar/NameText를 가진 프레임만 슬롯으로 본다.
+	-- (BackPattern 같은 배경/장식은 슬롯이 아니므로 템플릿·제거 대상에서 제외해 디자인을 보존)
+	local function isSlot(obj: Instance): boolean
+		return obj.Name:match("^Slot_") ~= nil
+			or obj:FindFirstChild("BuyDollar") ~= nil
+			or obj:FindFirstChild("NameText") ~= nil
+	end
+
+	-- 슬롯 템플릿 캡처 + 렌더된 픽셀 높이 측정 (최초 1회). BackPattern 등 배경은 isSlot으로 제외.
 	if not _shopSlotTemplate then
 		for _, child in scrollFrame:GetChildren() do
-			if child:IsA("Frame") or child:IsA("ImageLabel") or child:IsA("TextButton") then
-				if child.Name ~= "UIListLayout" and child.Name ~= "UIPadding" then
-					_shopSlotHeight = child.AbsoluteSize.Y
-					_shopSlotTemplate = child:Clone()
-					break
+			if child:IsA("GuiObject") and isSlot(child) then
+				if child.AbsoluteSize.Y > 0 then
+					_shopSlotHeightPx = math.floor(child.AbsoluteSize.Y + 0.5)
 				end
+				_shopSlotTemplate = child:Clone()
+				break
 			end
 		end
 	end
 
-	-- 기존 슬롯 모두 제거 (레이아웃 객체 보존)
+	-- 기존 슬롯·장식 제거 (UIListLayout/UIPadding 등 레이아웃만 보존)
 	for _, child in scrollFrame:GetChildren() do
-		if child:IsA("GuiObject") and not child:IsA("UIListLayout") and not child:IsA("UIPadding") and not child:IsA("UIGridLayout") then
+		if child:IsA("GuiObject") and not child:IsA("UILayout") and not child:IsA("UIPadding") then
 			child:Destroy()
 		end
 	end
@@ -210,30 +221,36 @@ function ShopUI._renderItems()
 
 	print("[ShopUI] rendering " .. #_shopData .. " items")
 
-	-- Ensure layout exists
-	if not scrollFrame:FindFirstChildWhichIsA("UIListLayout") and not scrollFrame:FindFirstChildWhichIsA("UIGridLayout") then
-		local layout = Instance.new("UIListLayout")
-		layout.Padding = UDim.new(0, 4)
-		layout.SortOrder = Enum.SortOrder.LayoutOrder
-		layout.Parent = scrollFrame
+	-- 레이아웃: 세로 리스트 + 자동 캔버스 (스크롤이 항상 마지막 슬롯까지 정확히 닿음).
+	scrollFrame.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar -- 스크롤바가 슬롯을 안 가림
+	scrollFrame.ScrollingEnabled = true
+	scrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+	local listLayout = scrollFrame:FindFirstChildWhichIsA("UIListLayout")
+	if not listLayout then
+		listLayout = Instance.new("UIListLayout")
+		listLayout.Parent = scrollFrame
 	end
+	listLayout.FillDirection = Enum.FillDirection.Vertical
+	listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	listLayout.Padding = UDim.new(0, SHOP_SLOT_GAP)
 
-	for i, item in _shopData do
+	local rendered = 0
+	for _, item in _shopData do
 		local building = Constants.BUILDINGS[item.itemName]
 		if not building then continue end
 
 		local slot = _shopSlotTemplate:Clone()
 		slot.Name = "Slot_" .. item.itemName
 		slot.Visible = true
-		slot.LayoutOrder = i
+		-- 위치/정렬은 UIListLayout이 담당. 너비는 스케일, 높이는 픽셀 고정.
+		slot.AnchorPoint = Vector2.new(0, 0)
+		slot.Position = UDim2.new(0, 0, 0, 0)
+		slot.Size = UDim2.new(SHOP_SLOT_WIDTH, 0, 0, _shopSlotHeightPx or 110)
+		slot.LayoutOrder = rendered
 		slot.Parent = scrollFrame
-
-		-- Debug: print ALL descendants (first item only)
-		if i == 1 then
-			for _, desc in slot:GetDescendants() do
-				print("[ShopSlot] " .. desc:GetFullName():sub(#slot:GetFullName() + 2) .. " (" .. desc.ClassName .. ")")
-			end
-		end
+		rendered += 1
 
 		-- NameText
 		local nameText = slot:FindFirstChild("NameText")
@@ -343,16 +360,7 @@ function ShopUI._renderItems()
 		end
 	end
 
-	-- Fix slot heights to original pixel size, then auto-expand canvas
-	if _shopSlotHeight and _shopSlotHeight > 0 then
-		for _, child in scrollFrame:GetChildren() do
-			if child:IsA("GuiObject") and not child:IsA("UIListLayout") and not child:IsA("UIPadding") and not child:IsA("UIGridLayout") then
-				child.Size = UDim2.new(child.Size.X.Scale, child.Size.X.Offset, 0, _shopSlotHeight)
-			end
-		end
-	end
-	scrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+	-- 캔버스는 AutomaticCanvasSize=Y가 슬롯 픽셀 높이 합으로 자동 계산 (위에서 설정 완료).
 end
 
 function ShopUI._renderItems_disabled()
