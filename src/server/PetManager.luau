@@ -516,6 +516,51 @@ local function movePetTo(petData, targetPos: Vector3): boolean
 end
 
 ----------------------------------------------------------------
+-- 건물별 펫 자세(작업/쉼) 위치 + 바라볼 방향 (Constants.BUILDINGS[name].petPose)
+-- kind: "work" | "rest". config 없으면 nil 반환 → 호출부가 기존 랜덤 위치로 폴백.
+----------------------------------------------------------------
+local function computeBuildingPose(petData, building: BasePart, kind: string): (Vector3?, Vector3?)
+	local itemName = building:GetAttribute("ItemName")
+	local info = itemName and Constants.BUILDINGS[itemName]
+	local pose = info and info.petPose and info.petPose[kind]
+	if not pose then return nil, nil end
+
+	local offset = pose.offset or Vector3.zero
+	-- 수평(x,z)은 건물 yaw 따라 회전, Y는 건물 바닥 기준 + 펫 키
+	local horiz = building.CFrame:PointToWorldSpace(Vector3.new(offset.X, 0, offset.Z))
+	local baseY = building.Position.Y - building.Size.Y / 2
+	local pos = Vector3.new(horiz.X, baseY + offset.Y + petYOffset(petData), horiz.Z)
+
+	local faceDir = nil
+	local f = pose.face
+	if typeof(f) == "number" then
+		faceDir = Vector3.new(math.sin(math.rad(f)), 0, math.cos(math.rad(f)))
+	elseif f == "in" then
+		faceDir = Vector3.new(building.Position.X - pos.X, 0, building.Position.Z - pos.Z)
+	elseif f == "out" then
+		faceDir = Vector3.new(pos.X - building.Position.X, 0, pos.Z - building.Position.Z)
+	end
+	if faceDir and faceDir.Magnitude < 0.05 then faceDir = nil end
+	return pos, faceDir
+end
+
+-- 펫이 dir(수평 방향)을 바라보게 모델 회전 (이동 없이 자세만). movePetTo와 동일한 facing 규칙.
+local function facePet(petData, dir: Vector3?)
+	if not dir or dir.Magnitude < 0.05 then return end
+	local mainPart = petData.model
+	if not mainPart or not mainPart.Parent then return end
+	local rotation = petData._modelRotation or CFrame.new()
+	local FACE_YAW = math.rad(Constants.getPetFacingYaw(petData.petName))
+	local faceRot = CFrame.lookAt(Vector3.zero, dir.Unit) * CFrame.Angles(0, FACE_YAW, 0)
+	local wholeModel = petData._petModel
+	if wholeModel and wholeModel.Parent then
+		wholeModel:PivotTo(CFrame.new(wholeModel:GetPivot().Position) * faceRot * rotation)
+	else
+		mainPart.CFrame = CFrame.new(mainPart.Position) * faceRot * rotation
+	end
+end
+
+----------------------------------------------------------------
 -- 행동 루프 중단 (외부에서 호출)
 ----------------------------------------------------------------
 function PetManager.stopBehaviorLoop(petId: string)
@@ -853,12 +898,15 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 				if restPlace then
 					restBuildingId = restPlace:GetAttribute("BuildingId")
 					occupyWorkplace(restBuildingId, petId)
-					local targetPos = restPlace.Position + Vector3.new(
+					-- 건물별 휴식 위치(petPose.rest) 있으면 그 자리+방향, 없으면 랜덤
+					local restPosePos, restPoseFace = computeBuildingPose(petData, restPlace, "rest")
+					local targetPos = restPosePos or (restPlace.Position + Vector3.new(
 						(math.random() * 2 - 1) * 2,
 						petYOffset(petData),
 						(math.random() * 2 - 1) * 2
-					)
+					))
 					movePetTo(petData, targetPos)
+					facePet(petData, restPoseFace)
 				else
 					-- 쉼터 없으면 빌드존 안 랜덤 위치로 흩어져 잠 (센터에 몰리지 않게, 펫마다 랜덤)
 					local center = buildZone.Position
@@ -895,12 +943,15 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 				occupyWorkplace(buildingId, petId)
 				petData.targetBuildingId = buildingId
 
-				-- 일터로 이동 (이동 중엔 move 애니)
-				local targetPos = workplace.Position + Vector3.new(
+				-- 일터로 이동 (이동 중엔 move 애니). 건물별 작업 위치(petPose) 있으면 그 자리, 없으면 랜덤.
+				local poseFace = nil
+				local posePos
+				posePos, poseFace = computeBuildingPose(petData, workplace, "work")
+				local targetPos = posePos or (workplace.Position + Vector3.new(
 					(math.random() * 2 - 1) * 2,
 					petYOffset(petData),
 					(math.random() * 2 - 1) * 2
-				)
+				))
 
 				setPetState(petData, "Walking")
 				if not movePetTo(petData, targetPos) then
@@ -914,8 +965,9 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 					break
 				end
 
-				-- 2. 작업 시작
+				-- 2. 작업 시작 (지정 방향 있으면 그 방향 바라봄)
 				petData.previousWorkId = buildingId
+				facePet(petData, poseFace)
 				setPetState(petData, "Working")
 
 				-- 업그레이드 건물이면 작업자 카운트 증가 (UpgradeManager 진행도 트리거)
@@ -1037,12 +1089,13 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 					local restBuildingId = restPlace:GetAttribute("BuildingId")
 					occupyWorkplace(restBuildingId, petId)
 
-					-- 쉼터 이동 → 휴식 (이동 중엔 move 애니)
-					local restPos = restPlace.Position + Vector3.new(
+					-- 쉼터 이동 → 휴식 (이동 중엔 move 애니). 건물별 휴식 위치(petPose.rest) 우선.
+					local restPosePos, restPoseFace = computeBuildingPose(petData, restPlace, "rest")
+					local restPos = restPosePos or (restPlace.Position + Vector3.new(
 						(math.random() * 2 - 1) * 2,
 						petYOffset(petData),
 						(math.random() * 2 - 1) * 2
-					)
+					))
 					setPetState(petData, "Walking")
 					if not movePetTo(petData, restPos) then
 						vacateWorkplace(restBuildingId, petId)
@@ -1053,6 +1106,7 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 						break
 					end
 
+					facePet(petData, restPoseFace)
 					setPetState(petData, "Resting")
 
 					-- 휴식 건물별 버프 적용

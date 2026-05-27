@@ -55,6 +55,12 @@ Constants.RARITY_COLORS = {
 --   }
 --
 -- 사용법: Constants.getBuildingIcon("Mine", 3) → 해당 레벨 아이콘 반환
+--
+-- petPose: 건물별 펫 작업/쉼 위치 + 바라보는 방향 (선택).
+--   { work = {...}, rest = {...} } — 각 항목:
+--     offset = Vector3(x, y, z)  -- x,z는 건물 로컬 수평(건물 회전 따라감), y는 건물 '바닥' 기준 높이. 펫 키는 자동 가산.
+--     face   = "in" | "out" | <숫자>  -- "in"=건물 바라봄, "out"=반대, 숫자=월드 yaw(도). 생략 시 정면 유지.
+--   config 없으면 기존 랜덤 위치 동작으로 폴백.
 Constants.BUILDINGS = {
 	ClockTower = {
 		name = "Clock Tower", types = {"Decoration"}, rarity = "Common",
@@ -70,6 +76,8 @@ Constants.BUILDINGS = {
 	Farm = {
 		name = "Farm", types = {"Work"}, rarity = "Common",
 		collisionSize = Vector3.new(6, 3, 6), workTypes = {"Farming"},
+		-- 밭 위(건물 윗면)에 서서 작업. (Y는 건물 높이만큼 = 윗면, 값 조정 가능)
+		petPose = { work = { offset = Vector3.new(0, 3, 0), face = "in" } },
 		icon = {
 			[1] = "rbxassetid://129699132906145",
 			[2] = "rbxassetid://114920300255596",
@@ -81,6 +89,8 @@ Constants.BUILDINGS = {
 	Mine = {
 		name = "Mine", types = {"Work"}, rarity = "Common",
 		collisionSize = Vector3.new(6, 4, 6), workTypes = {"Mining"},
+		-- 광산 바깥쪽(로컬 +Z 5스터드, 지면)에 서서 광산을 바라봄. (값 조정 가능)
+		petPose = { work = { offset = Vector3.new(0, 0, 5), face = "in" } },
 		icon = {
 			[1] = "rbxassetid://88757013091698",
 			[2] = "rbxassetid://73273000490779",
@@ -114,6 +124,8 @@ Constants.BUILDINGS = {
 	HotSpring = {
 		name = "Hot Spring", types = {"Rest"}, rarity = "Legendary",
 		collisionSize = Vector3.new(8, 2, 8),
+		-- 온천 물가 안쪽에서 휴식 (offset으로 물 위치 맞추세요)
+		petPose = { rest = { offset = Vector3.new(0, 0, 0), face = "out" } },
 		icon = {
 			[1] = "rbxassetid://90241666410858",
 			[2] = "rbxassetid://102498928116182",
