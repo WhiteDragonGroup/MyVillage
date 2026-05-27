@@ -28,19 +28,20 @@ local function createDisplay(building: BasePart)
 
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "WorkInfo"
-	gui.Size = UDim2.new(0, 160, 0, 50)
-	gui.StudsOffset = Vector3.new(0, 4, 0)
+	-- 약 2배 확대
+	gui.Size = UDim2.new(0, 320, 0, 100)
+	gui.StudsOffset = Vector3.new(0, 5, 0)
 	gui.AlwaysOnTop = true
 	gui.LightInfluence = 0
 	gui.MaxDistance = 80
 	gui.Parent = building
 
 	local coinLabel = Instance.new("TextLabel")
-	coinLabel.Size = UDim2.new(1, 0, 0, 24)
+	coinLabel.Size = UDim2.new(1, 0, 0, 48)
 	coinLabel.Position = UDim2.new(0, 0, 0, 0)
 	coinLabel.BackgroundTransparency = 1
 	coinLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Heavy)
-	coinLabel.TextSize = 18
+	coinLabel.TextSize = 36
 	coinLabel.TextColor3 = Color3.fromRGB(255, 220, 90)
 	coinLabel.TextStrokeTransparency = 0
 	coinLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -48,11 +49,12 @@ local function createDisplay(building: BasePart)
 	coinLabel.Parent = gui
 
 	local gemLabel = Instance.new("TextLabel")
-	gemLabel.Size = UDim2.new(1, 0, 0, 18)
-	gemLabel.Position = UDim2.new(0, 0, 0, 26)
+	gemLabel.Size = UDim2.new(1, 0, 0, 36)
+	gemLabel.Position = UDim2.new(0, 0, 0, 52)
 	gemLabel.BackgroundTransparency = 1
-	gemLabel.Font = Enum.Font.GothamBold
-	gemLabel.TextSize = 14
+	-- 폰트 통일 (GothamBold → 게임 메인 폰트)
+	gemLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
+	gemLabel.TextSize = 28
 	gemLabel.TextColor3 = Color3.fromRGB(180, 220, 255)
 	gemLabel.TextStrokeTransparency = 0
 	gemLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
