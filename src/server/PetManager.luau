@@ -908,14 +908,14 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 					movePetTo(petData, targetPos)
 					facePet(petData, restPoseFace)
 				else
-					-- 쉼터 없으면 빌드존 안 랜덤 위치로 흩어져 잠 (센터에 몰리지 않게, 펫마다 랜덤)
-					local center = buildZone.Position
+					-- 쉼터 없으면 빌드존 안 랜덤 위치로 흩어져 잠 (센터 몰림 방지, 펫마다 랜덤).
+					-- 빌드존 CFrame 기준(로컬)으로 계산 → 회전된 plot이어도 경계 밖으로 안 나감.
 					local half = buildZone.Size / 2
-					local sleepPos = Vector3.new(
-						center.X + (math.random() * 2 - 1) * math.max(0, half.X - 2),
-						center.Y + half.Y + petYOffset(petData),
-						center.Z + (math.random() * 2 - 1) * math.max(0, half.Z - 2)
-					)
+					local lx = (math.random() * 2 - 1) * math.max(0, half.X - 3)
+					local lz = (math.random() * 2 - 1) * math.max(0, half.Z - 3)
+					local world = buildZone.CFrame * CFrame.new(lx, 0, lz)
+					local bzTop = buildZone.Position.Y + half.Y
+					local sleepPos = Vector3.new(world.Position.X, bzTop + petYOffset(petData), world.Position.Z)
 					movePetTo(petData, sleepPos)
 				end
 
