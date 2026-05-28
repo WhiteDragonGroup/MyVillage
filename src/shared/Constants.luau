@@ -79,8 +79,8 @@ Constants.BUILDINGS = {
 	Farm = {
 		name = "Farm", types = {"Work"}, rarity = "Common",
 		collisionSize = Vector3.new(6, 3, 6), workTypes = {"Farming"},
-		-- 밭 위(건물 윗면)에 서서 작업. (Y는 건물 높이만큼 = 윗면, 값 조정 가능)
-		petPose = { work = { offset = Vector3.new(0, 3, 0), face = "in" } },
+		-- 밭(지면 높이)에 서서 작업. offset.Y로 높이 조절 (0=지면, 양수=그만큼 위로). 공중에 뜨면 Y를 낮추세요.
+		petPose = { work = { offset = Vector3.new(0, 0, 0), face = "in" } },
 		icon = {
 			[1] = "rbxassetid://129699132906145",
 			[2] = "rbxassetid://114920300255596",
