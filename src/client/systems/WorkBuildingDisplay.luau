@@ -67,7 +67,7 @@ local function createDisplay(building: BasePart)
 	coinLabel.Position = UDim2.new(0, 0, 0, 0)
 	coinLabel.BackgroundTransparency = 1
 	coinLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Heavy)
-	coinLabel.TextSize = 36
+	coinLabel.TextSize = 26
 	coinLabel.TextColor3 = Color3.fromRGB(255, 220, 90)
 	coinLabel.TextStrokeTransparency = 0
 	coinLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -104,7 +104,7 @@ local function createDisplay(building: BasePart)
 	gemLabel.Size = UDim2.new(0, 0, 1, 0)
 	gemLabel.BackgroundTransparency = 1
 	gemLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
-	gemLabel.TextSize = 28
+	gemLabel.TextSize = 26
 	gemLabel.TextColor3 = Color3.fromRGB(180, 220, 255)
 	gemLabel.TextStrokeTransparency = 0
 	gemLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)

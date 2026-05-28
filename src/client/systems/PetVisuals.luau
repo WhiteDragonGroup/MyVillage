@@ -230,8 +230,8 @@ end
 local function createNameTag(pet: BasePart): BillboardGui
 	local billboard = Instance.new("BillboardGui")
 	billboard.Name = "PetNameTag"
-	billboard.Size = UDim2.new(0, 100, 0, 40)
-	billboard.StudsOffset = Vector3.new(0, 1.5, 0)
+	billboard.Size = UDim2.new(0, 220, 0, 90)
+	billboard.StudsOffset = Vector3.new(0, 2, 0)
 	billboard.AlwaysOnTop = true
 	billboard.Adornee = pet
 	billboard.Parent = pet
@@ -239,13 +239,13 @@ local function createNameTag(pet: BasePart): BillboardGui
 	-- 이름
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Name = "NameLabel"
-	nameLabel.Size = UDim2.new(1, 0, 0, 16)
+	nameLabel.Size = UDim2.new(1, 0, 0, 34)
 	nameLabel.Position = UDim2.new(0, 0, 0, 0)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 	nameLabel.TextStrokeTransparency = 0.3
-	nameLabel.TextSize = 11
+	nameLabel.TextSize = 26
 	nameLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	nameLabel.Text = pet:GetAttribute("PetName") or "펫"
 	nameLabel.Parent = billboard
@@ -253,13 +253,13 @@ local function createNameTag(pet: BasePart): BillboardGui
 	-- 상태 라벨
 	local statusLabel = Instance.new("TextLabel")
 	statusLabel.Name = "StatusLabel"
-	statusLabel.Size = UDim2.new(1, 0, 0, 14)
-	statusLabel.Position = UDim2.new(0, 0, 0, 15)
+	statusLabel.Size = UDim2.new(1, 0, 0, 26)
+	statusLabel.Position = UDim2.new(0, 0, 0, 34)
 	statusLabel.BackgroundTransparency = 1
 	statusLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
 	statusLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 	statusLabel.TextStrokeTransparency = 0.5
-	statusLabel.TextSize = 10
+	statusLabel.TextSize = 22
 	statusLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Regular)
 	statusLabel.Text = ""
 	statusLabel.Parent = billboard
@@ -267,13 +267,13 @@ local function createNameTag(pet: BasePart): BillboardGui
 	-- 레벨 라벨
 	local levelLabel = Instance.new("TextLabel")
 	levelLabel.Name = "LevelLabel"
-	levelLabel.Size = UDim2.new(1, 0, 0, 12)
-	levelLabel.Position = UDim2.new(0, 0, 0, 28)
+	levelLabel.Size = UDim2.new(1, 0, 0, 24)
+	levelLabel.Position = UDim2.new(0, 0, 0, 62)
 	levelLabel.BackgroundTransparency = 1
 	levelLabel.TextColor3 = Color3.fromRGB(255, 220, 100)
 	levelLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 	levelLabel.TextStrokeTransparency = 0.5
-	levelLabel.TextSize = 9
+	levelLabel.TextSize = 22
 	levelLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Regular)
 	levelLabel.Text = "Lv." .. (pet:GetAttribute("PetLevel") or 1)
 	levelLabel.Parent = billboard
