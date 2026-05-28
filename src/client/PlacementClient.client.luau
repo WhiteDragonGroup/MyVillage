@@ -1847,7 +1847,7 @@ ShopUI.init({
 			label.BackgroundTransparency = 1
 			label.TextColor3 = Color3.fromRGB(255, 255, 255)
 			label.TextSize = 13
-			label.Font = Enum.Font.GothamBold
+			label.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 			label.Text = "I'll take a " .. eggName .. "!"
 			label.TextWrapped = true
 			label.TextStrokeTransparency = 0.5
@@ -2184,7 +2184,7 @@ petUpdateEvent.OnClientEvent:Connect(function(eventType, data)
 		nLabel.BackgroundTransparency = 1
 		nLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 		nLabel.TextSize = 13
-		nLabel.Font = Enum.Font.GothamBold
+		nLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 		nLabel.Text = "Mutation acquired: " .. mutName .. "!"
 		nLabel.Parent = notifFrame
 
@@ -2231,7 +2231,7 @@ eggUpdateEvent.OnClientEvent:Connect(function(eventType, data)
 		nLabel.BackgroundTransparency = 1
 		nLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 		nLabel.TextSize = 14
-		nLabel.Font = Enum.Font.GothamBold
+		nLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 		nLabel.Text = "Hatched! " .. data.petName .. " (" .. data.rarity .. ")"
 		nLabel.TextWrapped = true
 		nLabel.Parent = notifFrame

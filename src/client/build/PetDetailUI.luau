@@ -81,7 +81,7 @@ local function renderBuffSlots(activeList: { { buffId: string, remaining: number
 				timeLabel.Position = UDim2.new(0, 0, 0.65, 0)
 				timeLabel.BackgroundTransparency = 1
 				timeLabel.TextScaled = true
-				timeLabel.Font = Enum.Font.GothamBold
+				timeLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 				timeLabel.TextColor3 = Color3.new(1, 1, 1)
 				timeLabel.TextStrokeTransparency = 0.4
 				timeLabel.ZIndex = 10

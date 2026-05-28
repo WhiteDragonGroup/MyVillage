@@ -408,7 +408,7 @@ function ShopUI._renderItems_disabled()
 		nameLabel.BackgroundTransparency = 1
 		nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 		nameLabel.TextSize = 12
-		nameLabel.Font = Enum.Font.GothamBold
+		nameLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 		nameLabel.Text = building.name
 		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 		nameLabel.Parent = slot
@@ -422,7 +422,7 @@ function ShopUI._renderItems_disabled()
 		infoLabel.BackgroundTransparency = 1
 		infoLabel.TextColor3 = rarityColor
 		infoLabel.TextSize = 9
-		infoLabel.Font = Enum.Font.Gotham
+		infoLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Regular)
 		infoLabel.Text = infoText
 		infoLabel.TextXAlignment = Enum.TextXAlignment.Left
 		infoLabel.Parent = slot
@@ -434,7 +434,7 @@ function ShopUI._renderItems_disabled()
 		priceLabel.BackgroundTransparency = 1
 		priceLabel.TextColor3 = Color3.fromRGB(255, 200, 60)
 		priceLabel.TextSize = 11
-		priceLabel.Font = Enum.Font.GothamBold
+		priceLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 		priceLabel.Text = "$" .. item.price
 		priceLabel.TextXAlignment = Enum.TextXAlignment.Left
 		priceLabel.Parent = slot

@@ -47,7 +47,7 @@ function CurrencyUI.init()
 	icon.BackgroundTransparency = 1
 	icon.TextColor3 = Color3.fromRGB(255, 200, 60)
 	icon.TextSize = 20
-	icon.Font = Enum.Font.GothamBold
+	icon.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	icon.Text = "$"
 	icon.Parent = frame
 
@@ -59,7 +59,7 @@ function CurrencyUI.init()
 	coinLabel.BackgroundTransparency = 1
 	coinLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	coinLabel.TextSize = 16
-	coinLabel.Font = Enum.Font.GothamBold
+	coinLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	coinLabel.Text = "0"
 	coinLabel.TextXAlignment = Enum.TextXAlignment.Left
 	coinLabel.Parent = frame

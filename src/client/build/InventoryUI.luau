@@ -201,7 +201,7 @@ function InventoryUI._renderSlots()
 				countLabel.BackgroundTransparency = 0.3
 				countLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 				countLabel.TextSize = 11
-				countLabel.Font = Enum.Font.GothamBold
+				countLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 				countLabel.ZIndex = 5
 				countLabel.Parent = slot
 

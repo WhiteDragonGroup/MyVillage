@@ -43,7 +43,7 @@ local function createBadge(building: BasePart, level: number): BillboardGui
 	label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 	label.TextStrokeTransparency = 0.5
 	label.TextSize = 13
-	label.Font = Enum.Font.GothamBold
+	label.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	label.Text = "Lv." .. level
 	label.Parent = billboard
 

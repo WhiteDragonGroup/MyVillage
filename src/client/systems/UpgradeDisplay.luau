@@ -68,7 +68,7 @@ local function createGaugeBar(building: BasePart): BillboardGui
 	label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 	label.TextStrokeTransparency = 0.5
 	label.TextSize = 12
-	label.Font = Enum.Font.GothamBold
+	label.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	label.Text = "0 / 0"
 	label.Parent = billboard
 

@@ -98,7 +98,7 @@ local function createZzzVFX(pet: BasePart)
 	label.TextStrokeColor3 = Color3.fromRGB(50, 50, 80)
 	label.TextStrokeTransparency = 0.5
 	label.TextSize = 14
-	label.Font = Enum.Font.GothamBold
+	label.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	label.Text = "Zzz"
 	label.Parent = billboard
 
@@ -145,7 +145,7 @@ local function createChatBubbleVFX(pet: BasePart)
 	label.BackgroundTransparency = 1
 	label.TextColor3 = Color3.fromRGB(60, 60, 60)
 	label.TextSize = 14
-	label.Font = Enum.Font.GothamBold
+	label.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	label.Text = "..."
 	label.Parent = bg
 
@@ -246,7 +246,7 @@ local function createNameTag(pet: BasePart): BillboardGui
 	nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 	nameLabel.TextStrokeTransparency = 0.3
 	nameLabel.TextSize = 11
-	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	nameLabel.Text = pet:GetAttribute("PetName") or "펫"
 	nameLabel.Parent = billboard
 
@@ -260,7 +260,7 @@ local function createNameTag(pet: BasePart): BillboardGui
 	statusLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 	statusLabel.TextStrokeTransparency = 0.5
 	statusLabel.TextSize = 10
-	statusLabel.Font = Enum.Font.Gotham
+	statusLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Regular)
 	statusLabel.Text = ""
 	statusLabel.Parent = billboard
 
@@ -274,7 +274,7 @@ local function createNameTag(pet: BasePart): BillboardGui
 	levelLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 	levelLabel.TextStrokeTransparency = 0.5
 	levelLabel.TextSize = 9
-	levelLabel.Font = Enum.Font.Gotham
+	levelLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Regular)
 	levelLabel.Text = "Lv." .. (pet:GetAttribute("PetLevel") or 1)
 	levelLabel.Parent = billboard
 

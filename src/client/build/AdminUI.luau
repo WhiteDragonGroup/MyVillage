@@ -67,7 +67,7 @@ function AdminUI.init()
 	title.BackgroundTransparency = 1
 	title.TextColor3 = Color3.fromRGB(255, 100, 100)
 	title.TextSize = 16
-	title.Font = Enum.Font.GothamBold
+	title.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	title.Text = "Admin Panel"
 	title.Parent = mainFrame
 
@@ -78,7 +78,7 @@ function AdminUI.init()
 	closeBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
 	closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	closeBtn.TextSize = 12
-	closeBtn.Font = Enum.Font.GothamBold
+	closeBtn.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	closeBtn.Text = "X"
 	closeBtn.AutoButtonColor = true
 	closeBtn.Parent = mainFrame
@@ -113,7 +113,7 @@ function AdminUI.init()
 		button.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
 		button.TextColor3 = Color3.fromRGB(255, 255, 255)
 		button.TextSize = 12
-		button.Font = Enum.Font.GothamBold
+		button.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 		button.Text = btn.label
 		button.AutoButtonColor = true
 		button.Parent = scrollFrame

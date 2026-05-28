@@ -244,7 +244,7 @@ function EggInfoUI._showOdds(eggId: string)
 				petNameLabel.BackgroundTransparency = 1
 				petNameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 				petNameLabel.TextSize = 12
-				petNameLabel.Font = Enum.Font.GothamBold
+				petNameLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 				petNameLabel.Text = (petInfo and petInfo.name) or petProb.petName
 				petNameLabel.TextXAlignment = Enum.TextXAlignment.Left
 				petNameLabel.Parent = slot
@@ -255,7 +255,7 @@ function EggInfoUI._showOdds(eggId: string)
 				rarityLabel.BackgroundTransparency = 1
 				rarityLabel.TextColor3 = petRarityColor
 				rarityLabel.TextSize = 9
-				rarityLabel.Font = Enum.Font.Gotham
+				rarityLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Regular)
 				rarityLabel.Text = petProb.rarity
 				rarityLabel.Parent = slot
 
@@ -265,7 +265,7 @@ function EggInfoUI._showOdds(eggId: string)
 				chanceLabel.BackgroundTransparency = 1
 				chanceLabel.TextColor3 = Color3.fromRGB(255, 220, 130)
 				chanceLabel.TextSize = 13
-				chanceLabel.Font = Enum.Font.GothamBold
+				chanceLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 				chanceLabel.Text = string.format("%.1f%%", petProb.chance)
 				chanceLabel.TextXAlignment = Enum.TextXAlignment.Right
 				chanceLabel.Parent = slot

@@ -434,7 +434,7 @@ local function showWeatherNotify(message: string)
 	label.BackgroundTransparency = 1
 	label.TextColor3 = Color3.fromRGB(255, 255, 255)
 	label.TextSize = 14
-	label.Font = Enum.Font.GothamMedium
+	label.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Medium)
 	label.Text = message
 	label.TextWrapped = true
 	label.TextYAlignment = Enum.TextYAlignment.Center

@@ -73,7 +73,7 @@ function PetListUI.init(callbacks: { onAssign: (string, string) -> (), onUnassig
 	title.BackgroundTransparency = 1
 	title.TextColor3 = Color3.fromRGB(255, 255, 255)
 	title.TextSize = 16
-	title.Font = Enum.Font.GothamBold
+	title.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	title.Text = "Assign Pet"
 	title.TextXAlignment = Enum.TextXAlignment.Center
 	title.Parent = listFrame
@@ -103,7 +103,7 @@ function PetListUI.init(callbacks: { onAssign: (string, string) -> (), onUnassig
 	closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	closeBtn.Text = "Close"
 	closeBtn.TextSize = 14
-	closeBtn.Font = Enum.Font.GothamBold
+	closeBtn.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	closeBtn.AutoButtonColor = true
 	closeBtn.Parent = listFrame
 
@@ -160,7 +160,7 @@ function PetListUI.show(pets: { any }, buildingId: string)
 		nameLabel.BackgroundTransparency = 1
 		nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 		nameLabel.TextSize = 13
-		nameLabel.Font = Enum.Font.GothamBold
+		nameLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 		nameLabel.Text = pet.petName
 		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 		nameLabel.Parent = slot
@@ -180,7 +180,7 @@ function PetListUI.show(pets: { any }, buildingId: string)
 		statusLabel.BackgroundTransparency = 1
 		statusLabel.TextColor3 = Color3.fromRGB(160, 160, 170)
 		statusLabel.TextSize = 11
-		statusLabel.Font = Enum.Font.Gotham
+		statusLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Regular)
 		statusLabel.Text = statusText
 		statusLabel.TextXAlignment = Enum.TextXAlignment.Left
 		statusLabel.Parent = slot
@@ -191,7 +191,7 @@ function PetListUI.show(pets: { any }, buildingId: string)
 		actionBtn.Position = UDim2.new(1, -75, 0.5, -16)
 		actionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 		actionBtn.TextSize = 12
-		actionBtn.Font = Enum.Font.GothamBold
+		actionBtn.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 		actionBtn.AutoButtonColor = true
 		actionBtn.Parent = slot
 
@@ -237,7 +237,7 @@ function PetListUI.show(pets: { any }, buildingId: string)
 		emptyLabel.BackgroundTransparency = 1
 		emptyLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 		emptyLabel.TextSize = 13
-		emptyLabel.Font = Enum.Font.Gotham
+		emptyLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Regular)
 		emptyLabel.Text = "펫이 없습니다"
 		emptyLabel.Parent = contentFrame
 	end

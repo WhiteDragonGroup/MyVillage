@@ -444,7 +444,7 @@ function MainHUD.showMessage(text: string, duration: number?)
 	label.BackgroundTransparency = 0.3
 	label.TextColor3 = Color3.fromRGB(255, 255, 255)
 	label.TextSize = 13
-	label.Font = Enum.Font.GothamBold
+	label.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	label.Text = text
 	label.TextWrapped = true
 	label.LayoutOrder = -_messageOrder

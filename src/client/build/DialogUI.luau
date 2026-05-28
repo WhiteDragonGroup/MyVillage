@@ -149,7 +149,7 @@ function DialogUI.show(npcName: string, greeting: string, choices: { { text: str
 		nameLabel.BackgroundTransparency = 1
 		nameLabel.TextColor3 = Color3.fromRGB(255, 220, 130)
 		nameLabel.TextSize = 22 -- 13
-		--nameLabel.Font = Enum.Font.GothamBold
+		--nameLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 		nameLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 		nameLabel.Text = npcName
 		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -162,7 +162,7 @@ function DialogUI.show(npcName: string, greeting: string, choices: { { text: str
 		greetLabel.BackgroundTransparency = 1
 		greetLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 		greetLabel.TextSize = 26 -- 11
-		--greetLabel.Font = Enum.Font.Gotham
+		--greetLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Regular)
 		greetLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Medium)
 		greetLabel.Text = ""
 		greetLabel.TextWrapped = true
@@ -298,7 +298,7 @@ function DialogUI.showPlayerChoice(choices: { { text: string, id: string } }, on
 		btn.BackgroundColor3 = Color3.fromRGB(50, 45, 35)
 		btn.TextColor3 = Color3.fromRGB(255, 240, 200)
 		btn.TextSize = 22
-		--btn.Font = Enum.Font.GothamBold
+		--btn.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 		btn.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 		btn.Text = "#" .. i .. " " .. choice.text
 		btn.TextXAlignment = Enum.TextXAlignment.Left

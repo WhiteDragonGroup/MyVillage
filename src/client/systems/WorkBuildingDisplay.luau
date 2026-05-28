@@ -13,7 +13,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 local WorkBuildingDisplay = {}
 
-local _tracked: { [BasePart]: { gui: BillboardGui, coinLabel: TextLabel, gemLabel: TextLabel } } = {}
+local _tracked: { [BasePart]: { gui: BillboardGui, coinLabel: TextLabel, gemRow: Frame, gemLabel: TextLabel, gemIcon: ImageLabel } } = {}
 
 -- 게임 공용 다이아 아이콘. Constants.DIAMOND_ICON 우선, 없으면 HUD(Normal>Diamond)에서 읽기 폴백.
 local _diamondIcon: string? = nil
@@ -74,21 +74,45 @@ local function createDisplay(building: BasePart)
 	coinLabel.Text = "$0/0"
 	coinLabel.Parent = gui
 
+	-- 보석: [다이아 아이콘][숫자] 가로 배치 (RichText img는 빌보드에서 안 보여 ImageLabel 사용)
+	local gemRow = Instance.new("Frame")
+	gemRow.Name = "GemRow"
+	gemRow.Size = UDim2.new(1, 0, 0, 36)
+	gemRow.Position = UDim2.new(0, 0, 0, 52)
+	gemRow.BackgroundTransparency = 1
+	gemRow.Visible = false
+	gemRow.Parent = gui
+
+	local rowLayout = Instance.new("UIListLayout")
+	rowLayout.FillDirection = Enum.FillDirection.Horizontal
+	rowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	rowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+	rowLayout.Padding = UDim.new(0, 4)
+	rowLayout.Parent = gemRow
+
+	local gemIcon = Instance.new("ImageLabel")
+	gemIcon.Name = "GemIcon"
+	gemIcon.Size = UDim2.new(0, 30, 0, 30)
+	gemIcon.BackgroundTransparency = 1
+	gemIcon.Image = getDiamondIcon()
+	gemIcon.LayoutOrder = 1
+	gemIcon.Parent = gemRow
+
 	local gemLabel = Instance.new("TextLabel")
-	gemLabel.Size = UDim2.new(1, 0, 0, 36)
-	gemLabel.Position = UDim2.new(0, 0, 0, 52)
+	gemLabel.Name = "GemNum"
+	gemLabel.AutomaticSize = Enum.AutomaticSize.X
+	gemLabel.Size = UDim2.new(0, 0, 1, 0)
 	gemLabel.BackgroundTransparency = 1
-	-- 폰트 통일 (GothamBold → 게임 메인 폰트)
 	gemLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
-	gemLabel.RichText = true -- 다이아 아이콘을 <img>로 인라인 표시
 	gemLabel.TextSize = 28
 	gemLabel.TextColor3 = Color3.fromRGB(180, 220, 255)
 	gemLabel.TextStrokeTransparency = 0
 	gemLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 	gemLabel.Text = ""
-	gemLabel.Parent = gui
+	gemLabel.LayoutOrder = 2
+	gemLabel.Parent = gemRow
 
-	_tracked[building] = { gui = gui, coinLabel = coinLabel, gemLabel = gemLabel }
+	_tracked[building] = { gui = gui, coinLabel = coinLabel, gemRow = gemRow, gemLabel = gemLabel, gemIcon = gemIcon }
 
 	building.AncestryChanged:Connect(function(_, parent)
 		if not parent then
@@ -107,15 +131,15 @@ local function updateDisplay(building: BasePart, info)
 	info.coinLabel.Text = string.format("$%d / $%d", stored, cap)
 
 	if gems > 0 then
+		info.gemLabel.Text = tostring(gems)
 		local icon = getDiamondIcon()
-		if icon ~= "" then
-			info.gemLabel.Text = '<img src="' .. icon .. '"/> ' .. tostring(gems)
-		else
-			info.gemLabel.Text = "💎 " .. gems -- HUD 아이콘 못 찾을 때 폴백
-		end
-		info.gemLabel.Visible = true
+		info.gemIcon.Image = icon
+		info.gemIcon.Visible = icon ~= ""
+		-- 아이콘 못 찾으면 숫자 앞에 이모지 폴백
+		if icon == "" then info.gemLabel.Text = "💎 " .. tostring(gems) end
+		info.gemRow.Visible = true
 	else
-		info.gemLabel.Visible = false
+		info.gemRow.Visible = false
 	end
 end
 

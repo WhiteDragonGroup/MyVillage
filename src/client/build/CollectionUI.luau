@@ -70,7 +70,7 @@ function CollectionUI.init()
 	title.BackgroundColor3 = Color3.fromRGB(80, 45, 35)
 	title.TextColor3 = Color3.fromRGB(255, 230, 200)
 	title.TextSize = 16
-	title.Font = Enum.Font.GothamBold
+	title.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	title.Text = "Collection"
 	title.Parent = mainFrame
 
@@ -85,7 +85,7 @@ function CollectionUI.init()
 	closeBtn.BackgroundColor3 = Color3.fromRGB(150, 60, 50)
 	closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	closeBtn.TextSize = 14
-	closeBtn.Font = Enum.Font.GothamBold
+	closeBtn.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	closeBtn.Text = "X"
 	closeBtn.AutoButtonColor = true
 	closeBtn.ZIndex = 3
@@ -127,7 +127,7 @@ function CollectionUI.init()
 		catBtn.BackgroundColor3 = Color3.fromRGB(90, 55, 45)
 		catBtn.TextColor3 = Color3.fromRGB(200, 180, 160)
 		catBtn.TextSize = 10
-		catBtn.Font = Enum.Font.GothamBold
+		catBtn.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 		catBtn.Text = cat
 		catBtn.AutoButtonColor = true
 		catBtn.LayoutOrder = i
@@ -164,7 +164,7 @@ function CollectionUI.init()
 	searchBox.PlaceholderText = "Search..."
 	searchBox.PlaceholderColor3 = Color3.fromRGB(150, 130, 110)
 	searchBox.TextSize = 11
-	searchBox.Font = Enum.Font.Gotham
+	searchBox.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Regular)
 	searchBox.ClearTextOnFocus = false
 	searchBox.Text = ""
 	searchBox.Parent = listPanel
@@ -220,7 +220,7 @@ function CollectionUI.init()
 	placeholder.BackgroundTransparency = 1
 	placeholder.TextColor3 = Color3.fromRGB(150, 130, 110)
 	placeholder.TextSize = 12
-	placeholder.Font = Enum.Font.Gotham
+	placeholder.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Regular)
 	placeholder.Text = "Select an item"
 	placeholder.Parent = detailFrame
 
@@ -324,7 +324,7 @@ function CollectionUI._renderItems()
 		nameLabel.BackgroundTransparency = 1
 		nameLabel.TextColor3 = Color3.fromRGB(255, 230, 200)
 		nameLabel.TextSize = 12
-		nameLabel.Font = Enum.Font.GothamBold
+		nameLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 		nameLabel.Text = item.name
 		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 		nameLabel.Parent = slot
@@ -372,7 +372,7 @@ function CollectionUI._showDetail(item)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.TextColor3 = Color3.fromRGB(255, 240, 210)
 	nameLabel.TextSize = 15
-	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	nameLabel.Text = item.name
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.Parent = detailFrame
@@ -387,7 +387,7 @@ function CollectionUI._showDetail(item)
 		rarityLabel.BackgroundTransparency = 1
 		rarityLabel.TextColor3 = rarityColor
 		rarityLabel.TextSize = 11
-		rarityLabel.Font = Enum.Font.GothamBold
+		rarityLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 		rarityLabel.Text = item.rarity
 		rarityLabel.TextXAlignment = Enum.TextXAlignment.Left
 		rarityLabel.Parent = detailFrame
@@ -432,7 +432,7 @@ function CollectionUI._showDetail(item)
 		descLabel.BackgroundTransparency = 1
 		descLabel.TextColor3 = Color3.fromRGB(200, 180, 160)
 		descLabel.TextSize = 10
-		descLabel.Font = Enum.Font.Gotham
+		descLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Regular)
 		descLabel.TextWrapped = true
 		descLabel.TextXAlignment = Enum.TextXAlignment.Left
 		descLabel.TextYAlignment = Enum.TextYAlignment.Top
@@ -463,7 +463,7 @@ function CollectionUI._showDetail(item)
 		descLabel.BackgroundTransparency = 1
 		descLabel.TextColor3 = Color3.fromRGB(200, 180, 160)
 		descLabel.TextSize = 10
-		descLabel.Font = Enum.Font.Gotham
+		descLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Regular)
 		descLabel.TextWrapped = true
 		descLabel.TextXAlignment = Enum.TextXAlignment.Left
 		descLabel.TextYAlignment = Enum.TextYAlignment.Top
@@ -488,7 +488,7 @@ function CollectionUI._showDetail(item)
 		descLabel.BackgroundTransparency = 1
 		descLabel.TextColor3 = mutColor
 		descLabel.TextSize = 10
-		descLabel.Font = Enum.Font.Gotham
+		descLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Regular)
 		descLabel.TextWrapped = true
 		descLabel.TextXAlignment = Enum.TextXAlignment.Left
 		descLabel.TextYAlignment = Enum.TextYAlignment.Top
@@ -504,7 +504,7 @@ function CollectionUI._infoRow(parent, key, value, y)
 	keyLabel.BackgroundTransparency = 1
 	keyLabel.TextColor3 = Color3.fromRGB(170, 150, 130)
 	keyLabel.TextSize = 10
-	keyLabel.Font = Enum.Font.Gotham
+	keyLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Regular)
 	keyLabel.Text = key
 	keyLabel.TextXAlignment = Enum.TextXAlignment.Left
 	keyLabel.Parent = parent
@@ -515,7 +515,7 @@ function CollectionUI._infoRow(parent, key, value, y)
 	valLabel.BackgroundTransparency = 1
 	valLabel.TextColor3 = Color3.fromRGB(255, 230, 200)
 	valLabel.TextSize = 10
-	valLabel.Font = Enum.Font.GothamBold
+	valLabel.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
 	valLabel.Text = value
 	valLabel.TextXAlignment = Enum.TextXAlignment.Left
 	valLabel.Parent = parent
