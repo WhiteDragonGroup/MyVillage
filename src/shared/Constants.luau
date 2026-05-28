@@ -315,6 +315,7 @@ end
 Constants.PET_FACING_YAW = {
 	IceGolem  = 0,  -- 옆으로 걷던 것 → 90° 보정 (반대 옆이면 180)
 	Sunflowie = 90, -- X180 상하반전 보정 탓에 정면이 반대 → 180° 더함
+	FarmerNewbie = 90, -- 거꾸로 걸어서 180° 뒤집음 (기본 -90 + 180)
 }
 
 function Constants.getPetFacingYaw(petName: string): number
