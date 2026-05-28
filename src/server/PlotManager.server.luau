@@ -228,6 +228,23 @@ local function restoreBuildings(player, plot, savedBuildings: { any })
 				end
 				if minY < math.huge then
 					local yAdjust = buildZoneTop - minY
+					-- [진단] Farm 공중부양 조사 (해결되면 제거)
+					if itemName == "Farm" then
+						warn(string.format("[FarmSnap:Restore] lv%s PP=%s minY=%.2f bzTop=%.2f yAdjust=%.2f",
+							tostring(item:GetAttribute("Level")), item.PrimaryPart and item.PrimaryPart.Name or "nil",
+							minY, buildZoneTop, yAdjust))
+						for _, p in item:GetDescendants() do
+							if p:IsA("BasePart") and not p:GetAttribute("IsCollisionBox") and p.Transparency < 0.99 then
+								local cf, s = p.CFrame, p.Size
+								local mY = math.huge
+								for sx = -1, 1, 2 do for sy = -1, 1, 2 do for sz = -1, 1, 2 do
+									local w = cf:PointToWorldSpace(Vector3.new(sx * s.X / 2, sy * s.Y / 2, sz * s.Z / 2))
+									if w.Y < mY then mY = w.Y end
+								end end end
+								warn(string.format("   [FarmPart] %s bottomY=%.2f T=%.2f", p.Name, mY, p.Transparency))
+							end
+						end
+					end
 					if math.abs(yAdjust) > 0.01 then
 						item:PivotTo(item:GetPivot() + Vector3.new(0, yAdjust, 0))
 					end
