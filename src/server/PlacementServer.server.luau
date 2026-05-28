@@ -30,9 +30,16 @@ local UpgradeManager = require(serverScript:WaitForChild("UpgradeManager"))
 ----------------------------------------------------------------
 
 -- 보이는 파트만 기준으로 모델 하단 Y 계산 (회전 고려)
-local function getVisibleBottomY(item: Instance): number?
+local function getVisibleBottomY(item: Instance, itemName: string?): number?
 	local minY = math.huge
-	for _, part in item:GetDescendants() do
+	-- Farm은 호미 등 아래로 삐져나온 장식이 있어, 최저점 대신 PrimaryPart(밭) 바닥만 기준으로 함.
+	local parts
+	if itemName == "Farm" and item:IsA("Model") and item.PrimaryPart then
+		parts = { item.PrimaryPart }
+	else
+		parts = item:GetDescendants()
+	end
+	for _, part in parts do
 		if not part:IsA("BasePart") then continue end
 		if part:GetAttribute("IsCollisionBox") then continue end
 		if part.Transparency >= 0.99 then continue end
@@ -282,7 +289,7 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, localCFrame,
 
 		-- 바닥 보정 (보이는 파트 기준)
 		local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
-		local modelBottom = getVisibleBottomY(item)
+		local modelBottom = getVisibleBottomY(item, itemName)
 		if modelBottom then
 			local yAdjust = buildZoneTop - modelBottom
 			if math.abs(yAdjust) > 0.01 then

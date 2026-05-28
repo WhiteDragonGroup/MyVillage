@@ -315,7 +315,10 @@ function UpgradeManager._swapModel(oldBuilding: BasePart, template: Instance): B
 		if buildZone then
 			local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
 			local minY = math.huge
-			for _, part in newModel:GetDescendants() do
+			-- Farm은 PrimaryPart(밭) 바닥만 기준 (호미 등 아래로 삐져나온 장식 무시)
+			local snapParts = (itemName == "Farm" and newModel.PrimaryPart)
+				and { newModel.PrimaryPart } or newModel:GetDescendants()
+			for _, part in snapParts do
 				if not part:IsA("BasePart") then continue end
 				if part:GetAttribute("IsCollisionBox") then continue end
 				if part.Transparency >= 0.99 then continue end
