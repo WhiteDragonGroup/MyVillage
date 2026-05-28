@@ -337,7 +337,7 @@ function UpgradeManager._swapModel(oldBuilding: BasePart, template: Instance): B
 			if minY < math.huge then
 				local yAdjust = buildZoneTop - minY
 				-- [진단] Farm 공중부양 조사 (해결되면 제거)
-				if itemName == "Farm" then
+				if false then -- 진단 비활성화 (Farm PrimaryPart는 모델러가 지정)
 					warn(string.format("[FarmSnap:Swap] lv%s PP=%s minY=%.2f bzTop=%.2f yAdjust=%.2f",
 						tostring(attrs.Level), newModel.PrimaryPart and newModel.PrimaryPart.Name or "nil",
 						minY, buildZoneTop, yAdjust))
