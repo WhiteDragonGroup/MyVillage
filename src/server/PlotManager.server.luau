@@ -210,12 +210,12 @@ local function restoreBuildings(player, plot, savedBuildings: { any })
 				local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
 				local minY = math.huge
 				-- Farm은 PrimaryPart(밭) 바닥만 기준 (호미 등 아래로 삐져나온 장식 무시)
-				local snapParts = (itemName == "Farm" and item:IsA("Model") and item.PrimaryPart)
-					and { item.PrimaryPart } or item:GetDescendants()
+				local farmPrimary = (itemName == "Farm" and item:IsA("Model")) and item.PrimaryPart or nil
+				local snapParts = farmPrimary and { farmPrimary } or item:GetDescendants()
 				for _, part in snapParts do
 					if not part:IsA("BasePart") then continue end
-					if part:GetAttribute("IsCollisionBox") then continue end
-					if part.Transparency >= 0.99 then continue end
+					if not farmPrimary and part:GetAttribute("IsCollisionBox") then continue end
+					if not farmPrimary and part.Transparency >= 0.99 then continue end
 					local cf, s = part.CFrame, part.Size
 					for sx = -1, 1, 2 do
 						for sy = -1, 1, 2 do

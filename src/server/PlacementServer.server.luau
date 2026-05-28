@@ -33,16 +33,14 @@ local UpgradeManager = require(serverScript:WaitForChild("UpgradeManager"))
 local function getVisibleBottomY(item: Instance, itemName: string?): number?
 	local minY = math.huge
 	-- Farm은 호미 등 아래로 삐져나온 장식이 있어, 최저점 대신 PrimaryPart(밭) 바닥만 기준으로 함.
-	local parts
-	if itemName == "Farm" and item:IsA("Model") and item.PrimaryPart then
-		parts = { item.PrimaryPart }
-	else
-		parts = item:GetDescendants()
-	end
+	local farmPrimary = (itemName == "Farm" and item:IsA("Model")) and item.PrimaryPart or nil
+	local parts = farmPrimary and { farmPrimary } or item:GetDescendants()
 	for _, part in parts do
 		if not part:IsA("BasePart") then continue end
-		if part:GetAttribute("IsCollisionBox") then continue end
-		if part.Transparency >= 0.99 then continue end
+		if not farmPrimary then
+			if part:GetAttribute("IsCollisionBox") then continue end
+			if part.Transparency >= 0.99 then continue end
+		end
 		local cf = part.CFrame
 		local s = part.Size
 		for sx = -1, 1, 2 do
