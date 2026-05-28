@@ -230,7 +230,7 @@ end
 local function createNameTag(pet: BasePart): BillboardGui
 	local billboard = Instance.new("BillboardGui")
 	billboard.Name = "PetNameTag"
-	billboard.Size = UDim2.new(0, 220, 0, 90)
+	billboard.Size = UDim2.new(0, 220, 0, 72)
 	billboard.StudsOffset = Vector3.new(0, 2, 0)
 	billboard.AlwaysOnTop = true
 	billboard.Adornee = pet
@@ -239,7 +239,7 @@ local function createNameTag(pet: BasePart): BillboardGui
 	-- 이름
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Name = "NameLabel"
-	nameLabel.Size = UDim2.new(1, 0, 0, 34)
+	nameLabel.Size = UDim2.new(1, 0, 0, 26)
 	nameLabel.Position = UDim2.new(0, 0, 0, 0)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -253,8 +253,8 @@ local function createNameTag(pet: BasePart): BillboardGui
 	-- 상태 라벨
 	local statusLabel = Instance.new("TextLabel")
 	statusLabel.Name = "StatusLabel"
-	statusLabel.Size = UDim2.new(1, 0, 0, 26)
-	statusLabel.Position = UDim2.new(0, 0, 0, 34)
+	statusLabel.Size = UDim2.new(1, 0, 0, 22)
+	statusLabel.Position = UDim2.new(0, 0, 0, 26)
 	statusLabel.BackgroundTransparency = 1
 	statusLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
 	statusLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
