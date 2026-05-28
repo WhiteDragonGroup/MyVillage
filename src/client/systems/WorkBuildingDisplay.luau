@@ -15,9 +15,12 @@ local WorkBuildingDisplay = {}
 
 local _tracked: { [BasePart]: { gui: BillboardGui, coinLabel: TextLabel, gemLabel: TextLabel } } = {}
 
--- HUD(좌측 하단) Diamond 아이콘 에셋을 한 번 읽어 재사용 (게임 공용 다이아 아이콘).
+-- 게임 공용 다이아 아이콘. Constants.DIAMOND_ICON 우선, 없으면 HUD(Normal>Diamond)에서 읽기 폴백.
 local _diamondIcon: string? = nil
 local function getDiamondIcon(): string
+	if Constants.DIAMOND_ICON and Constants.DIAMOND_ICON ~= "" then
+		return Constants.DIAMOND_ICON
+	end
 	if _diamondIcon ~= nil then return _diamondIcon end
 	_diamondIcon = ""
 	local normal = playerGui:FindFirstChild("Normal")

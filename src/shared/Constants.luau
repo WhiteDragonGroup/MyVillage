@@ -36,6 +36,9 @@ Constants.RARITY_COLORS = {
 	["Mythic"] = Color3.fromRGB(255, 50, 50),
 }
 
+-- 게임 공용 다이아(보석) 아이콘. 모든 다이아 표시에 이 에셋 사용.
+Constants.DIAMOND_ICON = "rbxassetid://96290171205552"
+
 -- 건물 카탈로그
 -- collisionSize: 충돌 판정용 고정 사이즈 (모델 실제 크기와 무관, 레벨 변경에도 불변)
 --
