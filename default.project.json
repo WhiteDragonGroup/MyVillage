@@ -119,6 +119,9 @@
         },
         "GetPetBuffs": {
           "$className": "RemoteFunction"
+        },
+        "CoinPickup": {
+          "$className": "RemoteEvent"
         }
       },
       "Weather": {
