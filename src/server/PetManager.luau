@@ -139,7 +139,14 @@ local function playAnimationForState(petData, newState: string)
 		end
 		target = target or tracks["idle"]
 	end
-	if not target then return end
+	if not target then
+		-- 적합한 애니가 없어도 이전 트랙은 멈춤 (예: 쉼터에서 work 애니가 계속 도는 버그 방지)
+		if petData._currentTrack then
+			pcall(function() petData._currentTrack:Stop(0.2) end)
+			petData._currentTrack = nil
+		end
+		return
+	end
 	if petData._currentTrack == target then return end
 	if petData._currentTrack then
 		pcall(function() petData._currentTrack:Stop(0.2) end)

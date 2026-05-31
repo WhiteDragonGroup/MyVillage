@@ -1,27 +1,50 @@
 -- HarvestServer.server.luau
--- Work 건물 터치 시 코인/보석 드롭 모델을 사방으로 흩뿌리고,
--- 플레이어가 가까이 가면 빨려들어와 흡수(addCoins/addGems + 클라 이펙트).
+-- Work 건물 터치 → 저장량을 Money/Diamond 모델로 사방에 시차 토스 →
+-- 플레이어 접근 시 빨려와 흡수 (코인 먼저, 다이아 나중·더 멀리·길게 노출).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
 
 local serverScript = script.Parent
 local CurrencyManager = require(serverScript:WaitForChild("CurrencyManager"))
 local Constants = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Constants"))
 
 ----------------------------------------------------------------
--- 설정값 (튜닝 가능)
+-- 공통 설정
 ----------------------------------------------------------------
-local HARVEST_COOLDOWN  = 2     -- 같은 건물에서 다음 수확까지 대기 (초)
-local MAX_DROPS         = 12    -- 한 번 터치당 최대 드롭 개수 (액수가 많으면 청크로 분할)
-local SCATTER_DURATION  = 0.5   -- 흩뿌려져 안착하기까지 (초)
-local SCATTER_RADIUS    = { min = 3, max = 6 } -- 건물 중심 기준 흩어지는 거리 (stud)
-local SCATTER_ARC_HEIGHT = 2.5  -- 포물선 정점 높이 (stud)
-local PICKUP_RANGE      = 8     -- 플레이어 접근 시 빨려오기 시작 거리 (stud)
-local FLY_SPEED         = 55    -- 흡수 비행 속도 (stud/s)
-local DROP_LIFETIME     = 30    -- 안 먹으면 자동 소멸 (초)
+local HARVEST_COOLDOWN   = 2
+local MAX_DROPS          = 12
+local PICKUP_RANGE       = 8
+local DROP_LIFETIME      = 30
+
+-- 같은 종류 드롭 사이 시차 (각 드롭이 한 박자씩 튀어나오게)
+local SPAWN_INTERVAL_MIN = 0.04
+local SPAWN_INTERVAL_MAX = 0.10
+-- 코인 다 토스한 뒤 다이아 시작 전 쉼 (다이아 등장 강조)
+local KIND_SWITCH_PAUSE  = 0.30
+
+-- 종류별 모션 설정 (다이아는 더 멀리·높이·길게 노출)
+local DROP_CONFIG = {
+	coin = {
+		scatterRadius   = { min = 3, max = 5.5 },
+		arcHeight       = 2.6,
+		scatterDuration = 0.55,
+		bounceHeight    = 0.35,
+		bounceDuration  = 0.22,
+		pickupDelay     = 0.15, -- 안착 후 픽업 가능까지
+		flySpeed        = 55,
+	},
+	gem = {
+		scatterRadius   = { min = 5.5, max = 10 },
+		arcHeight       = 4.5,
+		scatterDuration = 0.85,
+		bounceHeight    = 0.6,
+		bounceDuration  = 0.32,
+		pickupDelay     = 0.75, -- 사이에서 시각적으로 잘 보이도록 길게
+		flySpeed        = 50,
+	},
+}
 
 ----------------------------------------------------------------
 -- Remotes
@@ -41,7 +64,7 @@ if not coinPickupEvent then
 end
 
 ----------------------------------------------------------------
--- VFX 자원 (Studio 전용 자산)
+-- VFX 자원
 ----------------------------------------------------------------
 local vfxFolder = ReplicatedStorage:WaitForChild("VFX")
 local resourceFolder = vfxFolder:WaitForChild("Resource")
@@ -62,7 +85,6 @@ local function isWorkBuilding(building: BasePart): boolean
 	return false
 end
 
--- 모델 안 모든 파트 자세 정리 (anchored, no-collide, no-touch)
 local function setupDropParts(model: Model)
 	local first
 	for _, d in model:GetDescendants() do
@@ -81,7 +103,6 @@ local function setupDropParts(model: Model)
 	return model.PrimaryPart
 end
 
--- 금액을 chunks 개수로 나눠 각 청크 금액 배열 반환 (잔여는 앞쪽에 +1)
 local function splitAmount(amount: number, chunks: number): { number }
 	chunks = math.max(1, math.min(chunks, amount))
 	local base = math.floor(amount / chunks)
@@ -93,14 +114,21 @@ local function splitAmount(amount: number, chunks: number): { number }
 	return out
 end
 
+-- 좀 더 균등한 랜덤 각 — i/N 기반 슬롯에 약간의 랜덤 오프셋
+local function pickAngle(i: number, n: number): number
+	local slot = (i - 1) / n
+	local jitter = (math.random() - 0.5) * (1 / n)
+	return (slot + jitter) * math.pi * 2
+end
+
 ----------------------------------------------------------------
 -- Drop Manager
 ----------------------------------------------------------------
--- _drops[model] = { state, player, kind, amount, startPos, target, scatterStart, settleTime, spawnTime, flyStartPos }
 local _drops: { [Model]: any } = {}
 
-local function spawnDrop(building: BasePart, kind: string, amount: number, player: Player)
+local function spawnDrop(building: BasePart, kind: string, amount: number, player: Player, spawnIndex: number, spawnCount: number)
 	local template = (kind == "gem") and diamondTemplate or moneyTemplate
+	local cfg = DROP_CONFIG[kind] or DROP_CONFIG.coin
 	if not template then return end
 
 	local drop = template:Clone()
@@ -108,20 +136,19 @@ local function spawnDrop(building: BasePart, kind: string, amount: number, playe
 	local pp = setupDropParts(drop)
 	if not pp then drop:Destroy(); return end
 
-	-- 초기 위치: 건물 위쪽
+	-- 시작 위치: 건물 위쪽
 	local startPos = building.Position + Vector3.new(0, building.Size.Y / 2 + 1.2, 0)
 
-	-- 흩어질 목표(수평 랜덤 방향, 건물 바닥 = 지면에 안착)
-	local angle = math.random() * math.pi * 2
-	local dist = SCATTER_RADIUS.min + math.random() * (SCATTER_RADIUS.max - SCATTER_RADIUS.min)
+	-- 흩어질 목표 (균등 분할 + 약간의 지터로 각자 다른 각도)
+	local angle = pickAngle(spawnIndex, math.max(1, spawnCount))
+	local dist = cfg.scatterRadius.min + math.random() * (cfg.scatterRadius.max - cfg.scatterRadius.min)
 	local groundY = building.Position.Y - building.Size.Y / 2
 	local targetPos = Vector3.new(
 		building.Position.X + math.cos(angle) * dist,
-		groundY + 0.6, -- 지면에 살짝 떠 있게
+		groundY + 0.6,
 		building.Position.Z + math.sin(angle) * dist
 	)
 
-	-- 드롭 식별용 어트리뷰트
 	drop:SetAttribute("Kind", kind)
 	drop:SetAttribute("Amount", amount)
 	drop:SetAttribute("OwnerId", player.UserId)
@@ -139,52 +166,76 @@ local function spawnDrop(building: BasePart, kind: string, amount: number, playe
 		target = targetPos,
 		scatterStart = tick(),
 		spawnTime = tick(),
+		cfg = cfg,
+		-- 회전 시드를 각자 다르게 (방향감 보너스)
+		spinOffset = math.random() * math.pi * 2,
+		spinSpeed = 1.2 + math.random() * 1.5,
 	}
 end
 
--- Heartbeat 업데이트: 모든 드롭의 상태 진행 / 픽업 처리
+-- Easing helpers
+local function easeOutCubic(t)
+	t = math.clamp(t, 0, 1)
+	local u = 1 - t
+	return 1 - u * u * u
+end
+
+-- Heartbeat 업데이트
 RunService.Heartbeat:Connect(function(dt)
 	local now = tick()
 	for drop, info in _drops do
-		-- 파괴됨 → 정리
 		if not drop or not drop.Parent then
 			_drops[drop] = nil
 			continue
 		end
-		-- 수명 초과 → 정리
 		if now - info.spawnTime > DROP_LIFETIME then
 			drop:Destroy()
 			_drops[drop] = nil
 			continue
 		end
-		-- 소유 플레이어 나감 → 정리
 		if not info.player or not info.player.Parent then
 			drop:Destroy()
 			_drops[drop] = nil
 			continue
 		end
 
+		local cfg = info.cfg
+
 		if info.state == "scatter" then
-			local t = math.min(1, (now - info.scatterStart) / SCATTER_DURATION)
-			local pos = info.startPos:Lerp(info.target, t)
-			-- 포물선 아치
-			pos = pos + Vector3.new(0, math.sin(t * math.pi) * SCATTER_ARC_HEIGHT, 0)
-			drop:PivotTo(CFrame.new(pos) * CFrame.Angles(0, t * math.pi * 2, 0))
+			local elapsed = now - info.scatterStart
+			local t = math.min(1, elapsed / cfg.scatterDuration)
+			-- 수평은 자연스럽게 감속해서 도착 (easeOutCubic)
+			local te = easeOutCubic(t)
+			local pos = info.startPos:Lerp(info.target, te)
+			-- 포물선 아치 (대칭 sin)
+			pos = pos + Vector3.new(0, math.sin(t * math.pi) * cfg.arcHeight, 0)
+			drop:PivotTo(CFrame.new(pos) * CFrame.Angles(0, info.spinOffset + t * info.spinSpeed * math.pi * 2, 0))
+			if t >= 1 then
+				info.state = "bounce"
+				info.bounceStart = now
+			end
+		elseif info.state == "bounce" then
+			local elapsed = now - info.bounceStart
+			local t = math.min(1, elapsed / cfg.bounceDuration)
+			-- 작은 바운스: 0→peak→0 (sin)
+			local by = math.sin(t * math.pi) * cfg.bounceHeight
+			drop:PivotTo(CFrame.new(info.target + Vector3.new(0, by, 0))
+				* CFrame.Angles(0, info.spinOffset + t * info.spinSpeed * math.pi, 0))
 			if t >= 1 then
 				info.state = "settled"
 				info.settleTime = now
 			end
 		elseif info.state == "settled" then
-			-- 가만히 둥실 + 천천히 회전
 			local elapsed = now - info.settleTime
-			local bob = math.sin(elapsed * 3) * 0.15
-			drop:PivotTo(CFrame.new(info.target + Vector3.new(0, bob, 0)) * CFrame.Angles(0, elapsed * 1.5, 0))
-
-			-- 플레이어 접근 체크
-			local character = info.player.Character
-			local hrp = character and character:FindFirstChild("HumanoidRootPart")
-			if hrp then
-				if (info.target - hrp.Position).Magnitude <= PICKUP_RANGE then
+			-- 천천히 둥실 + 미세 회전
+			local bob = math.sin(elapsed * 3) * 0.12
+			drop:PivotTo(CFrame.new(info.target + Vector3.new(0, bob, 0))
+				* CFrame.Angles(0, info.spinOffset + elapsed * 1.0, 0))
+			-- 픽업 가능 대기 후 플레이어 근접 체크
+			if elapsed >= cfg.pickupDelay then
+				local character = info.player.Character
+				local hrp = character and character:FindFirstChild("HumanoidRootPart")
+				if hrp and (info.target - hrp.Position).Magnitude <= PICKUP_RANGE then
 					info.state = "flying"
 					info.flyStartPos = drop:GetPivot().Position
 				end
@@ -193,7 +244,6 @@ RunService.Heartbeat:Connect(function(dt)
 			local character = info.player.Character
 			local hrp = character and character:FindFirstChild("HumanoidRootPart")
 			if not hrp then
-				-- 캐릭터 사라짐 → 다시 안착
 				info.state = "settled"
 				info.settleTime = now
 				continue
@@ -201,9 +251,8 @@ RunService.Heartbeat:Connect(function(dt)
 			local cur = drop:GetPivot().Position
 			local target = hrp.Position + Vector3.new(0, 1.5, 0)
 			local toTarget = target - cur
-			local step = FLY_SPEED * dt
+			local step = cfg.flySpeed * dt
 			if toTarget.Magnitude <= step or toTarget.Magnitude < 0.5 then
-				-- 도착 → 흡수
 				drop:Destroy()
 				_drops[drop] = nil
 				if info.kind == "gem" then
@@ -217,13 +266,13 @@ RunService.Heartbeat:Connect(function(dt)
 				})
 			else
 				local newPos = cur + toTarget.Unit * step
-				drop:PivotTo(CFrame.new(newPos) * CFrame.Angles(0, (now - info.scatterStart) * 4, 0))
+				drop:PivotTo(CFrame.new(newPos)
+					* CFrame.Angles(0, info.spinOffset + (now - info.scatterStart) * 4, 0))
 			end
 		end
 	end
 end)
 
--- 플레이어 퇴장 시 그 사람 소유 드롭 정리
 Players.PlayerRemoving:Connect(function(player)
 	for drop, info in _drops do
 		if info.player == player then
@@ -234,17 +283,15 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 ----------------------------------------------------------------
--- 수확 트리거 (터치)
+-- 수확 트리거 (터치) — 시차 토스 (코인 먼저 → 다이아 나중)
 ----------------------------------------------------------------
 local function tryHarvest(player: Player, building: BasePart)
-	-- 디바운스
 	local now = tick()
 	local lastKey = "_LastHarvest_" .. player.UserId
 	local last = building:GetAttribute(lastKey) or 0
 	if now - last < HARVEST_COOLDOWN then return end
 	building:SetAttribute(lastKey, now)
 
-	-- 소유자 확인
 	local ownerId = building:GetAttribute("OwnerId")
 	if ownerId and ownerId ~= player.UserId then return end
 
@@ -252,28 +299,41 @@ local function tryHarvest(player: Player, building: BasePart)
 	local gems = building:GetAttribute("StoredGems") or 0
 	if stored <= 0 and gems <= 0 then return end
 
-	-- 저장량 즉시 0 → 드롭으로 분할
-	if stored > 0 then
-		building:SetAttribute("StoredCoins", 0)
-		for _, amt in splitAmount(stored, MAX_DROPS) do
-			if amt > 0 then spawnDrop(building, "coin", amt, player) end
-		end
-	end
-	if gems > 0 then
-		building:SetAttribute("StoredGems", 0)
-		for _, amt in splitAmount(gems, MAX_DROPS) do
-			if amt > 0 then spawnDrop(building, "gem", amt, player) end
-		end
-	end
+	-- 즉시 저장량 0 (남은 처리는 비동기 스폰)
+	if stored > 0 then building:SetAttribute("StoredCoins", 0) end
+	if gems > 0 then building:SetAttribute("StoredGems", 0) end
 
-	-- 건물 초록 하이라이트(터치 피드백)만 트리거 (수치 텍스트는 픽업 시 별도)
-	harvestEffectEvent:FireClient(player, {
-		building = building,
-	})
+	-- 코인 청크
+	local coinAmounts = (stored > 0) and splitAmount(stored, MAX_DROPS) or {}
+	local gemAmounts  = (gems > 0)   and splitAmount(gems, MAX_DROPS)  or {}
+
+	-- 시퀀스 토스 (시차)
+	task.spawn(function()
+		local n = #coinAmounts
+		for i, amt in coinAmounts do
+			if amt > 0 then
+				spawnDrop(building, "coin", amt, player, i, n)
+			end
+			task.wait(SPAWN_INTERVAL_MIN + math.random() * (SPAWN_INTERVAL_MAX - SPAWN_INTERVAL_MIN))
+		end
+		if #gemAmounts > 0 then
+			task.wait(KIND_SWITCH_PAUSE)
+			local gn = #gemAmounts
+			for i, amt in gemAmounts do
+				if amt > 0 then
+					spawnDrop(building, "gem", amt, player, i, gn)
+				end
+				task.wait(SPAWN_INTERVAL_MIN + math.random() * (SPAWN_INTERVAL_MAX - SPAWN_INTERVAL_MIN))
+			end
+		end
+	end)
+
+	-- 건물 초록 하이라이트 (터치 피드백)
+	harvestEffectEvent:FireClient(player, { building = building })
 end
 
 ----------------------------------------------------------------
--- Touch 부착 (기존과 동일)
+-- Touch 부착
 ----------------------------------------------------------------
 local function attachTouchHandler(building: BasePart)
 	if building:GetAttribute("_HarvestWired") then return end
@@ -322,4 +382,4 @@ workspace.DescendantAdded:Connect(function(desc)
 	end
 end)
 
-print("HarvestServer 로드됨 (드롭/픽업 시스템)")
+print("HarvestServer 로드됨 (드롭/픽업 + 시차 토스 + 바운스)")
