@@ -197,15 +197,30 @@ local function isInternalAnchor(part: BasePart): boolean
 end
 
 local function hideInternalPart(part: BasePart)
+	-- 1) Transparency=1 (정공법)
 	if part.Transparency < 1 then
 		part.Transparency = 1
 	end
+	-- 2) Size를 0.05^3으로 축소 (Roblox 내부가 Transparency를 되돌려도 시각적으로 안 보임).
+	--    HRP 위치(CFrame)는 그대로라 Weld/애니메이션에 영향 없음.
+	if part:GetAttribute("_OrigSize") == nil then
+		part:SetAttribute("_OrigSize", part.Size)
+	end
+	if part.Size.X > 0.1 or part.Size.Y > 0.1 or part.Size.Z > 0.1 then
+		part.Size = Vector3.new(0.05, 0.05, 0.05)
+	end
 	if part:GetAttribute("_HiddenWired") then return end
 	part:SetAttribute("_HiddenWired", true)
-	-- 외부에서 다시 보이게 만들면 즉시 재숨김
+	-- 3) 외부가 Transparency를 되돌리면 즉시 재숨김
 	part:GetPropertyChangedSignal("Transparency"):Connect(function()
 		if part.Parent and part.Transparency < 1 then
 			part.Transparency = 1
+		end
+	end)
+	-- 4) Size도 누가 키우면 재축소
+	part:GetPropertyChangedSignal("Size"):Connect(function()
+		if part.Parent and (part.Size.X > 0.1 or part.Size.Y > 0.1 or part.Size.Z > 0.1) then
+			part.Size = Vector3.new(0.05, 0.05, 0.05)
 		end
 	end)
 end
