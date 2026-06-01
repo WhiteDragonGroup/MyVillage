@@ -183,6 +183,43 @@ local function petYOffset(petData): number
 end
 
 ----------------------------------------------------------------
+-- 내부 앵커/루트 파트(HRP 등)를 영구 숨김.
+-- Humanoid나 애니메이션이 Transparency를 0으로 되돌리면 즉시 재적용 (PropertyChanged 후크).
+----------------------------------------------------------------
+local function isInternalAnchor(part: BasePart): boolean
+	local n = string.lower(part.Name)
+	return n == "humanoidrootpart"
+		or n == "rootpart"
+		or n == "root"
+		or n == "hrp"
+		or string.sub(n, 1, 1) == "_"           -- "_Center" 등 언더스코어 시작
+		or part:GetAttribute("Hidden") == true   -- 모델러가 명시적으로 숨김 지정
+end
+
+local function hideInternalPart(part: BasePart)
+	if part.Transparency < 1 then
+		part.Transparency = 1
+	end
+	if part:GetAttribute("_HiddenWired") then return end
+	part:SetAttribute("_HiddenWired", true)
+	-- 외부에서 다시 보이게 만들면 즉시 재숨김
+	part:GetPropertyChangedSignal("Transparency"):Connect(function()
+		if part.Parent and part.Transparency < 1 then
+			part.Transparency = 1
+		end
+	end)
+end
+
+local function hideInternalParts(model: Instance)
+	if not model then return end
+	for _, d in model:GetDescendants() do
+		if d:IsA("BasePart") and isInternalAnchor(d) then
+			hideInternalPart(d)
+		end
+	end
+end
+
+----------------------------------------------------------------
 -- 펫 모델 생성
 ----------------------------------------------------------------
 local function createPetModel(petData, position: Vector3): BasePart
@@ -317,16 +354,9 @@ local function createPetModel(petData, position: Vector3): BasePart
 					desc.CanQuery = true
 					desc.CanTouch = false
 					desc.CollisionGroup = "Pets"
-					-- 내부 앵커/루트 파트(애니로 안 움직여서 몸 움직일 때 드러남) → 항상 투명.
-					local _ln = string.lower(desc.Name)
-					if _ln == "humanoidrootpart"
-						or _ln == "rootpart"
-						or _ln == "root"
-						or _ln == "hrp"
-						or string.sub(_ln, 1, 1) == "_"           -- "_Center" 등 언더스코어 시작
-						or desc:GetAttribute("Hidden") == true    -- 모델러가 명시적으로 숨길 파트
-					then
-						desc.Transparency = 1
+					-- 내부 앵커/루트 파트 → 영구 숨김 (PropertyChanged 후크로 재적용 보장)
+					if isInternalAnchor(desc) then
+						hideInternalPart(desc)
 					end
 					if desc ~= mainPart then
 						desc.Anchored = false
@@ -447,28 +477,15 @@ local function createPetModel(petData, position: Vector3): BasePart
 		end
 	end
 
-	-- HumanoidRootPart(몸 가운데 박스)는 부모 설정 후 Humanoid가 다시 드러내거나
-	-- 이름이 달라 못 숨기는 경우가 있어, 다음 프레임에 루트 파트를 확실히 투명 처리.
+	-- 부모 설정 후 Humanoid가 다시 드러낼 수 있어 한 번 더 적용.
+	-- hideInternalPart의 PropertyChanged 후크가 영구 감시.
 	if pet:IsA("Model") then
 		task.defer(function()
 			if not pet or not pet.Parent then return end
-			for _, d in pet:GetDescendants() do
-				if d:IsA("BasePart") then
-					local n = string.lower(d.Name)
-					if n == "humanoidrootpart"
-						or n == "rootpart"
-						or n == "root"
-						or n == "hrp"
-						or string.sub(n, 1, 1) == "_"
-						or d:GetAttribute("Hidden") == true
-					then
-						d.Transparency = 1
-					end
-				end
-			end
+			hideInternalParts(pet)
 			local hum = pet:FindFirstChildOfClass("Humanoid")
 			if hum and hum.RootPart then
-				hum.RootPart.Transparency = 1
+				hideInternalPart(hum.RootPart)
 			end
 		end)
 	end
@@ -1787,5 +1804,23 @@ function PetManager.removePlayer(player: Player)
 	end
 	_playerPets[player] = nil
 end
+
+----------------------------------------------------------------
+-- 워크스페이스에 이미 존재하는 펫 모델들에 대해 내부 파트 숨김 적용.
+-- (이전 세션에서 생성된 펫이 현재 코드 적용 전이라 HRP가 보이는 경우 처리)
+----------------------------------------------------------------
+local function applyTransparencyToExistingPets()
+	for _, d in workspace:GetDescendants() do
+		if d:IsA("Model") and string.match(d.Name, "^Pet_") then
+			hideInternalParts(d)
+		end
+	end
+end
+task.defer(applyTransparencyToExistingPets)
+workspace.DescendantAdded:Connect(function(d)
+	if d:IsA("Model") and string.match(d.Name, "^Pet_") then
+		task.defer(function() hideInternalParts(d) end)
+	end
+end)
 
 return PetManager
