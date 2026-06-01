@@ -317,8 +317,15 @@ local function createPetModel(petData, position: Vector3): BasePart
 					desc.CanQuery = true
 					desc.CanTouch = false
 					desc.CollisionGroup = "Pets"
-					-- HumanoidRootPart는 애니메이션으로 안 움직여서 몸이 움직이면 드러남 → 항상 투명.
-					if desc.Name == "HumanoidRootPart" then
+					-- 내부 앵커/루트 파트(애니로 안 움직여서 몸 움직일 때 드러남) → 항상 투명.
+					local _ln = string.lower(desc.Name)
+					if _ln == "humanoidrootpart"
+						or _ln == "rootpart"
+						or _ln == "root"
+						or _ln == "hrp"
+						or string.sub(_ln, 1, 1) == "_"           -- "_Center" 등 언더스코어 시작
+						or desc:GetAttribute("Hidden") == true    -- 모델러가 명시적으로 숨길 파트
+					then
 						desc.Transparency = 1
 					end
 					if desc ~= mainPart then
@@ -446,8 +453,17 @@ local function createPetModel(petData, position: Vector3): BasePart
 		task.defer(function()
 			if not pet or not pet.Parent then return end
 			for _, d in pet:GetDescendants() do
-				if d:IsA("BasePart") and d.Name == "HumanoidRootPart" then
-					d.Transparency = 1
+				if d:IsA("BasePart") then
+					local n = string.lower(d.Name)
+					if n == "humanoidrootpart"
+						or n == "rootpart"
+						or n == "root"
+						or n == "hrp"
+						or string.sub(n, 1, 1) == "_"
+						or d:GetAttribute("Hidden") == true
+					then
+						d.Transparency = 1
+					end
 				end
 			end
 			local hum = pet:FindFirstChildOfClass("Humanoid")
