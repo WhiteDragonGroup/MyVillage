@@ -11,9 +11,15 @@ local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local buffUpdateEvent = remotes:WaitForChild("BuffUpdate")
 local getBuffsFunc = remotes:WaitForChild("GetBuffs")
 local getPetBuffsFunc = remotes:WaitForChild("GetPetBuffs")
+local petBuffUpdateEvent = remotes:WaitForChild("PetBuffUpdate")
 
 BuffManager.setBuffsChangedHandler(function(player, buffs)
 	buffUpdateEvent:FireClient(player, buffs)
+end)
+
+-- 펫 단위 버프 변경 → 모든 클라이언트로 broadcast (펫 모델은 모두에게 보임)
+BuffManager.setPetBuffsChangedHandler(function(petId, buffs)
+	petBuffUpdateEvent:FireAllClients(petId, buffs)
 end)
 
 getBuffsFunc.OnServerInvoke = function(player)

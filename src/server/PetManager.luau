@@ -1123,8 +1123,9 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 					if restCfg then
 						-- 버프 적용 (BuffManager 외부 모듈)
 						local ok, BuffManager = pcall(require, script.Parent:WaitForChild("BuffManager"))
-						if ok and restCfg.buffId and BuffManager.applyBuff then
-							BuffManager.applyBuff(player, restCfg.buffId, restCfg.durationSec or 60)
+						if ok and restCfg.buffId and BuffManager.applyPetBuff then
+							-- 휴식 건물 버프는 해당 펫에게만 부여 (플레이어 X)
+							BuffManager.applyPetBuff(petData.petId, restCfg.buffId, restCfg.durationSec or 60)
 						end
 						-- 휴식 시간 단축 배율
 						if restCfg.restDecayMultiplier and restCfg.restDecayMultiplier > 0 then

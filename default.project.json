@@ -122,6 +122,9 @@
         },
         "CoinPickup": {
           "$className": "RemoteEvent"
+        },
+        "PetBuffUpdate": {
+          "$className": "RemoteEvent"
         }
       },
       "Weather": {

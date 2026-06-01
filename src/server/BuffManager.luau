@@ -26,6 +26,18 @@ local function notifyPlayer(player: Player)
 	end
 end
 
+-- 펫 단위 버프 변경 알림 (모든 클라이언트가 펫 VFX 동기화에 사용)
+local _onPetBuffsChanged = nil
+function BuffManager.setPetBuffsChangedHandler(fn)
+	_onPetBuffsChanged = fn
+end
+
+local function notifyPet(petId: string)
+	if _onPetBuffsChanged then
+		_onPetBuffsChanged(petId, BuffManager.getPetBuffsDetailed(petId))
+	end
+end
+
 ----------------------------------------------------------------
 -- 플레이어 라이프사이클
 ----------------------------------------------------------------
@@ -51,6 +63,7 @@ function BuffManager.applyPetBuff(petId: string, buffId: string, duration: numbe
 	if not petTable[buffId] or petTable[buffId] < newExpire then
 		petTable[buffId] = newExpire
 	end
+	notifyPet(petId)
 end
 
 -- 펫의 활성 버프: { [buffId] = true }
@@ -66,7 +79,9 @@ function BuffManager.getPetActiveBuffs(petId: string): { [string]: boolean }
 end
 
 function BuffManager.removePetBuffs(petId: string)
+	if _petBuffs[petId] == nil then return end
 	_petBuffs[petId] = nil
+	notifyPet(petId)
 end
 
 -- 펫의 활성 버프 상세 (클라 동기화/표시용): { { buffId, remaining } }
@@ -139,10 +154,15 @@ task.spawn(function()
 		task.wait(1)
 		local now = tick()
 		for petId, petTable in _petBuffs do
+			local changed = false
 			for buffId, expire in petTable do
-				if expire <= now then petTable[buffId] = nil end
+				if expire <= now then
+					petTable[buffId] = nil
+					changed = true
+				end
 			end
 			if next(petTable) == nil then _petBuffs[petId] = nil end
+			if changed then notifyPet(petId) end
 		end
 		for player, buffs in _playerBuffs do
 			local changed = false
