@@ -62,4 +62,35 @@ if petDealer then
 	setupNPC(petDealer, "eggs", "Shop")
 end
 
+-- NPC idle 애니메이션 재생 (게임 시작 시 한 번. Animation의 Looped=true면 계속 재생됨)
+local function playIdleAnim(npc: Instance?)
+	if not npc then return end
+	local humanoid = npc:FindFirstChildWhichIsA("Humanoid", true)
+	if not humanoid then
+		warn("[NPCInteraction] " .. npc.Name .. ": Humanoid 없음, idle anim 스킵")
+		return
+	end
+	local animator = humanoid:FindFirstChildOfClass("Animator")
+	if not animator then
+		animator = Instance.new("Animator")
+		animator.Parent = humanoid
+	end
+	-- NPC 안 어딘가의 Animation 인스턴스 찾기
+	local anim = npc:FindFirstChildWhichIsA("Animation", true)
+	if not anim then
+		warn("[NPCInteraction] " .. npc.Name .. ": Animation 인스턴스 없음, idle anim 스킵")
+		return
+	end
+	local ok, track = pcall(function() return animator:LoadAnimation(anim) end)
+	if ok and track then
+		track:Play()
+		print("[NPCInteraction] " .. npc.Name .. " idle anim 재생 (" .. anim.Name .. ")")
+	else
+		warn("[NPCInteraction] " .. npc.Name .. ": LoadAnimation 실패")
+	end
+end
+
+playIdleAnim(buildingDealer)
+playIdleAnim(petDealer)
+
 print("[NPCInteraction] NPC interaction loaded")
