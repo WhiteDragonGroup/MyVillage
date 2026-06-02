@@ -364,134 +364,76 @@ function MainHUD.updateWeather(weatherType: string)
 	end
 end
 
--- Message system: multiple simultaneous messages with float-up animation
-local _messageContainer = nil
+-- Message system: 미리 만들어둔 Normal.Message TextLabel을 재사용 (Studio에서 디자인된 박스)
+-- 한 번에 하나의 메시지만 표시. 새 메시지가 오면 직전 메시지 페이드 취소 후 즉시 표시.
+local _msgBaseStyle: any = nil
+local _msgState = { token = nil :: any, cancelDelay = nil :: any }
 
-local function ensureMessageContainer()
-	if _messageContainer and _messageContainer.Parent then return _messageContainer end
-
-	-- Create a top-level ScreenGui so messages are never hidden by other UIs
-	local msgGui = playerGui:FindFirstChild("_MessageGui")
-	if not msgGui then
-		msgGui = Instance.new("ScreenGui")
-		msgGui.Name = "_MessageGui"
-		msgGui.DisplayOrder = 999
-		msgGui.ResetOnSpawn = false
-		msgGui.Parent = playerGui
-	end
-
-	_messageContainer = Instance.new("Frame")
-	_messageContainer.Name = "_MessageContainer"
-	_messageContainer.Size = UDim2.new(1, 0, 0.5, 0)
-	_messageContainer.Position = UDim2.new(0, 0, 0.3, 0)
-	_messageContainer.BackgroundTransparency = 1
-	_messageContainer.Parent = msgGui
-
-	local layout = Instance.new("UIListLayout")
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
-	layout.Padding = UDim.new(0, 4)
-	layout.Parent = _messageContainer
-
-	return _messageContainer
+local function captureMsgBaseStyle(msg)
+	if _msgBaseStyle then return end
+	local stroke = msg:FindFirstChildWhichIsA("UIStroke")
+	_msgBaseStyle = {
+		bg = msg.BackgroundTransparency,
+		text = msg.TextTransparency,
+		stroke = stroke and stroke.Transparency or 0,
+	}
 end
-
-local _messageOrder = 0
-local _activeMessages = {} -- { [text] = { label, count, cancelDelay } }
 
 function MainHUD.showMessage(text: string, duration: number?)
 	if not normalGui then return end
+	local msg = normalGui:FindFirstChild("Message")
+	if not msg or not msg:IsA("TextLabel") then return end
+	captureMsgBaseStyle(msg)
 
-	local container = ensureMessageContainer()
-	if not container then return end
+	duration = duration or 2
 
-	-- Check if same message already visible → stack count
-	local existing = _activeMessages[text]
-	if existing and existing.label and existing.label.Parent then
-		existing.count = existing.count + 1
-		existing.label.Text = text .. " x" .. existing.count
-		-- Reset fade timer
-		if existing.cancelDelay then
-			task.cancel(existing.cancelDelay)
-		end
-		local holdTime = duration or 2
-		existing.cancelDelay = task.delay(holdTime, function()
-			if not existing.label or not existing.label.Parent then return end
-			local stroke = existing.label:FindFirstChildWhichIsA("UIStroke")
-			local fadeOut = TweenService:Create(existing.label, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-				TextTransparency = 1,
-				BackgroundTransparency = 1,
-			})
-			if stroke then
-				TweenService:Create(stroke, TweenInfo.new(0.6), { Transparency = 1 }):Play()
-			end
-			fadeOut:Play()
-			fadeOut.Completed:Connect(function()
-				if existing.label then existing.label:Destroy() end
-				_activeMessages[text] = nil
-			end)
-		end)
-		return
+	-- 이전 메시지 페이드 타이머 취소
+	if _msgState.cancelDelay then
+		task.cancel(_msgState.cancelDelay)
+		_msgState.cancelDelay = nil
 	end
 
-	_messageOrder = _messageOrder + 1
+	local token = {}
+	_msgState.token = token
+	local stroke = msg:FindFirstChildWhichIsA("UIStroke")
 
-	local label = Instance.new("TextLabel")
-	label.Name = "_Msg_" .. _messageOrder
-	label.Size = UDim2.new(0.6, 0, 0, 30)
-	label.BackgroundColor3 = Color3.fromRGB(30, 25, 20)
-	label.BackgroundTransparency = 0.3
-	label.TextColor3 = Color3.fromRGB(255, 255, 255)
-	label.TextSize = 13
-	label.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Bold)
-	label.Text = text
-	label.TextWrapped = true
-	label.LayoutOrder = -_messageOrder
-	label.Parent = container
+	msg.Text = text
+	msg.Visible = true
+	-- 페이드 인 시작 (투명)
+	msg.TextTransparency = 1
+	msg.BackgroundTransparency = 1
+	if stroke then stroke.Transparency = 1 end
 
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = label
+	-- 페이드 인 → 원래 스타일로
+	TweenService:Create(msg, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		TextTransparency = _msgBaseStyle.text,
+		BackgroundTransparency = _msgBaseStyle.bg,
+	}):Play()
+	if stroke then
+		TweenService:Create(stroke, TweenInfo.new(0.25), { Transparency = _msgBaseStyle.stroke }):Play()
+	end
 
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = Color3.fromRGB(180, 140, 80)
-	stroke.Thickness = 1
-	stroke.Parent = label
-
-	-- Start below and transparent, float up
-	label.Position = UDim2.new(0, 0, 0, 40)
-	label.TextTransparency = 1
-	label.BackgroundTransparency = 1
-
-	-- Float up + fade in
-	local fadeIn = TweenService:Create(label, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		TextTransparency = 0,
-		BackgroundTransparency = 0.3,
-	})
-	fadeIn:Play()
-
-	-- Track active message
-	local entry = { label = label, count = 1, cancelDelay = nil }
-	_activeMessages[text] = entry
-
-	-- Hold, then fade out
-	local holdTime = duration or 2
-	entry.cancelDelay = task.delay(holdTime, function()
-		if not label.Parent then return end
-		local fadeOut = TweenService:Create(label, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+	-- duration 후 페이드 아웃
+	_msgState.cancelDelay = task.delay(duration, function()
+		if _msgState.token ~= token or not msg.Parent then return end
+		local fadeOut = TweenService:Create(msg, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 			TextTransparency = 1,
 			BackgroundTransparency = 1,
 		})
-		if stroke and stroke.Parent then
-			TweenService:Create(stroke, TweenInfo.new(0.6), {
-				Transparency = 1,
-			}):Play()
+		if stroke then
+			TweenService:Create(stroke, TweenInfo.new(0.5), { Transparency = 1 }):Play()
 		end
 		fadeOut:Play()
 		fadeOut.Completed:Connect(function()
-			label:Destroy()
-			_activeMessages[text] = nil
+			if _msgState.token == token then
+				msg.Visible = false
+				-- 다음 표시를 위해 base 스타일로 복원
+				msg.TextTransparency = _msgBaseStyle.text
+				msg.BackgroundTransparency = _msgBaseStyle.bg
+				if stroke then stroke.Transparency = _msgBaseStyle.stroke end
+				_msgState.token = nil
+				_msgState.cancelDelay = nil
+			end
 		end)
 	end)
 end

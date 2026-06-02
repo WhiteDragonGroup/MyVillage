@@ -383,84 +383,15 @@ end
 local isTransitioning = false
 
 ----------------------------------------------------------------
--- 알림 UI
+-- 알림 UI: Studio의 Normal.Message TextLabel을 재사용 (MainHUD.showMessage 위임)
 ----------------------------------------------------------------
 
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-local notifyGui = nil
+local clientScript = script.Parent.Parent  -- src/client
+local MainHUD = require(clientScript:WaitForChild("build"):WaitForChild("MainHUD"))
 
 local function showWeatherNotify(message: string)
 	if not message or message == "" then return end
-
-	-- 기존 알림 제거
-	if notifyGui then
-		notifyGui:Destroy()
-		notifyGui = nil
-	end
-
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "WeatherNotify"
-	gui.ResetOnSpawn = false
-	gui.DisplayOrder = 20
-	gui.Parent = playerGui
-	notifyGui = gui
-
-	local frame = Instance.new("Frame")
-	frame.Name = "NotifyFrame"
-	frame.Size = UDim2.new(0, 400, 0, 60)
-	frame.Position = UDim2.new(0.5, -200, 0, -70)
-	frame.AnchorPoint = Vector2.new(0, 0)
-	frame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-	frame.BackgroundTransparency = 0.2
-	frame.BorderSizePixel = 0
-	frame.Parent = gui
-
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 12)
-	corner.Parent = frame
-
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = Color3.fromRGB(180, 180, 220)
-	stroke.Thickness = 1
-	stroke.Transparency = 0.5
-	stroke.Parent = frame
-
-	local label = Instance.new("TextLabel")
-	label.Name = "Message"
-	label.Size = UDim2.new(1, -20, 1, -10)
-	label.Position = UDim2.new(0, 10, 0, 5)
-	label.BackgroundTransparency = 1
-	label.TextColor3 = Color3.fromRGB(255, 255, 255)
-	label.TextSize = 14
-	label.FontFace = Font.new("rbxassetid://12187364648", Enum.FontWeight.Medium)
-	label.Text = message
-	label.TextWrapped = true
-	label.TextYAlignment = Enum.TextYAlignment.Center
-	label.Parent = frame
-
-	-- 슬라이드 인 애니메이션
-	TweenService:Create(frame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-		Position = UDim2.new(0.5, -200, 0, 20)
-	}):Play()
-
-	-- 5초 후 페이드아웃
-	task.delay(5, function()
-		if gui and gui.Parent then
-			TweenService:Create(frame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-				Position = UDim2.new(0.5, -200, 0, -70)
-			}):Play()
-			task.delay(0.6, function()
-				if gui and gui.Parent then
-					gui:Destroy()
-				end
-				if notifyGui == gui then
-					notifyGui = nil
-				end
-			end)
-		end
-	end)
+	MainHUD.showMessage(message, 5) -- 날씨 메시지는 5초
 end
 
 ----------------------------------------------------------------
