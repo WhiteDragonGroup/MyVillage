@@ -364,12 +364,14 @@ function MainHUD.updateWeather(weatherType: string)
 	end
 end
 
--- Message system: 미리 만들어둔 Normal.Message TextLabel을 재사용 (Studio에서 디자인된 박스)
--- 한 번에 하나의 메시지만 표시. 새 메시지가 오면 직전 메시지 페이드 취소 후 즉시 표시.
+-- Message system: Studio의 Normal.Message를 템플릿으로 사용해 여러 메시지를 세로 스택.
+-- 규칙: 새 메시지가 바로 직전(스택 마지막) 메시지와 동일하면 × N 카운트만 증가. 다르면 새 라벨 추가.
 local _msgBaseStyle = nil
-local _msgState = { token = nil, cancelDelay = nil }
+local _msgTemplate: TextLabel? = nil   -- Normal.Message의 복제본 (스타일 보존)
+local _msgContainer: Frame? = nil      -- 클론된 메시지 라벨들이 쌓이는 컨테이너
+local _msgStack: { any } = {}          -- { { label, text, count, cancelDelay } } 마지막이 가장 최근
 
-local function captureMsgBaseStyle(msg)
+local function captureMsgBaseStyle(msg: TextLabel)
 	if _msgBaseStyle then return end
 	local stroke = msg:FindFirstChildWhichIsA("UIStroke")
 	_msgBaseStyle = {
@@ -379,33 +381,75 @@ local function captureMsgBaseStyle(msg)
 	}
 end
 
-function MainHUD.showMessage(text: string, duration: number?)
-	if not normalGui then return end
-	local msg = normalGui:FindFirstChild("Message")
-	if not msg or not msg:IsA("TextLabel") then return end
-	captureMsgBaseStyle(msg)
+local function ensureMsgInfra(): boolean
+	if _msgContainer and _msgContainer.Parent and _msgTemplate then return true end
+	if not normalGui then return false end
+	local original = normalGui:FindFirstChild("Message")
+	if not original or not original:IsA("TextLabel") then return false end
 
-	duration = duration or 2
+	captureMsgBaseStyle(original)
 
-	-- 이전 메시지 페이드 타이머 취소
-	if _msgState.cancelDelay then
-		task.cancel(_msgState.cancelDelay)
-		_msgState.cancelDelay = nil
+	-- 템플릿: 원본 복제 + 비활성. 부모는 나중에 컨테이너로.
+	_msgTemplate = original:Clone()
+	if _msgTemplate then
+		_msgTemplate.Visible = false
 	end
 
-	local token = {}
-	_msgState.token = token
-	local stroke = msg:FindFirstChildWhichIsA("UIStroke")
+	-- 컨테이너: 원본 위치/크기 유지, AutomaticSize.Y로 세로 스택 자동 확장.
+	_msgContainer = Instance.new("Frame")
+	_msgContainer.Name = "_MessageContainer"
+	_msgContainer.AnchorPoint = original.AnchorPoint
+	_msgContainer.Position = original.Position
+	_msgContainer.Size = UDim2.new(original.Size.X.Scale, original.Size.X.Offset, original.Size.Y.Scale, original.Size.Y.Offset)
+	_msgContainer.AutomaticSize = Enum.AutomaticSize.Y
+	_msgContainer.BackgroundTransparency = 1
+	_msgContainer.ZIndex = original.ZIndex
+	_msgContainer.Parent = normalGui
 
-	msg.Text = text
-	msg.Visible = true
-	-- 페이드 인 시작 (투명)
-	msg.TextTransparency = 1
-	msg.BackgroundTransparency = 1
+	local layout = Instance.new("UIListLayout")
+	layout.FillDirection = Enum.FillDirection.Vertical
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.Padding = UDim.new(0, 4)
+	layout.Parent = _msgContainer
+
+	-- 원본 Message는 컨테이너로 대체되므로 숨김
+	original.Visible = false
+	return true
+end
+
+local fadeOutEntry: ((any) -> ())? = nil
+
+local function showMessageImpl(text: string, duration: number?)
+	if not ensureMsgInfra() then return end
+	duration = duration or 2
+
+	-- 1) 바로 직전 메시지와 같으면 × N 카운트만 증가 + 타이머 재설정
+	local last = _msgStack[#_msgStack]
+	if last and last.label and last.label.Parent and last.text == text then
+		last.count += 1
+		last.label.Text = text .. " ×" .. last.count
+		if last.cancelDelay then task.cancel(last.cancelDelay); last.cancelDelay = nil end
+		last.cancelDelay = task.delay(duration, function()
+			if fadeOutEntry then fadeOutEntry(last) end
+		end)
+		return
+	end
+
+	-- 2) 새 메시지 추가
+	if not _msgTemplate then return end
+	local label = _msgTemplate:Clone()
+	label.Visible = true
+	label.Text = text
+	label.LayoutOrder = #_msgStack + 1
+	label.Parent = _msgContainer
+
+	local stroke = label:FindFirstChildWhichIsA("UIStroke")
+	label.TextTransparency = 1
+	label.BackgroundTransparency = 1
 	if stroke then stroke.Transparency = 1 end
 
-	-- 페이드 인 → 원래 스타일로
-	TweenService:Create(msg, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+	TweenService:Create(label, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 		TextTransparency = _msgBaseStyle.text,
 		BackgroundTransparency = _msgBaseStyle.bg,
 	}):Play()
@@ -413,29 +457,39 @@ function MainHUD.showMessage(text: string, duration: number?)
 		TweenService:Create(stroke, TweenInfo.new(0.25), { Transparency = _msgBaseStyle.stroke }):Play()
 	end
 
-	-- duration 후 페이드 아웃
-	_msgState.cancelDelay = task.delay(duration, function()
-		if _msgState.token ~= token or not msg.Parent then return end
-		local fadeOut = TweenService:Create(msg, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-			TextTransparency = 1,
-			BackgroundTransparency = 1,
-		})
-		if stroke then
-			TweenService:Create(stroke, TweenInfo.new(0.5), { Transparency = 1 }):Play()
-		end
-		fadeOut:Play()
-		fadeOut.Completed:Connect(function()
-			if _msgState.token == token then
-				msg.Visible = false
-				-- 다음 표시를 위해 base 스타일로 복원
-				msg.TextTransparency = _msgBaseStyle.text
-				msg.BackgroundTransparency = _msgBaseStyle.bg
-				if stroke then stroke.Transparency = _msgBaseStyle.stroke end
-				_msgState.token = nil
-				_msgState.cancelDelay = nil
-			end
-		end)
+	local entry = { label = label, text = text, count = 1, cancelDelay = nil :: any }
+	table.insert(_msgStack, entry)
+
+	entry.cancelDelay = task.delay(duration, function()
+		if fadeOutEntry then fadeOutEntry(entry) end
 	end)
+end
+
+fadeOutEntry = function(entry)
+	if not entry or not entry.label or not entry.label.Parent then return end
+	local label = entry.label
+	local stroke = label:FindFirstChildWhichIsA("UIStroke")
+	local fadeOut = TweenService:Create(label, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+		TextTransparency = 1,
+		BackgroundTransparency = 1,
+	})
+	if stroke then
+		TweenService:Create(stroke, TweenInfo.new(0.5), { Transparency = 1 }):Play()
+	end
+	fadeOut:Play()
+	fadeOut.Completed:Connect(function()
+		if label.Parent then label:Destroy() end
+		for i, e in _msgStack do
+			if e == entry then
+				table.remove(_msgStack, i)
+				break
+			end
+		end
+	end)
+end
+
+function MainHUD.showMessage(text: string, duration: number?)
+	showMessageImpl(text, duration)
 end
 
 -- Shadow (오버레이) 표시/숨김
