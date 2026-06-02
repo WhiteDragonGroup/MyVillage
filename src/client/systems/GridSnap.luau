@@ -42,15 +42,19 @@ function GridSnap.snapToGrid(buildZone: BasePart, worldPosition: Vector3, object
 	return bzCFrame * CFrame.new(snappedLocal)
 end
 
--- Model 바닥 보정: 보이는 파트 기준 (CollisionBox/투명 제외, 회전 고려)
+-- Model 바닥 보정: 보이는 파트 기준 (CollisionBox/투명 제외, 회전 고려).
+-- Farm은 모델 안에 호미 등 시각 외 요소가 있어 PrimaryPart(밭) 기준으로 별도 처리.
 function GridSnap.adjustModelY(model: Model, mainPart: BasePart, buildZone: BasePart)
 	local buildZoneTop = buildZone.Position.Y + buildZone.Size.Y / 2
+
+	-- Farm 전용: PrimaryPart 모서리의 최저 Y만 사용 (필터 우회).
+	-- 서버측(PlotManager/UpgradeManager)도 동일 규칙으로 처리됨.
+	local itemName = (mainPart and mainPart:GetAttribute("ItemName")) or model.Name
+	local farmPrimary = (itemName == "Farm" and model.PrimaryPart) or nil
+
 	local minY = math.huge
-	for _, part in model:GetDescendants() do
-		if not part:IsA("BasePart") then continue end
-		if part:GetAttribute("IsCollisionBox") then continue end
-		if part.Transparency >= 0.99 then continue end
-		local cf, s = part.CFrame, part.Size
+	if farmPrimary then
+		local cf, s = farmPrimary.CFrame, farmPrimary.Size
 		for sx = -1, 1, 2 do
 			for sy = -1, 1, 2 do
 				for sz = -1, 1, 2 do
@@ -59,7 +63,23 @@ function GridSnap.adjustModelY(model: Model, mainPart: BasePart, buildZone: Base
 				end
 			end
 		end
+	else
+		for _, part in model:GetDescendants() do
+			if not part:IsA("BasePart") then continue end
+			if part:GetAttribute("IsCollisionBox") then continue end
+			if part.Transparency >= 0.99 then continue end
+			local cf, s = part.CFrame, part.Size
+			for sx = -1, 1, 2 do
+				for sy = -1, 1, 2 do
+					for sz = -1, 1, 2 do
+						local p = cf:PointToWorldSpace(Vector3.new(sx*s.X/2, sy*s.Y/2, sz*s.Z/2))
+						if p.Y < minY then minY = p.Y end
+					end
+				end
+			end
+		end
 	end
+
 	if minY == math.huge then return end
 	local yAdjust = buildZoneTop - minY
 	if math.abs(yAdjust) > 0.01 then
