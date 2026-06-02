@@ -1213,6 +1213,17 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 				DragHandler.pause()
 				updateCollisionState()
 			end
+		elseif currentState == BuildState.Selected then
+			-- 같은 건물 다시 클릭 → 즉시 이동. 다른 건물 → 그쪽으로 선택 전환.
+			local target = mouse.Target
+			local mainPart = findBuildingMainPart(target)
+			if mainPart and isMyBuilding(mainPart) then
+				if mainPart == selectedBuilding then
+					toMoving(mainPart)
+				else
+					toSelected(mainPart)
+				end
+			end
 		elseif currentState == BuildState.BuildMode then
 			local target = mouse.Target
 			local mainPart = findBuildingMainPart(target)
