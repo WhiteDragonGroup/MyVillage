@@ -277,18 +277,18 @@ function ShopUI._renderItems()
 		local nameShadow = slot:FindFirstChild("NameTextShadow")
 		if nameShadow then nameShadow.Text = building.name end
 
-		-- PriceText
+		-- PriceText: Studio에서 제거됨. 혹시 남아있으면 안전 처리만.
 		local priceText = slot:FindFirstChild("PriceText")
-		if priceText then priceText.Text = "$" .. item.price end
+		if priceText and (priceText:IsA("TextLabel") or priceText:IsA("TextButton")) then
+			priceText.Text = "$" .. item.price
+		end
 
-		-- StockText
+		-- StockText: 항상 초록색
 		local stockText = slot:FindFirstChild("StockText")
 		if stockText then
-			stockText.Text = if item.stock > 0 then item.stock .. "x stock" else "NO STOCK"
+			stockText.Text = if item.stock > 0 then item.stock .. "x Stock" else "NO STOCK"
 			if stockText:IsA("TextLabel") or stockText:IsA("TextButton") then
-				stockText.TextColor3 = if item.stock > 0
-					then Color3.fromRGB(255, 255, 255)
-					else Color3.fromRGB(198, 36, 39)
+				stockText.TextColor3 = Color3.fromRGB(60, 220, 80) -- 초록
 			end
 		end
 
@@ -299,14 +299,7 @@ function ShopUI._renderItems()
 			if rarityLabel then rarityLabel.Text = building.rarity end
 		end
 
-		-- InfoText: Studio 디자이너가 placeholder("test test ...") 넣어둔 자리. 코드가 비워줌.
-		-- 다른 라벨과 폰트 통일 (TextSize 14 + TextScaled).
-		local infoText = slot:FindFirstChild("InfoText")
-		if infoText and (infoText:IsA("TextLabel") or infoText:IsA("TextButton")) then
-			infoText.Text = ""
-			infoText.TextSize = 14
-			infoText.TextScaled = true
-		end
+		-- InfoText: Studio에서 건물별 설명 채워둠 — 코드는 손대지 않음.
 
 		-- Icon (레벨 1 이미지)
 		local iconLabel = slot:FindFirstChild("Icon", true)
@@ -315,19 +308,23 @@ function ShopUI._renderItems()
 			if iconId ~= "" then iconLabel.Image = iconId end
 		end
 
-		-- BuyDollar
+		-- BuyDollar: 항상 가격 표시. 재고 없을 땐 텍스트만 회색 (배경/버튼색은 Studio 디자인 그대로 — 빨강 유지).
 		local buyDollar = slot:FindFirstChild("BuyDollar")
 		if buyDollar and buyDollar:IsA("GuiButton") then
 			local btnText = buyDollar:FindFirstChild("TextLabel") or buyDollar:FindFirstChildWhichIsA("TextLabel")
-			if btnText then btnText.Text = "$" .. item.price end
+			if btnText then
+				btnText.Text = "$" .. item.price
+				if item.stock <= 0 then
+					btnText.TextColor3 = Color3.fromRGB(150, 150, 150) -- 회색
+				end
+			end
 			if item.stock > 0 then
 				buyDollar.MouseButton1Click:Connect(function()
 					if _callbacks.onBuy then _callbacks.onBuy(item.itemName) end
 				end)
 			else
 				buyDollar.Active = false
-				buyDollar.BackgroundColor3 = Color3.fromRGB(198, 36, 39)
-				buyDollar.BackgroundTransparency = 0
+				-- BackgroundColor3는 Studio 디자인(빨강) 그대로 둠 — 코드가 덮어쓰지 않음
 			end
 		end
 
