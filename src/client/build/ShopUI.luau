@@ -208,9 +208,9 @@ function ShopUI._renderItems()
 		end
 	end
 
-	-- 기존 슬롯·장식 제거 (UIListLayout/UIPadding 등 레이아웃만 보존)
+	-- 기존 "슬롯"만 제거. BackPattern 등 디자인 장식(슬롯이 아닌 GuiObject)은 보존.
 	for _, child in scrollFrame:GetChildren() do
-		if child:IsA("GuiObject") and not child:IsA("UILayout") and not child:IsA("UIPadding") then
+		if child:IsA("GuiObject") and isSlot(child) then
 			child:Destroy()
 		end
 	end
