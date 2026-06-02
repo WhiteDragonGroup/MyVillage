@@ -263,9 +263,11 @@ function ShopUI._renderItems()
 		if not building then continue end
 
 		local slot = _shopSlotTemplate:Clone()
-		-- Studio 슬롯 속성(Size/Position/AnchorPoint/Visible 등) 전부 그대로 복제. 코드는 손대지 않음.
+		-- Studio 슬롯 속성 그대로 복제. 단, 높이는 화면 크기에 따라 0.2 스케일이 작아지는 문제 때문에 픽셀로 고정.
+		-- 너비/색/내부 디자인 모두 Studio 그대로.
 		slot.Name = "Slot_" .. item.itemName
 		slot.LayoutOrder = rendered
+		slot.Size = UDim2.new(slot.Size.X.Scale, slot.Size.X.Offset, 0, 110)
 		slot.Parent = scrollFrame
 		rendered += 1
 
