@@ -384,14 +384,29 @@ local isTransitioning = false
 
 ----------------------------------------------------------------
 -- 알림 UI: Studio의 Normal.Message TextLabel을 재사용 (MainHUD.showMessage 위임)
+-- 모듈 로드 시점에 require하면 PlacementClient 초기화를 차단할 수 있어 lazy 로드.
 ----------------------------------------------------------------
 
-local clientScript = script.Parent.Parent  -- src/client
-local MainHUD = require(clientScript:WaitForChild("build"):WaitForChild("MainHUD"))
+local _MainHUD: any = nil
+local function getMainHUD()
+	if _MainHUD then return _MainHUD end
+	local clientFolder = script.Parent and script.Parent.Parent
+	if not clientFolder then return nil end
+	local buildFolder = clientFolder:FindFirstChild("build")
+	if not buildFolder then return nil end
+	local mod = buildFolder:FindFirstChild("MainHUD")
+	if not mod then return nil end
+	local ok, result = pcall(require, mod)
+	if ok then _MainHUD = result end
+	return _MainHUD
+end
 
 local function showWeatherNotify(message: string)
 	if not message or message == "" then return end
-	MainHUD.showMessage(message, 5) -- 날씨 메시지는 5초
+	local m = getMainHUD()
+	if m and m.showMessage then
+		m.showMessage(message, 5) -- 날씨 메시지는 5초
+	end
 end
 
 ----------------------------------------------------------------

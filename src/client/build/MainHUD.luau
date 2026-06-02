@@ -366,8 +366,8 @@ end
 
 -- Message system: 미리 만들어둔 Normal.Message TextLabel을 재사용 (Studio에서 디자인된 박스)
 -- 한 번에 하나의 메시지만 표시. 새 메시지가 오면 직전 메시지 페이드 취소 후 즉시 표시.
-local _msgBaseStyle: any = nil
-local _msgState = { token = nil :: any, cancelDelay = nil :: any }
+local _msgBaseStyle = nil
+local _msgState = { token = nil, cancelDelay = nil }
 
 local function captureMsgBaseStyle(msg)
 	if _msgBaseStyle then return end
