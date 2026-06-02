@@ -299,6 +299,15 @@ function ShopUI._renderItems()
 			if rarityLabel then rarityLabel.Text = building.rarity end
 		end
 
+		-- InfoText: Studio 디자이너가 placeholder("test test ...") 넣어둔 자리. 코드가 비워줌.
+		-- 다른 라벨과 폰트 통일 (TextSize 14 + TextScaled).
+		local infoText = slot:FindFirstChild("InfoText")
+		if infoText and (infoText:IsA("TextLabel") or infoText:IsA("TextButton")) then
+			infoText.Text = ""
+			infoText.TextSize = 14
+			infoText.TextScaled = true
+		end
+
 		-- Icon (레벨 1 이미지)
 		local iconLabel = slot:FindFirstChild("Icon", true)
 		if iconLabel and (iconLabel:IsA("ImageLabel") or iconLabel:IsA("ImageButton")) and Constants.getBuildingIcon then
