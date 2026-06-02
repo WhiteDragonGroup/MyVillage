@@ -1296,8 +1296,9 @@ function PetManager.initPlayer(player: Player, savedPets: { any }?)
 				inInventory = savedPet.inInventory or false,
 			}
 
-			-- Ensure FarmerNewbie always has Insomnia
-			if petData.petName == "FarmerNewbie" then
+			-- 항상 Insomnia를 가져야 하는 펫(밤에 안 잠): FarmerNewbie, ZombieNewbie
+			local ALWAYS_INSOMNIA = { FarmerNewbie = true, ZombieNewbie = true }
+			if ALWAYS_INSOMNIA[petData.petName] then
 				local hasIns = false
 				for _, t in petData.traits do
 					if t == "Insomnia" then hasIns = true; break end
