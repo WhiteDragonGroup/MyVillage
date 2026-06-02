@@ -62,7 +62,10 @@ if petDealer then
 	setupNPC(petDealer, "eggs", "Shop")
 end
 
--- NPC idle 애니메이션 재생 (게임 시작 시 한 번. Animation의 Looped=true면 계속 재생됨)
+-- NPC idle 애니메이션 재생 (ReplicatedStorage.Animations.{NPCName}.Idle).
+-- Animation의 Looped=true 가정 → 한 번만 :Play() 호출.
+local animationsFolder = ReplicatedStorage:FindFirstChild("Animations")
+
 local function playIdleAnim(npc: Instance?)
 	if not npc then return end
 	local humanoid = npc:FindFirstChildWhichIsA("Humanoid", true)
@@ -75,16 +78,21 @@ local function playIdleAnim(npc: Instance?)
 		animator = Instance.new("Animator")
 		animator.Parent = humanoid
 	end
-	-- NPC 안 어딘가의 Animation 인스턴스 찾기
-	local anim = npc:FindFirstChildWhichIsA("Animation", true)
-	if not anim then
-		warn("[NPCInteraction] " .. npc.Name .. ": Animation 인스턴스 없음, idle anim 스킵")
+	-- ReplicatedStorage.Animations.{NPCName}.Idle 위치에서 가져옴
+	if not animationsFolder then
+		warn("[NPCInteraction] ReplicatedStorage.Animations 폴더 없음")
+		return
+	end
+	local npcAnimFolder = animationsFolder:FindFirstChild(npc.Name)
+	local anim = npcAnimFolder and npcAnimFolder:FindFirstChild("Idle")
+	if not anim or not anim:IsA("Animation") then
+		warn("[NPCInteraction] " .. npc.Name .. ": Idle Animation 없음 (Animations." .. npc.Name .. ".Idle)")
 		return
 	end
 	local ok, track = pcall(function() return animator:LoadAnimation(anim) end)
 	if ok and track then
 		track:Play()
-		print("[NPCInteraction] " .. npc.Name .. " idle anim 재생 (" .. anim.Name .. ")")
+		print("[NPCInteraction] " .. npc.Name .. " idle anim 재생")
 	else
 		warn("[NPCInteraction] " .. npc.Name .. ": LoadAnimation 실패")
 	end
