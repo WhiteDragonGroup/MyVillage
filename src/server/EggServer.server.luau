@@ -11,6 +11,7 @@ local getEggsFunc = remotes:WaitForChild("GetEggs")
 local getPlacedEggsFunc = remotes:WaitForChild("GetPlacedEggs")
 local eggUpdateEvent = remotes:WaitForChild("EggUpdate")
 local showEggBuyPopup = remotes:WaitForChild("ShowEggBuyPopup")
+local eggHatchEffectEvent = remotes:WaitForChild("EggHatchEffect")
 
 local serverScript = script.Parent
 local EggManager = require(serverScript:WaitForChild("EggManager"))
@@ -81,6 +82,9 @@ EggManager.setHatchTriggerHandler(function(player, eggId)
 	local success, msg, result = EggManager.hatchEgg(player, eggId)
 	if success and result then
 		eggUpdateEvent:FireClient(player, "hatched", result)
+		if result.hatchPos then
+			eggHatchEffectEvent:FireAllClients(result.hatchPos, result.rarity)
+		end
 	else
 		warn(player.Name .. " - 부화 실패: " .. (msg or ""))
 	end
@@ -160,6 +164,10 @@ hatchEggEvent.OnServerEvent:Connect(function(player, eggId)
 	local success, msg, result = EggManager.hatchEgg(player, eggId)
 	if success and result then
 		eggUpdateEvent:FireClient(player, "hatched", result)
+		-- 부화 이펙트는 모든 클라이언트에 broadcast (다른 플레이어도 봄)
+		if result.hatchPos then
+			eggHatchEffectEvent:FireAllClients(result.hatchPos, result.rarity)
+		end
 	else
 		warn(player.Name .. " - 부화 실패: " .. msg)
 	end

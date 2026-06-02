@@ -341,6 +341,16 @@ placeBuildingEvent.OnServerEvent:Connect(function(player, itemName, localCFrame,
 	end
 
 	print(player.Name .. " → " .. plot.Name .. "에 " .. itemName .. " Lv" .. level .. " 배치 완료 (ID: " .. buildingId .. ")")
+
+	-- 12. 설치 이펙트: 모든 클라이언트로 broadcast
+	local installPos = mainPart.Position
+	if item:IsA("Model") then
+		installPos = item:GetPivot().Position
+	end
+	local installEvent = remotes:FindFirstChild("BuildingInstallEffect")
+	if installEvent then
+		installEvent:FireAllClients(installPos)
+	end
 end)
 
 ----------------------------------------------------------------

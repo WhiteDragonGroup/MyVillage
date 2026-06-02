@@ -60,6 +60,8 @@ local BuffPlayerVFX = require(clientScript:WaitForChild("systems"):WaitForChild(
 BuffPlayerVFX.init()
 local BuffPetVFX = require(clientScript:WaitForChild("systems"):WaitForChild("BuffPetVFX"))
 BuffPetVFX.init()
+local HatchInstallEffects = require(clientScript:WaitForChild("systems"):WaitForChild("HatchInstallEffects"))
+HatchInstallEffects.init()
 local BuildingInfoUI = require(clientScript:WaitForChild("build"):WaitForChild("BuildingInfoUI"))
 
 -- Remotes

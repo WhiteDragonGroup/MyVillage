@@ -125,6 +125,12 @@
         },
         "PetBuffUpdate": {
           "$className": "RemoteEvent"
+        },
+        "EggHatchEffect": {
+          "$className": "RemoteEvent"
+        },
+        "BuildingInstallEffect": {
+          "$className": "RemoteEvent"
         }
       },
       "Weather": {

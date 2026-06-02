@@ -610,10 +610,19 @@ function EggManager.hatchEgg(player: Player, eggId: string): (boolean, string, {
 		_addPet(player, petData)
 	end
 
+	-- 알 위치 캡처 (이펙트용)
+	local hatchPos: Vector3? = nil
+	if model and model:IsA("BasePart") then
+		hatchPos = model.Position
+	elseif model and model:IsA("Model") then
+		hatchPos = model:GetPivot().Position
+	end
+
 	-- 알 제거
 	if model.Parent then
 		local parent = model.Parent
 		if parent:IsA("Model") then
+			if not hatchPos then hatchPos = parent:GetPivot().Position end
 			parent:Destroy()
 		else
 			model:Destroy()
@@ -625,6 +634,7 @@ function EggManager.hatchEgg(player: Player, eggId: string): (boolean, string, {
 		petName = selectedPet.petName,
 		rarity = selectedPet.rarity,
 		mutations = mutations,
+		hatchPos = hatchPos,
 	}
 
 	print(player.Name .. " - hatched! " .. selectedPet.petName .. " (" .. selectedPet.rarity .. ")")
