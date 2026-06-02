@@ -208,7 +208,30 @@ function ShopUI._renderItems()
 		end
 	end
 
-	-- 기존 "슬롯"만 제거. BackPattern 등 디자인 장식(슬롯이 아닌 GuiObject)은 보존.
+	-- 첫 렌더 시 BackPattern 같은 비-슬롯 장식을 ScrollingFrame 밖(부모 Frame)으로 이동.
+	-- UIListLayout이 모든 자식을 세로 스택해서 BackPattern이 슬롯 영역을 차지하는 문제 해결.
+	-- 장식은 ScrollingFrame과 같은 영역을 덮도록 부모에 복제 배치.
+	if not scrollFrame:GetAttribute("_DecorMoved") then
+		scrollFrame:SetAttribute("_DecorMoved", true)
+		local parent = scrollFrame.Parent
+		if parent then
+			for _, child in scrollFrame:GetChildren() do
+				if child:IsA("GuiObject") and not isSlot(child) then
+					-- ScrollingFrame과 동일한 영역 덮도록 위치/크기 복사
+					child.AnchorPoint = scrollFrame.AnchorPoint
+					child.Position = scrollFrame.Position
+					child.Size = scrollFrame.Size
+					-- ScrollingFrame 뒤로 보내기 (ZIndex 낮춤)
+					if child.ZIndex >= scrollFrame.ZIndex then
+						child.ZIndex = scrollFrame.ZIndex - 1
+					end
+					child.Parent = parent
+				end
+			end
+		end
+	end
+
+	-- 기존 슬롯만 제거 (장식은 이미 밖으로 이동돼서 영향 없음)
 	for _, child in scrollFrame:GetChildren() do
 		if child:IsA("GuiObject") and isSlot(child) then
 			child:Destroy()
