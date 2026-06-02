@@ -1562,20 +1562,9 @@ local eggInventory = {} -- 알 인벤토리 캐시
 
 local function mergeInventory()
 	local merged = {}
-	-- 건물
+	-- 건물만 빌드모드 인벤토리에 표시 (알은 별도 UI에서 관리)
 	for _, item in inventory do
 		table.insert(merged, item)
-	end
-	-- 알 (isEgg 플래그 추가)
-	for _, egg in eggInventory do
-		if egg.count > 0 then
-			table.insert(merged, {
-				itemName = egg.eggType,
-				count = egg.count,
-				level = 1,
-				isEgg = true,
-			})
-		end
 	end
 	InventoryUI.updateInventory(merged)
 end
