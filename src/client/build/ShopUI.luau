@@ -176,9 +176,9 @@ end
 
 local _shopSlotTemplate = nil
 local _shopSlotHeightPx = nil  -- 원본 슬롯의 렌더된 픽셀 높이 (최초 1회 측정)
+local _shopSlotSize: UDim2? = nil -- 원본 슬롯의 Size (Studio 디자인 그대로 사용)
 -- UIListLayout이 세로 스택·간격·캔버스를 처리한다. 슬롯 높이는 픽셀로 고정해야 스크롤이 정확.
-local SHOP_SLOT_WIDTH = 0.94   -- 슬롯 너비 (스케일, 가운데 정렬)
-local SHOP_SLOT_GAP = 10       -- 슬롯 간 세로 간격(px)
+local SHOP_SLOT_GAP_DEFAULT = 10  -- UIListLayout이 없을 때만 사용하는 기본 간격(px)
 
 function ShopUI._renderItems()
 	if not buildingsShopFrame then return end
@@ -201,6 +201,7 @@ function ShopUI._renderItems()
 				if child.AbsoluteSize.Y > 0 then
 					_shopSlotHeightPx = math.floor(child.AbsoluteSize.Y + 0.5)
 				end
+				_shopSlotSize = child.Size -- Studio 디자인된 Size 그대로 보존
 				_shopSlotTemplate = child:Clone()
 				break
 			end
@@ -226,15 +227,17 @@ function ShopUI._renderItems()
 	scrollFrame.ScrollingEnabled = true
 	scrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+	-- UIListLayout: Studio에서 만든 게 있으면 Padding/HorizontalAlignment 디자인 그대로 사용.
+	-- 새로 만든 경우에만 기본값 적용.
 	local listLayout = scrollFrame:FindFirstChildWhichIsA("UIListLayout")
 	if not listLayout then
 		listLayout = Instance.new("UIListLayout")
+		listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		listLayout.Padding = UDim.new(0, SHOP_SLOT_GAP_DEFAULT)
 		listLayout.Parent = scrollFrame
 	end
 	listLayout.FillDirection = Enum.FillDirection.Vertical
 	listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	listLayout.Padding = UDim.new(0, SHOP_SLOT_GAP)
 
 	local rendered = 0
 	for _, item in _shopData do
@@ -244,10 +247,14 @@ function ShopUI._renderItems()
 		local slot = _shopSlotTemplate:Clone()
 		slot.Name = "Slot_" .. item.itemName
 		slot.Visible = true
-		-- 위치/정렬은 UIListLayout이 담당. 너비는 스케일, 높이는 픽셀 고정.
+		-- 위치/정렬은 UIListLayout이 담당. Size는 Studio 디자인된 원본 그대로 사용.
 		slot.AnchorPoint = Vector2.new(0, 0)
 		slot.Position = UDim2.new(0, 0, 0, 0)
-		slot.Size = UDim2.new(SHOP_SLOT_WIDTH, 0, 0, _shopSlotHeightPx or 110)
+		if _shopSlotSize then
+			slot.Size = _shopSlotSize
+		else
+			slot.Size = UDim2.new(0.94, 0, 0, _shopSlotHeightPx or 110)
+		end
 		slot.LayoutOrder = rendered
 		slot.Parent = scrollFrame
 		rendered += 1
