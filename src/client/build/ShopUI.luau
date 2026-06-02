@@ -175,9 +175,8 @@ function ShopUI.updateShop(shopData: { any }, restockTime: number)
 end
 
 local _shopSlotTemplate = nil
-local _shopSlotHeightPx = nil  -- 원본 슬롯의 렌더된 픽셀 높이 (최초 1회 측정)
-local _shopSlotSize: UDim2? = nil -- 원본 슬롯의 Size (Studio 디자인 그대로 사용)
--- UIListLayout이 세로 스택·간격·캔버스를 처리한다. 슬롯 높이는 픽셀로 고정해야 스크롤이 정확.
+-- Studio의 슬롯 템플릿을 그대로 복제. Size/Position/AnchorPoint 등 모든 속성 보존.
+-- UIListLayout(Studio 또는 새로 생성한 것)이 세로 스택을 담당.
 local SHOP_SLOT_GAP_DEFAULT = 10  -- UIListLayout이 없을 때만 사용하는 기본 간격(px)
 
 function ShopUI._renderItems()
@@ -194,14 +193,10 @@ function ShopUI._renderItems()
 			or obj:FindFirstChild("NameText") ~= nil
 	end
 
-	-- 슬롯 템플릿 캡처 + 렌더된 픽셀 높이 측정 (최초 1회). BackPattern 등 배경은 isSlot으로 제외.
+	-- 슬롯 템플릿 캡처 (최초 1회). BackPattern 등 배경은 isSlot으로 제외.
 	if not _shopSlotTemplate then
 		for _, child in scrollFrame:GetChildren() do
 			if child:IsA("GuiObject") and isSlot(child) then
-				if child.AbsoluteSize.Y > 0 then
-					_shopSlotHeightPx = math.floor(child.AbsoluteSize.Y + 0.5)
-				end
-				_shopSlotSize = child.Size -- Studio 디자인된 Size 그대로 보존
 				_shopSlotTemplate = child:Clone()
 				break
 			end
@@ -268,16 +263,8 @@ function ShopUI._renderItems()
 		if not building then continue end
 
 		local slot = _shopSlotTemplate:Clone()
+		-- Studio 슬롯 속성(Size/Position/AnchorPoint/Visible 등) 전부 그대로 복제. 코드는 손대지 않음.
 		slot.Name = "Slot_" .. item.itemName
-		slot.Visible = true
-		-- 위치/정렬은 UIListLayout이 담당. Size는 Studio 디자인된 원본 그대로 사용.
-		slot.AnchorPoint = Vector2.new(0, 0)
-		slot.Position = UDim2.new(0, 0, 0, 0)
-		if _shopSlotSize then
-			slot.Size = _shopSlotSize
-		else
-			slot.Size = UDim2.new(0.94, 0, 0, _shopSlotHeightPx or 110)
-		end
 		slot.LayoutOrder = rendered
 		slot.Parent = scrollFrame
 		rendered += 1
