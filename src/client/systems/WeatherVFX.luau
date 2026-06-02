@@ -387,6 +387,9 @@ local isTransitioning = false
 -- 모듈 로드 시점에 require하면 PlacementClient 초기화를 차단할 수 있어 lazy 로드.
 ----------------------------------------------------------------
 
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
 local _MainHUD: any = nil
 local function getMainHUD()
 	if _MainHUD then return _MainHUD end
