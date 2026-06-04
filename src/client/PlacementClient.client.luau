@@ -1199,22 +1199,13 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		end
 
 		if currentState == BuildState.PlacingNew or currentState == BuildState.Moving then
+			-- 프리뷰는 CanQuery=false라 마우스가 통과 → target 체크 불가.
+			-- paused일 때 클릭하면 재개(이동 모드 진입). 아니면 paused(고정).
 			if _dragPaused then
-				-- Fixed: click the building to resume
-				local target = mouse.Target
-				if target and previewPart then
-					local previewModel = getParentModel(previewPart)
-					local clickedModel = getParentModel(target)
-					local isPreview = (target == previewPart)
-						or (previewModel and (target:IsDescendantOf(previewModel) or clickedModel == previewModel))
-					if isPreview then
-						_dragPaused = false
-						DragHandler.resume()
-						updateCollisionState()
-					end
-				end
+				_dragPaused = false
+				DragHandler.resume()
+				updateCollisionState()
 			else
-				-- Moving: click anywhere to fix in place
 				_dragPaused = true
 				DragHandler.pause()
 				updateCollisionState()
