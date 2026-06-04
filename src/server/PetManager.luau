@@ -107,29 +107,49 @@ local STATE_TO_ANIM = {
 }
 
 -- 액션 폴백 순서 (지정 액션이 없으면 차례로 시도). 모두 소문자.
--- 실제 보유 키 예: idle, move, make, field, pet, greeting (펫별로 일부만 존재).
+-- "field"/"fields"는 PLANT(작업) 애니이므로 sleep/rest 폴백에서 제외.
+-- 그렇지 않으면 Working→field 재생 후 Sleeping이 되어도 같은 field track이 계속 돌아 일하는 모습.
 local ACTION_FALLBACK = {
 	mine         = { "mining", "make", "work", "idle" },
 	plant        = { "farming", "field", "fields", "make", "work", "idle" },
 	construction = { "build", "make", "work", "idle" },
 	work         = { "make", "magic", "idle" },
 	move         = { "walk", "walking", "run", "idle" },
-	sleep        = { "sleeping", "rest", "field", "idle" },
-	rest         = { "resting", "field", "idle" },
+	sleep        = { "sleeping", "rest", "idle" },   -- field 제거
+	rest         = { "resting", "idle" },            -- field 제거
 	greeting     = { "greet", "greetin", "idle" },
 	pet          = { "petting", "idle" },
+	-- 스킬형 펫 액션 폴백
+	song         = { "sing", "idle" },
+	magic        = { "spell", "magic", "idle" },
+	spray        = { "water", "spray", "idle" },
+	buff         = { "aura", "buff", "idle" },
+	fireball     = { "fire", "fireball", "idle" },
 }
 
--- 진단용: ANIM_DEBUG = true로 두면 모든 애니 전환을 로그. 원인 파악 끝나면 false로.
-local ANIM_DEBUG = true
+-- 펫 이름별 Working 액션 오버라이드 (광부/농부 아닌 스킬형 펫). petType보다 우선.
+local PET_NAME_TO_WORK_ACTION = {
+	Ghost      = "song",
+	Witch      = "magic",
+	Lumini     = "spray",
+	Zipbit     = "buff",
+	BabyDragon = "fireball",
+}
+
+-- 진단용: ANIM_DEBUG = true로 두면 모든 애니 전환을 로그.
+local ANIM_DEBUG = false
 
 local function playAnimationForState(petData, newState: string)
 	local tracks = petData._animTracks
 	if not tracks then return end
 	local action = STATE_TO_ANIM[newState] or "idle"
-	-- Working은 펫 타입에 따라 구체 액션으로 치환 (Farming/Mining/Construction)
-	if newState == "Working" and petData.petType then
-		action = STATE_TO_ANIM[petData.petType] or action
+	-- Working은 펫 이름별 스킬 오버라이드(Ghost=song 등) 우선, 없으면 petType 매핑(Farming/Mining/Construction).
+	if newState == "Working" then
+		if PET_NAME_TO_WORK_ACTION[petData.petName] then
+			action = PET_NAME_TO_WORK_ACTION[petData.petName]
+		elseif petData.petType then
+			action = STATE_TO_ANIM[petData.petType] or action
+		end
 	end
 
 	local target = tracks[action]
