@@ -1139,11 +1139,15 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 
 	-- 마우스 클릭: 배치 확정 / BuildMode에서 건물 선택 / 펫 클릭
 	if input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessed then
-		-- 펫 Tool을 들고 있고 마을 안 클릭 → 그 자리에 펫 배치
+		-- 클릭 대상이 (내) 건물이면 펫/알 드롭 로직 스킵 — 건물 인터랙션(선택/이동) 우선
+		local _clickedBldMain = findBuildingMainPart(mouse.Target)
+		local _isBuildingClick = _clickedBldMain ~= nil and isMyBuilding(_clickedBldMain)
+
+		-- 펫 Tool을 들고 있고 (건물 아닌) 마을 안 클릭 → 그 자리에 펫 배치
 		do
 			local character = player.Character
 			local equippedPetId: string? = nil
-			if character then
+			if character and not _isBuildingClick then
 				for _, child in character:GetChildren() do
 					if child:IsA("Tool") and child:GetAttribute("PetId") then
 						equippedPetId = child:GetAttribute("PetId")
@@ -1168,9 +1172,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 				end
 			end
 
-			-- 알 Tool을 들고 있고 마을 안 클릭 → 그 자리에 알 배치
+			-- 알 Tool을 들고 있고 (건물 아닌) 마을 안 클릭 → 그 자리에 알 배치
 			local heldEggType = nil
-			if character then
+			if character and not _isBuildingClick then
 				for _, child in character:GetChildren() do
 					if child:IsA("Tool") and child:GetAttribute("IsEggTool") then
 						heldEggType = child:GetAttribute("EggType")
