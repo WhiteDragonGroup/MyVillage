@@ -437,6 +437,16 @@ moveBuildingEvent.OnServerEvent:Connect(function(player, buildingId, newCFrame)
 	syncCollisionBox(building)
 
 	print(player.Name .. " - " .. (itemName or "?") .. " 이동 완료")
+
+	-- 이동도 설치와 동일하게 BuildingInstall 이펙트 broadcast
+	local installPos = building.Position
+	if isBuildingModel and parentModel then
+		installPos = parentModel:GetPivot().Position
+	end
+	local installEvent = remotes:FindFirstChild("BuildingInstallEffect")
+	if installEvent then
+		installEvent:FireAllClients(installPos)
+	end
 end)
 
 ----------------------------------------------------------------

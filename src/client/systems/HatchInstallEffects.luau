@@ -23,8 +23,10 @@ local HatchInstallEffects = {}
 -- @param template     클론할 BasePart (VFX/General 아래의 이펙트 파트)
 -- @param position     Vector3 — 이펙트가 나타날 월드 좌표
 -- @param colorOverride Color3? — 모든 ParticleEmitter.Color를 이 색 단일톤으로 덮어씀 (등급별)
-local function playEffect(template: BasePart, position: Vector3, colorOverride: Color3?)
+-- @param emitScale    number? — EmitCount 배율 (1=원본, 0.5=절반 등). nil이면 1.
+local function playEffect(template: BasePart, position: Vector3, colorOverride: Color3?, emitScale: number?)
 	if not template or not position then return end
+	local scale = emitScale or 1
 
 	local fx = template:Clone()
 	-- 안전 설정 (충돌/조회 비활성, 위치 이동)
@@ -42,8 +44,8 @@ local function playEffect(template: BasePart, position: Vector3, colorOverride: 
 			if colorOverride then
 				d.Color = ColorSequence.new(colorOverride)
 			end
-			local ec = d:GetAttribute("EmitCount") or 1
-			d:Emit(ec)
+			local ec = (d:GetAttribute("EmitCount") or 1) * scale
+			d:Emit(math.max(1, math.floor(ec + 0.5)))
 		end
 	end
 
@@ -84,6 +86,9 @@ local function getBuildingInstallTemplate(): BasePart?
 	return nil
 end
 
+-- 건물 설치 이펙트는 너무 과해서 0.4배로 축소
+local BUILDING_INSTALL_EMIT_SCALE = 0.4
+
 local function onBuildingInstall(position)
 	if typeof(position) ~= "Vector3" then return end
 	local template = getBuildingInstallTemplate()
@@ -91,8 +96,8 @@ local function onBuildingInstall(position)
 		warn("[HatchInstallEffects] BuildingInstall 파트 없음 (ReplicatedStorage.VFX.General.Building.BuildingInstall)")
 		return
 	end
-	-- 건물 설치는 등급 색상 적용 안 함
-	playEffect(template, position, nil)
+	-- 건물 설치는 등급 색상 적용 안 함, 파티클 양만 축소
+	playEffect(template, position, nil, BUILDING_INSTALL_EMIT_SCALE)
 end
 
 ----------------------------------------------------------------

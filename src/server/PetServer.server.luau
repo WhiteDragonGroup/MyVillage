@@ -247,13 +247,11 @@ local function createPetTool(player: Player, petData)
 	return tool
 end
 
-holdPetEvent.OnServerEvent:Connect(function(player, petId)
+-- 내부에서 재사용 가능한 hold 로직. 클라이언트 RemoteEvent와 EggServer(부화 후 손에 들기) 양쪽 사용.
+local function internalHoldPet(player: Player, petId: string)
 	if typeof(petId) ~= "string" then return end
 
-	-- 이미 같은 펫 Tool이 있으면 무시 (다른 펫 Tool들은 그대로 유지)
-	if findPetTool(player, petId) then
-		return
-	end
+	if findPetTool(player, petId) then return end -- 이미 같은 펫 Tool 보유
 
 	local petData = PetManager.getPetData(player, petId)
 	if not petData then
@@ -261,7 +259,6 @@ holdPetEvent.OnServerEvent:Connect(function(player, petId)
 		return
 	end
 
-	-- Can't hold assigned pets (e.g., 업그레이드/작업 중)
 	if petData.assignedBuildingId and petData.assignedBuildingId ~= "" then
 		warn("[HoldPet] Pet is assigned")
 		holdPetEvent:FireClient(player, "error", "Pet is busy with a building.")
@@ -270,12 +267,10 @@ holdPetEvent.OnServerEvent:Connect(function(player, petId)
 
 	print("[HoldPet] Holding: " .. petData.petName)
 
-	-- Stop behavior loop
 	petData.state = "Held"
 	petData.inInventory = true
 	PetManager.stopBehaviorLoop(petId)
 
-	-- 즉시 DataStore 저장 (재접속 시 인벤토리 유지)
 	task.spawn(function()
 		local ok, DataStoreManager = pcall(require, script.Parent:WaitForChild("DataStoreManager"))
 		if ok and DataStoreManager.savePlayer then
@@ -283,19 +278,20 @@ holdPetEvent.OnServerEvent:Connect(function(player, petId)
 		end
 	end)
 
-	-- Hide the world model
 	if petData._petModel and petData._petModel.Parent then
 		petData._petModel.Parent = nil
 	elseif petData.model and petData.model.Parent then
 		petData.model.Parent = nil
 	end
 
-	local tool = createPetTool(player, petData)
+	createPetTool(player, petData)
+end
 
-	-- 캐릭터 리스폰 등으로 Tool이 사라져도 inInventory=true 유지
-	-- (CharacterAdded 핸들러가 Tool을 다시 생성)
-	-- 명시적 드롭(dropPetEvent)에서만 returnPetToWorld 호출됨
-end)
+holdPetEvent.OnServerEvent:Connect(internalHoldPet)
+
+-- 서버 내부 호출용 (EggServer 부화 후 펫을 손에 들기 위해 사용).
+-- _G로 노출. 다른 서버 스크립트에서: if _G.PetServer_HoldPet then _G.PetServer_HoldPet(player, petId) end
+_G.PetServer_HoldPet = internalHoldPet
 
 dropPetEvent.OnServerEvent:Connect(function(player, position, petIdParam)
 	-- petIdParam이 들어오면 그 펫만 드롭, 없으면 캐릭터에 장착된 펫 Tool 자동 탐지

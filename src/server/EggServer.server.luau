@@ -66,6 +66,12 @@ EggManager.setPetFunction(function(player, petData)
 
 	-- PetManager._playerPets에 접근해야 하므로 addPetDirect 사용
 	PetManager.addPetDirect(player, fullPetData)
+
+	-- 부화 직후: 펫을 플레이어 손(Tool 슬롯)에 들리도록
+	-- PetServer가 _G에 등록한 hold 함수 호출 (서버 내부 통신)
+	if _G.PetServer_HoldPet then
+		task.defer(_G.PetServer_HoldPet, player, petId)
+	end
 end)
 
 -- 중복 ShowEggBuyPopup 인스턴스가 있을 수 있으니 모두에 fire
