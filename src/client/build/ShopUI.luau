@@ -288,7 +288,7 @@ function ShopUI._renderItems()
 		if stockText then
 			stockText.Text = if item.stock > 0 then item.stock .. "x Stock" else "NO STOCK"
 			if stockText:IsA("TextLabel") or stockText:IsA("TextButton") then
-				stockText.TextColor3 = Color3.fromRGB(60, 220, 80) -- 초록
+				stockText.TextColor3 = Color3.fromRGB(95, 245, 105) -- 밝은 라임 그린
 			end
 		end
 

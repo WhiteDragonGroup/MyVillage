@@ -27,7 +27,7 @@ local KIND_SWITCH_PAUSE  = 0.30
 -- 종류별 모션 설정 (다이아는 더 멀리·높이·길게 노출)
 local DROP_CONFIG = {
 	coin = {
-		scatterRadius   = { min = 3, max = 5.5 },
+		scatterRadius   = { min = 3, max = 10 },
 		arcHeight       = 2.6,
 		scatterDuration = 0.55,
 		bounceHeight    = 0.35,
@@ -154,7 +154,10 @@ local function spawnDrop(building: BasePart, kind: string, amount: number, playe
 	drop:SetAttribute("OwnerId", player.UserId)
 	drop:SetAttribute("IsHarvestDrop", true)
 
-	drop:PivotTo(CFrame.new(startPos))
+	-- 다이아는 누워있는 모델이라 90° 세워야 함. 코인은 추가 회전 없음.
+	local baseRot = (kind == "gem") and CFrame.Angles(math.rad(90), 0, 0) or CFrame.new()
+
+	drop:PivotTo(CFrame.new(startPos) * baseRot)
 	drop.Parent = workspace
 
 	_drops[drop] = {
@@ -167,6 +170,7 @@ local function spawnDrop(building: BasePart, kind: string, amount: number, playe
 		scatterStart = tick(),
 		spawnTime = tick(),
 		cfg = cfg,
+		baseRot = baseRot,
 		-- 회전 시드를 각자 다르게 (방향감 보너스)
 		spinOffset = math.random() * math.pi * 2,
 		spinSpeed = 1.2 + math.random() * 1.5,
@@ -209,7 +213,7 @@ RunService.Heartbeat:Connect(function(dt)
 			local pos = info.startPos:Lerp(info.target, te)
 			-- 포물선 아치 (대칭 sin)
 			pos = pos + Vector3.new(0, math.sin(t * math.pi) * cfg.arcHeight, 0)
-			drop:PivotTo(CFrame.new(pos) * CFrame.Angles(0, info.spinOffset + t * info.spinSpeed * math.pi * 2, 0))
+			drop:PivotTo(CFrame.new(pos) * info.baseRot * CFrame.Angles(0, info.spinOffset + t * info.spinSpeed * math.pi * 2, 0))
 			if t >= 1 then
 				info.state = "bounce"
 				info.bounceStart = now
@@ -220,7 +224,7 @@ RunService.Heartbeat:Connect(function(dt)
 			-- 작은 바운스: 0→peak→0 (sin)
 			local by = math.sin(t * math.pi) * cfg.bounceHeight
 			drop:PivotTo(CFrame.new(info.target + Vector3.new(0, by, 0))
-				* CFrame.Angles(0, info.spinOffset + t * info.spinSpeed * math.pi, 0))
+				* info.baseRot * CFrame.Angles(0, info.spinOffset + t * info.spinSpeed * math.pi, 0))
 			if t >= 1 then
 				info.state = "settled"
 				info.settleTime = now
@@ -230,7 +234,7 @@ RunService.Heartbeat:Connect(function(dt)
 			-- 천천히 둥실 + 미세 회전
 			local bob = math.sin(elapsed * 3) * 0.12
 			drop:PivotTo(CFrame.new(info.target + Vector3.new(0, bob, 0))
-				* CFrame.Angles(0, info.spinOffset + elapsed * 1.0, 0))
+				* info.baseRot * CFrame.Angles(0, info.spinOffset + elapsed * 1.0, 0))
 			-- 픽업 가능 대기 후 플레이어 근접 체크
 			if elapsed >= cfg.pickupDelay then
 				local character = info.player.Character
@@ -251,7 +255,10 @@ RunService.Heartbeat:Connect(function(dt)
 			local cur = drop:GetPivot().Position
 			local target = hrp.Position + Vector3.new(0, 1.5, 0)
 			local toTarget = target - cur
-			local step = cfg.flySpeed * dt
+			-- 거리 가까울수록 가속 (1x at PICKUP_RANGE, 3x at 0). 끌려오는 감각.
+			local distRatio = math.clamp(toTarget.Magnitude / PICKUP_RANGE, 0, 1)
+			local speedMult = 1 + (1 - distRatio) * 2
+			local step = cfg.flySpeed * speedMult * dt
 			if toTarget.Magnitude <= step or toTarget.Magnitude < 0.5 then
 				drop:Destroy()
 				_drops[drop] = nil
@@ -267,7 +274,7 @@ RunService.Heartbeat:Connect(function(dt)
 			else
 				local newPos = cur + toTarget.Unit * step
 				drop:PivotTo(CFrame.new(newPos)
-					* CFrame.Angles(0, info.spinOffset + (now - info.scatterStart) * 4, 0))
+					* info.baseRot * CFrame.Angles(0, info.spinOffset + (now - info.scatterStart) * 4, 0))
 			end
 		end
 	end
