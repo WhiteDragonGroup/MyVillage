@@ -131,6 +131,9 @@
         },
         "BuildingInstallEffect": {
           "$className": "RemoteEvent"
+        },
+        "SkipHatch": {
+          "$className": "RemoteEvent"
         }
       },
       "Weather": {

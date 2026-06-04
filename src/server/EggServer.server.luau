@@ -12,6 +12,16 @@ local getPlacedEggsFunc = remotes:WaitForChild("GetPlacedEggs")
 local eggUpdateEvent = remotes:WaitForChild("EggUpdate")
 local showEggBuyPopup = remotes:WaitForChild("ShowEggBuyPopup")
 local eggHatchEffectEvent = remotes:WaitForChild("EggHatchEffect")
+local skipHatchEvent = remotes:WaitForChild("SkipHatch")
+
+-- 클라이언트의 Skip 요청 처리
+skipHatchEvent.OnServerEvent:Connect(function(player, eggId)
+	if typeof(eggId) ~= "string" then return end
+	local ok, msg = EggManager.skipHatch(player, eggId)
+	if not ok then
+		warn(player.Name .. " - skip 실패: " .. msg)
+	end
+end)
 
 local serverScript = script.Parent
 local EggManager = require(serverScript:WaitForChild("EggManager"))
@@ -22,10 +32,14 @@ local HttpService = game:GetService("HttpService")
 local BalanceConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BalanceConfig"))
 local PetCfg = BalanceConfig.Pet
 
--- EggManager에 코인/펫 함수 연결
+-- EggManager에 코인/다이아/펫 함수 연결
 EggManager.setCurrencyFunctions(
 	function(player, amount) return CurrencyManager.hasCoins(player, amount) end,
 	function(player, amount) return CurrencyManager.spendCoins(player, amount) end
+)
+EggManager.setGemFunctions(
+	function(player, amount) return CurrencyManager.hasGems(player, amount) end,
+	function(player, amount) return CurrencyManager.spendGems(player, amount) end
 )
 
 EggManager.setPetFunction(function(player, petData)

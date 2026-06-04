@@ -62,6 +62,8 @@ local BuffPetVFX = require(clientScript:WaitForChild("systems"):WaitForChild("Bu
 BuffPetVFX.init()
 local HatchInstallEffects = require(clientScript:WaitForChild("systems"):WaitForChild("HatchInstallEffects"))
 HatchInstallEffects.init()
+local EggSkipUI = require(clientScript:WaitForChild("systems"):WaitForChild("EggSkipUI"))
+EggSkipUI.init()
 local BuildingInfoUI = require(clientScript:WaitForChild("build"):WaitForChild("BuildingInfoUI"))
 
 -- Remotes
@@ -1313,6 +1315,10 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 										end)
 									elseif choiceId == "nevermind" then
 										DialogUI.showResponse("See you around!", 1.5)
+										task.delay(1.5, function()
+											stopNpcDistanceCheck()
+											DialogUI.hide()
+										end)
 									end
 								end, npcHead or npcPart)
 								if npcPart then startNpcDistanceCheck(npcPart) end
@@ -2326,6 +2332,8 @@ local function stopNpcDistanceCheck()
 		_npcDistanceConn:Disconnect()
 		_npcDistanceConn = nil
 	end
+	-- NPC 인터랙션 종료 시 카메라 FOV도 복원
+	CameraManager.ResetFOV(TweenInfo.new(1.0, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out))
 end
 
 local function startNpcDistanceCheck(npcPart: BasePart)
@@ -2429,6 +2437,10 @@ if openShopEvent then
 					end)
 				elseif choiceId == "nevermind" then
 					DialogUI.showResponse("See you around!", 1.5)
+					task.delay(1.5, function()
+						stopNpcDistanceCheck()
+						DialogUI.hide()
+					end)
 				end
 			end, npcHead or npcPart)
 			if npcPart then startNpcDistanceCheck(npcPart) end

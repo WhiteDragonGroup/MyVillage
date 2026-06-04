@@ -85,10 +85,14 @@ local function ensureGui()
 	tDesc.Parent = _tooltip
 end
 
+-- 지연 hide 토큰: 빠른 슬롯 이동 시 깜빡임 방지. 새 showTooltip이 오면 토큰 무효화.
+local _hideToken: any = nil
+
 local function showTooltip(buffId: string, anchor: GuiObject)
 	if not _tooltip then return end
 	local cfg = BuffCfg.BUFFS[buffId]
 	if not cfg then return end
+	_hideToken = nil -- 이전에 예약된 hide 취소
 	_tooltip.BuffName.Text = cfg.name or buffId
 	_tooltip.Desc.Text = cfg.description or ""
 	local pos = anchor.AbsolutePosition
@@ -97,7 +101,16 @@ local function showTooltip(buffId: string, anchor: GuiObject)
 end
 
 local function hideTooltip()
-	if _tooltip then _tooltip.Visible = false end
+	if not _tooltip then return end
+	-- 약간 지연. 다른 슬롯으로 옮기는 중이면 그쪽의 showTooltip이 토큰을 무효화.
+	local token = {}
+	_hideToken = token
+	task.delay(0.12, function()
+		if _hideToken == token and _tooltip then
+			_tooltip.Visible = false
+			_hideToken = nil
+		end
+	end)
 end
 
 local function createSlot(buffId: string): typeof(_slots[""])

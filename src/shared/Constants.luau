@@ -140,6 +140,8 @@ Constants.BUILDINGS = {
 	TreeOfGrowth = {
 		name = "Tree of Growth", types = {"Rest"}, rarity = "Mythic",
 		collisionSize = Vector3.new(6, 12, 6),
+		-- 펫이 나무 옆(로컬 +Z 3.5 stud)에 서서 나무 중심을 바라봄. 중앙 겹침 방지.
+		petPose = { rest = { offset = Vector3.new(0, 0, 3.5), face = "in" } },
 		icon = {
 			[1] = "rbxassetid://93974551023223",
 			[2] = "rbxassetid://117821154949242",

@@ -36,6 +36,14 @@ function EggManager.setCurrencyFunctions(hasFn, spendFn)
 	_spendCoins = spendFn
 end
 
+-- 다이아(보석) 함수 (외부 주입). Skip 기능에서 사용.
+local _hasGems = nil
+local _spendGems = nil
+function EggManager.setGemFunctions(hasFn, spendFn)
+	_hasGems = hasFn
+	_spendGems = spendFn
+end
+
 local _showEggBuyPopup = nil
 function EggManager.setShowEggBuyPopup(showFn)
 	_showEggBuyPopup = showFn
@@ -496,6 +504,29 @@ function EggManager._startHatchTimer(player: Player, eggId: string, initialProgr
 		timerLabel.Text = formatTime(math.max(0, effectiveHatchTime - startElapsed))
 	end
 
+	-- 진행도 어트리뷰트 초기화 + Skip 프롬프트 부착 (부화 전까지만 표시)
+	if data.model and data.model.Parent then
+		data.model:SetAttribute("HatchProgress", startProgress)
+		data.model:SetAttribute("RemainingSeconds", math.max(0, effectiveHatchTime - startElapsed))
+		data.model:SetAttribute("EggOwnerId", player.UserId)
+		-- Skip 프롬프트 부착
+		local promptParent: Instance = data.model
+		if data.model:IsA("Model") and data.model.PrimaryPart then
+			promptParent = data.model.PrimaryPart
+		end
+		if not promptParent:FindFirstChild("SkipHatchPrompt") then
+			local skip = Instance.new("ProximityPrompt")
+			skip.Name = "SkipHatchPrompt"
+			skip.ActionText = "Skip !"
+			skip.ObjectText = data.eggType
+			skip.MaxActivationDistance = 10
+			skip.HoldDuration = 0.5
+			skip.RequiresLineOfSight = false
+			skip.Parent = promptParent
+			-- 클라이언트가 직접 Triggered를 받아 확인 다이얼로그를 띄움 (서버는 SkipHatch RemoteEvent 수신만)
+		end
+	end
+
 	task.spawn(function()
 		local elapsed = startElapsed
 		while elapsed < effectiveHatchTime do
@@ -506,8 +537,15 @@ function EggManager._startHatchTimer(player: Player, eggId: string, initialProgr
 			if not data.model or not data.model.Parent then return end
 			if not _placedEggs[player] or not _placedEggs[player][eggId] then return end
 
+			-- Skip으로 elapsed가 강제로 끝까지 갔으면 즉시 종료
+			if data._skipped then
+				elapsed = effectiveHatchTime
+				break
+			end
+
 			-- 진행도 업데이트
 			data.model:SetAttribute("HatchProgress", elapsed / effectiveHatchTime)
+			data.model:SetAttribute("RemainingSeconds", math.max(0, effectiveHatchTime - elapsed))
 
 			if timerLabel and timerLabel.Parent then
 				timerLabel.Text = formatTime(effectiveHatchTime - elapsed)
@@ -517,7 +555,15 @@ function EggManager._startHatchTimer(player: Player, eggId: string, initialProgr
 		-- hatched
 		if data.model and data.model.Parent then
 			data.model:SetAttribute("HatchProgress", 1)
+			data.model:SetAttribute("RemainingSeconds", 0)
 			data.model:SetAttribute("ReadyToHatch", true)
+			-- Skip 프롬프트 제거 (부화 가능 상태부터는 Hatch만)
+			local promptParent: Instance = data.model
+			if data.model:IsA("Model") and data.model.PrimaryPart then
+				promptParent = data.model.PrimaryPart
+			end
+			local skip = promptParent:FindFirstChild("SkipHatchPrompt")
+			if skip then skip:Destroy() end
 			if timerLabel and timerLabel.Parent then
 				timerLabel.Text = "Ready! [E]"
 				timerLabel.TextColor3 = Color3.fromRGB(255, 220, 100)
@@ -547,6 +593,58 @@ function EggManager._startHatchTimer(player: Player, eggId: string, initialProgr
 			print(player.Name .. " - egg ready to hatch: " .. data.eggType)
 		end
 	end)
+end
+
+----------------------------------------------------------------
+-- 부화 대기시간 Skip (다이아 소비). 시간이 0이 되지만 부화는 자동이 아님.
+-- 비용: max(1, ceil(remainingMinutes / 5)) — 5분당 1다이아.
+----------------------------------------------------------------
+function EggManager.getSkipCost(player: Player, eggId: string): number
+	local placed = _placedEggs[player]
+	if not placed or not placed[eggId] then return 0 end
+	local data = placed[eggId]
+	if not data.model or not data.model.Parent then return 0 end
+	if data.model:GetAttribute("ReadyToHatch") then return 0 end
+	local remainingSec = tonumber(data.model:GetAttribute("RemainingSeconds")) or 0
+	if remainingSec <= 0 then return 0 end
+	local mins = remainingSec / 60
+	return math.max(1, math.ceil(mins / 5))
+end
+
+function EggManager.skipHatch(player: Player, eggId: string): (boolean, string)
+	local placed = _placedEggs[player]
+	if not placed or not placed[eggId] then return false, "Egg not found" end
+	local data = placed[eggId]
+	if not data.model or not data.model.Parent then return false, "No egg" end
+	if data.model:GetAttribute("ReadyToHatch") then return false, "Already ready" end
+	if data._skipped then return false, "Already skipping" end
+
+	-- 소유자 확인
+	local ownerId = data.model:GetAttribute("EggOwnerId")
+	if ownerId and ownerId ~= player.UserId then return false, "Not your egg" end
+
+	local cost = EggManager.getSkipCost(player, eggId)
+	if cost <= 0 then return false, "No skip needed" end
+
+	-- 다이아 차감
+	if not _hasGems or not _spendGems then
+		return false, "Gem system not ready"
+	end
+	if not _hasGems(player, cost) then
+		return false, "Not enough diamonds (need " .. cost .. ")"
+	end
+	if not _spendGems(player, cost) then
+		return false, "Failed to spend diamonds"
+	end
+
+	-- 타이머가 즉시 종료되도록 플래그 설정 (다음 task.wait(1) 후 break)
+	data._skipped = true
+	-- 진행도 어트리뷰트도 강제로 채워서 클라가 즉시 ready 인식
+	data.model:SetAttribute("HatchProgress", 1)
+	data.model:SetAttribute("RemainingSeconds", 0)
+
+	print(player.Name .. " - skipped hatch for " .. data.eggType .. " (cost: " .. cost .. " gems)")
+	return true, "Skipped"
 end
 
 ----------------------------------------------------------------
