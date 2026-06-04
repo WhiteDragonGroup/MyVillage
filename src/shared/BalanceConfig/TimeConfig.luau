@@ -5,8 +5,9 @@
 local TimeConfig = {}
 
 -- TIME_SCALE: 시간이 실제보다 몇 배 빠르게 흐르는지
---   6 = 실제 10분이 게임 내 1시간, 실제 4시간이 게임 내 하루
-TimeConfig.TIME_SCALE = 6
+--   120 = 낮(6시→18시) 12 게임시간 = 6 실제분, 밤(18시→6시) 12 게임시간 = 6 실제분.
+--         한 사이클 12분 (낮 6분 + 밤 6분).
+TimeConfig.TIME_SCALE = 120
 
 -- UTC_OFFSET: 서버 시작 시점 기준 시간대 오프셋
 --   9 = KST (한국 표준시, UTC+9)

@@ -120,6 +120,9 @@ local ACTION_FALLBACK = {
 	pet          = { "petting", "idle" },
 }
 
+-- 진단용: ANIM_DEBUG = true로 두면 모든 애니 전환을 로그. 원인 파악 끝나면 false로.
+local ANIM_DEBUG = true
+
 local function playAnimationForState(petData, newState: string)
 	local tracks = petData._animTracks
 	if not tracks then return end
@@ -128,17 +131,32 @@ local function playAnimationForState(petData, newState: string)
 	if newState == "Working" and petData.petType then
 		action = STATE_TO_ANIM[petData.petType] or action
 	end
+
 	local target = tracks[action]
+	local resolved = action
 	if not target then
 		local fallback = ACTION_FALLBACK[action]
 		if fallback then
 			for _, name in fallback do
 				target = tracks[name]
-				if target then break end
+				if target then resolved = name; break end
 			end
 		end
-		target = target or tracks["idle"]
+		if not target then
+			target = tracks["idle"]
+			if target then resolved = "idle" end
+		end
 	end
+
+	if ANIM_DEBUG then
+		local available = {}
+		for k in tracks do table.insert(available, k) end
+		table.sort(available)
+		print(string.format("[Anim] %s state=%s action=%s resolved=%s found=%s | available={%s}",
+			petData.petName or "?", newState, action, resolved,
+			tostring(target ~= nil), table.concat(available, ",")))
+	end
+
 	if not target then
 		-- 적합한 애니가 없어도 이전 트랙은 멈춤 (예: 쉼터에서 work 애니가 계속 도는 버그 방지)
 		if petData._currentTrack then
@@ -147,7 +165,10 @@ local function playAnimationForState(petData, newState: string)
 		end
 		return
 	end
-	if petData._currentTrack == target then return end
+	if petData._currentTrack == target then
+		if ANIM_DEBUG then print("[Anim]   → 이미 같은 트랙. 스킵") end
+		return
+	end
 	if petData._currentTrack then
 		pcall(function() petData._currentTrack:Stop(0.2) end)
 	end
@@ -905,16 +926,12 @@ function PetManager._startBehaviorLoop(player: Player, petData, plot)
 					newLevel = petData.level,
 				})
 			end
-			-- 클라 10초마다 동기화
-			xpClientTimer = xpClientTimer + 1
-			if xpClientTimer >= 10 then
-				xpClientTimer = 0
-				petUpdateEvent:FireClient(player, "xpUpdate", {
-					petId = petId,
-					xp = petData.xp,
-					level = petData.level,
-				})
-			end
+			-- 클라 매초 동기화 (UI가 실시간으로 XP 증가 보이도록)
+			petUpdateEvent:FireClient(player, "xpUpdate", {
+				petId = petId,
+				xp = petData.xp,
+				level = petData.level,
+			})
 		end
 	end)
 
