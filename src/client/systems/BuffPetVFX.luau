@@ -27,6 +27,8 @@ local _activeVFX: { [string]: { [string]: BasePart } } = {}
 local function findTemplate(buffId: string): BasePart?
 	local name = NAME_MAP[buffId] or buffId
 	local t = buffFolder:FindFirstChild(name)
+	print(string.format("[BuffVFX-client] findTemplate buffId=%q → folderName=%q found=%s",
+		tostring(buffId), tostring(name), tostring(t ~= nil)))
 	if t and t:IsA("BasePart") then return t end
 	return nil
 end

@@ -854,6 +854,8 @@ local function applyGreetingBuffs(petA, petB)
 	local function tryKin(selfPet, otherPet)
 		local cfg = AbilityCfg.ABILITIES[selfPet.petName]
 		if cfg and cfg.kind == "buff_kin" and cfg.buffId and otherPet.petName == selfPet.petName then
+			print(string.format("[KinBuff] %s(self) ↔ %s(partner) → buffId=%q duration=%d",
+				selfPet.petName, otherPet.petName, tostring(cfg.buffId), cfg.duration or 30))
 			BuffManager.applyPetBuff(selfPet.petId, cfg.buffId, cfg.duration or 30)
 		end
 	end

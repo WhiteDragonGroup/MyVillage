@@ -53,7 +53,11 @@ end
 -- 펫 단위
 ----------------------------------------------------------------
 function BuffManager.applyPetBuff(petId: string, buffId: string, duration: number)
-	if not BuffCfg.BUFFS[buffId] then return end
+	if not BuffCfg.BUFFS[buffId] then
+		warn(string.format("[Buff] applyPetBuff: BuffCfg.BUFFS[%q] 없음. petId=%s", tostring(buffId), tostring(petId)))
+		return
+	end
+	print(string.format("[Buff] applyPetBuff petId=%s buffId=%q duration=%d", tostring(petId), tostring(buffId), duration))
 	local petTable = _petBuffs[petId]
 	if not petTable then
 		petTable = {}
