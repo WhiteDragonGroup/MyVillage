@@ -275,11 +275,12 @@ local function buildGui()
 	local actions = {
 		Place = confirm,
 		Cancle = cancel,
+		-- Y축 양의 회전은 위에서 볼 때 반시계 방향이다
 		RotationCW = function()
-			rotate(1)
+			rotate(-1)
 		end,
 		RotationCCW = function()
-			rotate(-1)
+			rotate(1)
 		end,
 	}
 	for name, action in actions do

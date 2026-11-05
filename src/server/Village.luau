@@ -22,6 +22,7 @@ local SHOP_STAND_DISTANCE = 8
 local WORKBENCH_NPC = "PetDealer" -- 작업대 모델이 들어오기 전 임시 위치
 local FIRST_SALE_COINS = 1200 -- 튜토리얼 첫 판매 후 벌목장을 살 수 있게 보충
 local HARVEST_MARGIN = 2.5
+local MAX_HINT_ID_LENGTH = 32
 local HARVEST_INTERVAL = 0.2
 local SAVE_INTERVAL = 60
 local RESIDENT_NAMES = {
@@ -42,6 +43,7 @@ local moveEvent = Net.event("Move")
 local storeEvent = Net.event("Store")
 local upgradeEvent = Net.event("Upgrade")
 local editingEvent = Net.event("SetEditing")
+local hintSeenEvent = Net.event("HintSeen")
 
 local Village = {}
 
@@ -110,6 +112,7 @@ local function pushSnapshot(village)
 		clockTower = village.profile.clockTower,
 		shop = Shop.view(village.profile),
 		tutorial = village.profile.tutorial,
+		hints = village.profile.hints or {},
 	})
 end
 
@@ -176,6 +179,18 @@ local function refreshStoreAttributes(model: Model, rec)
 end
 
 -- justBuilt: 방금 지은 건물이면 클라이언트가 건설 연출을 재생한다
+-- 자원별 다음 생산까지 남은 초. 멈춘 자원은 -1이다.
+local function refreshTimers(model: Model, rec, workers: number)
+	for _, itemId in Buildings.ById[rec.id].outputs do
+		local full = (rec.store[itemId] or 0) >= Production.capacityOf(itemId, rec.level)
+		local remaining = -1
+		if workers > 0 and not full then
+			remaining = math.ceil((Items.ById[itemId].cycle - (rec.progress[itemId] or 0)) / workers)
+		end
+		model:SetAttribute("Next_" .. itemId, remaining)
+	end
+end
+
 local function spawnModel(village, rec, justBuilt: boolean?)
 	local cframe = Placement.toWorld(village.zone, rec.x, rec.z, rec.rot)
 	local model = BuildingModels.build(rec.id, rec.level, cframe)
@@ -699,6 +714,7 @@ local function handleSell(player: Player, request)
 	if earned > 0 then
 		village.profile.coins += earned
 		village.profile.tutorialSold = true
+		buyResultEvent:FireClient(player, true, "Sold for $" .. earned)
 		pushSnapshot(village)
 		updateTutorial(village)
 	end
@@ -760,7 +776,13 @@ local function handleTravel(player: Player, destination)
 		local npc = workspace:FindFirstChild("NPC") and workspace.NPC:FindFirstChild(npcName)
 		if npc then
 			local pivot = npc:GetPivot()
-			character:PivotTo(CFrame.new(pivot.Position + pivot.LookVector * SHOP_STAND_DISTANCE + Vector3.new(0, 3, 0)))
+			local stand = pivot.Position + pivot.LookVector * SHOP_STAND_DISTANCE + Vector3.new(0, 3, 0)
+			if destination == "Workbench" then
+				-- 작업대를 바라보며 도착한다
+				character:PivotTo(CFrame.lookAt(stand, Vector3.new(pivot.Position.X, stand.Y, pivot.Position.Z)))
+			else
+				character:PivotTo(CFrame.new(stand))
+			end
 		end
 	end
 end
@@ -779,6 +801,13 @@ function Village.start()
 	moveEvent.OnServerEvent:Connect(handleMove)
 	storeEvent.OnServerEvent:Connect(handleStore)
 	upgradeEvent.OnServerEvent:Connect(handleUpgrade)
+	hintSeenEvent.OnServerEvent:Connect(function(player, hintId)
+		local village = villages[player]
+		if village and typeof(hintId) == "string" and #hintId <= MAX_HINT_ID_LENGTH then
+			village.profile.hints = village.profile.hints or {}
+			village.profile.hints[hintId] = true
+		end
+	end)
 	editingEvent.OnServerEvent:Connect(function(player, editing)
 		local village = villages[player]
 		if village then
@@ -800,8 +829,12 @@ function Village.start()
 			task.wait(1)
 			for _, village in villages do
 				for uid, rec in village.profile.placed do
-					if rec.store and Production.advance(rec, village.workers[uid] or 0, 1) then
-						refreshStoreAttributes(village.models[uid], rec)
+					if rec.store then
+						local workers = village.workers[uid] or 0
+						if Production.advance(rec, workers, 1) then
+							refreshStoreAttributes(village.models[uid], rec)
+						end
+						refreshTimers(village.models[uid], rec, workers)
 					end
 				end
 				updateTutorial(village)

@@ -19,6 +19,10 @@ local ROW_GAP = 8
 local INFO_WIDTH = 0.47
 local INFO_HEIGHT = 0.62
 local MISSING_COLOR = "#ff6b5e"
+local TRAVEL_TIMEOUT = 5 -- 처음 가는 곳은 스트리밍 때문에 도착이 늦을 수 있다
+local TRAVEL_MIN_TURN = 0.05 -- 이만큼 방향이 바뀌거나 위치가 옮겨지면 도착으로 본다
+local CAMERA_BACK = 12
+local CAMERA_UP = 5
 
 local CraftUi = {}
 
@@ -115,6 +119,34 @@ local function render()
 	scroll.CanvasSize = UDim2.fromOffset(0, ROW_GAP + #order * (rowHeight + ROW_GAP))
 end
 
+-- 서버가 캐릭터를 작업대 쪽으로 돌려 세운 뒤, 카메라를 캐릭터 뒤로 옮겨 작업대를 보게 한다
+local function faceWorkbenchAfterTravel()
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return
+	end
+
+	local before = root.CFrame
+	local started = os.clock()
+	local arrived = false
+	repeat
+		task.wait()
+		local moved = (root.Position - before.Position).Magnitude > 1
+		local turned = 1 - root.CFrame.LookVector:Dot(before.LookVector) > TRAVEL_MIN_TURN
+		arrived = moved or turned
+	until arrived or os.clock() - started > TRAVEL_TIMEOUT
+	if not arrived then
+		return
+	end
+
+	local look = root.CFrame.LookVector
+	local camera = workspace.CurrentCamera
+	camera.CFrame = CFrame.lookAt(
+		root.Position - look * CAMERA_BACK + Vector3.new(0, CAMERA_UP, 0),
+		root.Position + look * CAMERA_BACK
+	)
+end
+
 function CraftUi.open()
 	Hud.showOnly(frame)
 	frame.Visible = true
@@ -167,6 +199,7 @@ function CraftUi.start()
 	end
 	top.Activated:Connect(function()
 		travelEvent:FireServer("Workbench")
+		task.spawn(faceWorkbenchAfterTravel)
 		CraftUi.open()
 	end)
 

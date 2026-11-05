@@ -20,6 +20,8 @@ local travelEvent = Net.event("Travel")
 local ROW_SHARE = 0.24 -- 스크롤 영역 대비 한 줄 높이
 local ROW_GAP = 8
 local TAB_WIDTH = 116
+local DETAILS_BUTTON_X = 0.66
+local TOAST_SECONDS = 1.4
 local BUTTON_HOVER_GROWTH = 6
 local BUTTON_HOVER_TILT = 5
 local BUTTON_PRESS_SHRINK = 4
@@ -44,7 +46,7 @@ local toastHost
 local activeTab = "Buildings"
 local selected = {} -- [itemId] = true
 local pendingSale
-local shopHandler, buildHandler
+local shopHandler, buildHandler, detailsHandler
 local panels = {}
 local panelListeners = {}
 
@@ -119,6 +121,16 @@ local function addRow(index: number, rowHeight: number, spec)
 		row.UIStroke.Thickness = 3
 	end
 	row.Sell.Activated:Connect(spec.onAction)
+
+	if spec.onDetails then
+		local details = row.Sell:Clone()
+		details.Name = "Details"
+		details.Position = UDim2.new(DETAILS_BUTTON_X, 0, row.Sell.Position.Y.Scale, 0)
+		setButtonText(details, "Info")
+		details.Parent = row
+		details.Activated:Connect(spec.onDetails)
+	end
+
 	row.Parent = scroll
 end
 
@@ -168,6 +180,11 @@ local function buildingRows()
 			action = "Equip",
 			onAction = function()
 				equipTool(group.key)
+			end,
+			onDetails = function()
+				if detailsHandler then
+					detailsHandler(group.id, group.level)
+				end
 			end,
 		})
 	end
@@ -440,7 +457,7 @@ local function setupToast()
 	})
 end
 
-function Hud.toast(text: string, color: Color3?)
+function Hud.toast(text: string, color: Color3?, seconds: number?)
 	local label = Ui.label({
 		Size = UDim2.new(1, 0, 0, 26),
 		Text = text,
@@ -450,7 +467,7 @@ function Hud.toast(text: string, color: Color3?)
 		TextXAlignment = Enum.TextXAlignment.Center,
 		Parent = toastHost,
 	})
-	task.delay(1.4, function()
+	task.delay(seconds or TOAST_SECONDS, function()
 		local tween = TweenService:Create(label, TweenInfo.new(0.3), { TextTransparency = 1, TextStrokeTransparency = 1 })
 		tween:Play()
 		tween.Completed:Wait()
@@ -465,6 +482,10 @@ Hud.equipTool = equipTool
 
 function Hud.onShopButton(handler)
 	shopHandler = handler
+end
+
+function Hud.onBuildingDetails(handler)
+	detailsHandler = handler
 end
 
 function Hud.onBuildButton(handler)

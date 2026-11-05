@@ -6,6 +6,8 @@ local RunService = game:GetService("RunService")
 local Buildings = require(script.Parent.Buildings)
 
 local HOUSE_FOLDER = "HouseTemplates"
+local VILLAGER_SOURCE = "farmer"
+local VILLAGER_TEMPLATE = "VillagerTemplate"
 local PLACEHOLDER_SIZE = Vector3.new(8, 4, 8)
 local PLACEHOLDER_COLOR = Color3.fromRGB(200, 190, 170)
 
@@ -29,6 +31,20 @@ function BuildingModels.prepareServer()
 	end
 
 	folder.Parent = ReplicatedStorage
+
+	local villager = workspace:FindFirstChild(VILLAGER_SOURCE)
+	if villager then
+		local template = villager:Clone()
+		template.Name = VILLAGER_TEMPLATE
+		template.Parent = ReplicatedStorage
+	else
+		warn("주민 모델 없음: " .. VILLAGER_SOURCE)
+	end
+end
+
+-- 주민 모델. 서버가 시작 시 복사해 둔 것을 기다려서 쓴다.
+function BuildingModels.villagerTemplate(): Model?
+	return ReplicatedStorage:WaitForChild(VILLAGER_TEMPLATE, 10)
 end
 
 local function templateFor(id: string, level: number): Model?

@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Buildings = require(Shared:WaitForChild("Buildings"))
+local BuildingModels = require(Shared:WaitForChild("BuildingModels"))
 local Items = require(Shared:WaitForChild("Items"))
 local Production = require(Shared:WaitForChild("Production"))
 local Ui = require(script.Parent.Ui)
@@ -27,14 +28,20 @@ local villagerFolder
 ----------------------------------------------------------------
 local function labelText(model: Model, def): string
 	local level = model:GetAttribute("Level") or 1
-	local lines = { string.format("%s Lv%d  (%d/%d)", def.name, level, model:GetAttribute("Workers") or 0, def.capacity) }
+	local workers = model:GetAttribute("Workers") or 0
+	local lines = { string.format("%s Lv%d  (%d/%d)", def.name, level, workers, def.capacity) }
 	local allFull = true
 
 	for _, itemId in def.outputs do
 		local cap = Production.capacityOf(itemId, level)
 		local stored = model:GetAttribute("Store_" .. itemId) or 0
-		allFull = allFull and stored >= cap
-		table.insert(lines, string.format("%s %d/%d", Items.ById[itemId].name, stored, cap))
+		local full = stored >= cap
+		allFull = allFull and full
+		table.insert(lines, string.format("%s %d/%d%s", Items.ById[itemId].name, stored, cap, if full then " FULL" else ""))
+	end
+
+	if workers < def.capacity then
+		table.insert(lines, "Place more homes for workers")
 	end
 
 	if allFull then
@@ -53,8 +60,8 @@ local function attachLabel(model: Model, def)
 		AlwaysOnTop = true,
 		ExtentsOffsetWorldSpace = Vector3.new(0, size.Y + 1, 0),
 		MaxDistance = LABEL_DISTANCE,
-		Size = UDim2.fromOffset(190, 24 + 18 * #def.outputs),
-		Parent = model,
+		Size = UDim2.fromOffset(210, 42 + 18 * #def.outputs),
+		Parent = root, -- 파츠 아래에 있어야 화면에 그려진다
 	})
 	local label = Ui.label({
 		Size = UDim2.fromScale(1, 1),
@@ -74,24 +81,39 @@ end
 
 local function attachHomeLabel(model: Model, def)
 	local _, size = model:GetBoundingBox()
+	local root = model:WaitForChild("Root")
 	local billboard = Ui.make("BillboardGui", {
 		Name = "Status",
-		Adornee = model:WaitForChild("Root"),
+		Adornee = root,
 		AlwaysOnTop = true,
 		ExtentsOffsetWorldSpace = Vector3.new(0, size.Y + 1, 0),
 		MaxDistance = LABEL_DISTANCE,
-		Size = UDim2.fromOffset(170, 24),
-		Parent = model,
+		Size = UDim2.fromOffset(190, 40),
+		Parent = root,
 	})
-	Ui.label({
+	local label = Ui.label({
 		Size = UDim2.fromScale(1, 1),
-		Text = string.format("%s (%d)", def.name, def.residents),
 		TextColor3 = Ui.Colors.White,
 		TextSize = 14,
 		TextStrokeTransparency = 0.3,
 		TextXAlignment = Enum.TextXAlignment.Center,
 		Parent = billboard,
 	})
+
+	local function refresh()
+		local resting = 0
+		for _, job in HttpService:JSONDecode(model:GetAttribute("Jobs") or "[]") do
+			if not job then
+				resting += 1
+			end
+		end
+		label.Text = string.format("%s (%d)", def.name, def.residents)
+		if resting > 0 then
+			label.Text ..= string.format("\n%d resting · add a workplace", resting)
+		end
+	end
+	model:GetAttributeChangedSignal("Jobs"):Connect(refresh)
+	refresh()
 end
 
 ----------------------------------------------------------------
@@ -118,7 +140,7 @@ end
 -- 주민
 ----------------------------------------------------------------
 local function makeVillager(): Model
-	local source = workspace:FindFirstChild("farmer")
+	local source = BuildingModels.villagerTemplate()
 	local model
 
 	if source then

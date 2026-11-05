@@ -78,11 +78,33 @@ local function bodyText(model: Model, def): string
 			local item = Items.ById[itemId]
 			local cap = Production.capacityOf(itemId, level)
 			local stored = model:GetAttribute("Store_" .. itemId) or 0
-			local line = string.format("%s %d/%d · %ds", item.name, stored, cap, item.cycle)
-			if level < Buildings.MAX_LEVEL then
-				line ..= string.format(" (+%d → +%d, cap %d)", level, level + 1, Production.capacityOf(itemId, level + 1))
-			end
-			table.insert(lines, line)
+			local nextIn = model:GetAttribute("Next_" .. itemId) or -1
+			local status = if stored >= cap
+				then "FULL"
+				elseif nextIn >= 0 then string.format("next %ds", nextIn)
+				else "no workers"
+			table.insert(lines, string.format("%s %d/%d · %s", item.name, stored, cap, status))
+		end
+		if level < Buildings.MAX_LEVEL then
+			table.insert(lines, string.format("Next level : +%d each, storage x2", level + 1))
+		end
+	end
+
+	return table.concat(lines, "\n")
+end
+
+-- 보관 중인 건물의 상세 정보
+local function catalogText(def, level: number): string
+	local lines = {}
+
+	if def.kind == "Home" then
+		table.insert(lines, string.format("Residents : %d", def.residents))
+		table.insert(lines, "Villagers find the nearest open workplace on their own.")
+	else
+		table.insert(lines, string.format("Up to %d workers · makes %d each", def.capacity, level))
+		for _, itemId in def.outputs do
+			local item = Items.ById[itemId]
+			table.insert(lines, string.format("%s : %ds · storage %d", item.name, item.cycle, Production.capacityOf(itemId, level)))
 		end
 	end
 
@@ -200,6 +222,18 @@ local function onPointer(position: Vector2)
 	end
 end
 
+function EditMenu.showDetails(id: string, level: number)
+	clear()
+
+	local def = Buildings.ById[id]
+	Hud.showOnly(info)
+	Hud.setText(info.Header, "TextLabel", if def.kind == "Work" then string.format("%s LV.%d", def.name, level) else def.name)
+	info.Frame.Info.TextLabel.Text = catalogText(def, level)
+	info.Frame.Upgrade.Visible = false
+	info.Visible = true
+	selectButtons.Cancle.Visible = true
+end
+
 function EditMenu.setEnabled(value: boolean)
 	enabled = value
 	if not value then
@@ -231,6 +265,7 @@ function EditMenu.start()
 	end)
 
 	selectButtons.Cancle.Activated:Connect(clear)
+	Hud.onBuildingDetails(EditMenu.showDetails)
 
 	-- 다른 창을 열면 선택을 해제한다
 	Hud.onPanelOpened(function(frame)
