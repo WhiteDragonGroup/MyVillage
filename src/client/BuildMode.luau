@@ -20,6 +20,8 @@ local moveEvent = Net.event("Move")
 
 local RED = Color3.fromRGB(235, 70, 60)
 local GREEN = Color3.fromRGB(80, 220, 110)
+local VALID_FILL = 0.6
+local INVALID_FILL = 0.05
 
 local BuildMode = {}
 
@@ -90,7 +92,7 @@ local function rebuildGhost()
 
 	session.ghost = ghost
 	session.highlight = Ui.make("Highlight", {
-		FillTransparency = 0.6,
+		FillTransparency = VALID_FILL,
 		OutlineTransparency = 0.2,
 		Parent = ghost,
 	})
@@ -116,6 +118,8 @@ local function update()
 	session.ghost:PivotTo(Placement.toWorld(session.zone, session.x, session.z, session.rot))
 	session.highlight.FillColor = if ok then GREEN else RED
 	session.highlight.OutlineColor = session.highlight.FillColor
+	-- 불가능한 곳에서는 건물 전체를 빨갛게 덮는다
+	session.highlight.FillTransparency = if ok then VALID_FILL else INVALID_FILL
 
 	hint.Text = if ok then "Can place here" else reason
 	hint.TextColor3 = if ok then GREEN else RED

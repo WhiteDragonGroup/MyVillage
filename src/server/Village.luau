@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local AdminNames = require(Shared.AdminNames)
 local Buildings = require(Shared.Buildings)
 local BuildingModels = require(Shared.BuildingModels)
 local Items = require(Shared.Items)
@@ -784,6 +785,120 @@ local function handleTravel(player: Player, destination)
 				character:PivotTo(CFrame.new(stand))
 			end
 		end
+	end
+end
+
+----------------------------------------------------------------
+-- 관리자 도구 (권한 확인은 Admin.luau가 한다)
+----------------------------------------------------------------
+local ADMIN_MAX_AMOUNT = 1e12
+
+local function isAdminAmount(value): boolean
+	return typeof(value) == "number" and value % 1 == 0 and math.abs(value) <= ADMIN_MAX_AMOUNT
+end
+
+local function addResource(profile, itemId: string, amount: number)
+	profile.resources[itemId] = math.max(0, (profile.resources[itemId] or 0) + amount)
+end
+
+local function clockTowerRecord(profile)
+	for _, rec in profile.placed do
+		if rec.id == "ClockTower" then
+			return rec
+		end
+	end
+	return nil
+end
+
+local function resetVillage(village)
+	for _, model in village.models do
+		model:Destroy()
+	end
+	village.models = {}
+
+	local profile = PlayerStore.newProfile()
+	setupNewProfile(profile)
+	village.profile = profile
+
+	for _, rec in profile.placed do
+		spawnModel(village, rec)
+	end
+	reassignWorkers(village)
+	syncTools(village)
+	if village.player.Character then
+		moveToVillage(village, village.player.Character)
+	end
+end
+
+-- 반환: 성공 여부, 안내 문구
+local function applyAdmin(village, action, arg1, arg2): (boolean, string?)
+	local profile = village.profile
+
+	if action == "Coins" and isAdminAmount(arg1) then
+		profile.coins = math.max(0, profile.coins + arg1)
+		return true, "코인: $" .. profile.coins
+	elseif action == "Resource" and isAdminAmount(arg2) then
+		if arg1 == "All" then
+			for _, item in Items.List do
+				addResource(profile, item.id, arg2)
+			end
+			return true, string.format("전체 자원 %+d", arg2)
+		elseif typeof(arg1) == "string" and Items.ById[arg1] then
+			addResource(profile, arg1, arg2)
+			return true, string.format("%s %+d", AdminNames.item(arg1), arg2)
+		end
+	elseif action == "ClearResources" then
+		profile.resources = {}
+		return true, "자원을 모두 비웠습니다"
+	elseif action == "Building" and typeof(arg1) == "string" and Buildings.ById[arg1] then
+		if Buildings.ById[arg1].kind == "Landmark" then
+			return false, "랜드마크는 지급할 수 없습니다"
+		end
+		table.insert(profile.stored, newRecord(profile, arg1))
+		syncTools(village)
+		return true, AdminNames.building(arg1) .. " 1개 지급"
+	elseif action == "ClockTower" and isAdminAmount(arg1) and arg1 >= 1 and arg1 <= Buildings.MAX_LEVEL then
+		profile.clockTower = arg1
+		local tower = clockTowerRecord(profile)
+		if tower then
+			tower.level = arg1
+			respawnModel(village, tower)
+			reassignWorkers(village)
+		end
+		return true, "시계탑 " .. arg1 .. "레벨"
+	elseif action == "FillStorage" then
+		for uid, rec in profile.placed do
+			if rec.store then
+				for _, itemId in Buildings.ById[rec.id].outputs do
+					rec.store[itemId] = Production.capacityOf(itemId, rec.level)
+					rec.progress[itemId] = 0
+				end
+				refreshStoreAttributes(village.models[uid], rec)
+			end
+		end
+		return true, "모든 일터를 채웠습니다"
+	elseif action == "SkipTutorial" then
+		profile.tutorial = nil
+		return true, "튜토리얼을 건너뛰었습니다"
+	elseif action == "Reset" then
+		resetVillage(village)
+		return true, "마을을 초기화했습니다"
+	end
+
+	return false, "잘못된 관리자 명령"
+end
+
+function Village.admin(player: Player, action, arg1, arg2)
+	local village = villages[player]
+	if not village then
+		return
+	end
+
+	local ok, message = applyAdmin(village, action, arg1, arg2)
+	buyResultEvent:FireClient(player, ok, message)
+	if ok then
+		pushSnapshot(village)
+		updateTutorial(village)
 	end
 end
 

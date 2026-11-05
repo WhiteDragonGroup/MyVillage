@@ -14,7 +14,7 @@ local function keyFor(player: Player): string
 	return "player_" .. player.UserId
 end
 
-local function newProfile()
+function PlayerStore.newProfile()
 	return {
 		schema = SCHEMA,
 		coins = 0,
@@ -36,14 +36,14 @@ function PlayerStore.load(player: Player)
 		end)
 
 		if ok then
-			return data or newProfile(), true
+			return data or PlayerStore.newProfile(), true
 		end
 
 		warn(string.format("저장 데이터 로드 실패 (%d/%d): %s", attempt, RETRIES, tostring(data)))
 		task.wait(attempt)
 	end
 
-	return newProfile(), false
+	return PlayerStore.newProfile(), false
 end
 
 function PlayerStore.save(player: Player, profile): boolean
